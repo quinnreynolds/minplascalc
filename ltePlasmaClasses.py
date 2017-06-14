@@ -67,10 +67,25 @@ class elementGroup:
                 energyLevelFile = self.energyLevelFilePath + self.element + chargeString + ".csv"))
         
     def sahaRHS(self, n, T):
-        partitionTerm = 2. * self.species[n+1].internalPartitionFunction(T) / self.species[n].internalPartitionFunction(T)
-        translationTerm = (2. * math.pi * constants.electronMass * constants.boltzmann * T / constants.planck ** 2) ** 1.5
-        expTerm = math.exp(-(self.species[n].ionisationEnergy - self.species[n].deltaIonisationEnergy) / (constants.boltzmann * T))
-        return partitionTerm * translationTerm * expTerm
-    
+        if n < (len(self.chargeNumbers) - 1):
+            partitionTerm = 2. * self.species[n+1].internalPartitionFunction(T) / self.species[n].internalPartitionFunction(T)
+            translationTerm = (2. * math.pi * constants.electronMass * constants.boltzmann * T / constants.planck ** 2) ** 1.5
+            expTerm = math.exp(-(self.species[n].ionisationEnergy - self.species[n].deltaIonisationEnergy) / (constants.boltzmann * T))
+            return partitionTerm * translationTerm * expTerm
+        else:
+            return "Error - requested Saha ratio for n too high"
+
+
+class composition:
+    def __init__(self, **kwargs):
+        speciesDictionary = kwargs.get("speciesDictionary")
+        self.energyLevelFilePath = kwargs.get("energyLevelFilePath")
+        self.ne = 0.
+        
+        self.elementGroups = []
+        for key, val in speciesDictionary.items():
+            self.elementGroups.append(elementGroup(element = key, chargeNumbers = val, energyLevelFilePath = self.energyLevelFilePath))
+        
+        
 ################################################################################
 
