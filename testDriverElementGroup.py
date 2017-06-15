@@ -11,7 +11,7 @@ import ltePlasmaClasses as lpc
 parser = argparse.ArgumentParser(
     description = "Test driver for ltePlasmaClasses."
     )
-parser.add_argument("-ts", help = "Temperature to start calculating at, K", type = float, default = 1000.)
+parser.add_argument("-ts", help = "Temperature to start calculating at, K", type = float, default = 5000.)
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
 parserArgs = parser.parse_args()
 
