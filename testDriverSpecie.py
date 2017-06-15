@@ -15,36 +15,46 @@ parser.add_argument("-ts", help = "Temperature to start calculating at, K", type
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 35000.)
 parserArgs = parser.parse_args()
 
-myOxygenAtom = lpc.specie(
+myOxygenMolecule = lpc.diatomicSpecie(
+    name = "OO", 
+    chargeNumber = 0,
+    dataFile = "NistData/OO.csv"
+    )
+
+myOxygenAtom = lpc.monatomicSpecie(
     name = "OI", 
     chargeNumber = 0,
-    energyLevelFile = "NistData/LevelDataParsed/OI.csv"
+    dataFile = "NistData/OI.csv"
     )
 
-myOxygenPlus = lpc.specie(
+myOxygenPlus = lpc.monatomicSpecie(
     name = "OII", 
-    chargeNumber = 0,
-    energyLevelFile = "NistData/LevelDataParsed/OII.csv"
+    chargeNumber = 1,
+    dataFile = "NistData/OII.csv"
     )
 
-myOxygenPlusPlus = lpc.specie(
+myOxygenPlusPlus = lpc.monatomicSpecie(
     name = "OIII", 
-    chargeNumber = 0,
-    energyLevelFile = "NistData/LevelDataParsed/OIII.csv"
+    chargeNumber = 2,
+    dataFile = "NistData/OIII.csv"
     )
 
 Temps = np.linspace(parserArgs.ts, parserArgs.te, 1000)
+pFuncOO = []
 pFuncO = []
 pFuncOp = []
 pFuncOpp = []
 for Temp in Temps:
+    pFuncOO.append(myOxygenMolecule.internalPartitionFunction(Temp))
     pFuncO.append(myOxygenAtom.internalPartitionFunction(Temp))
     pFuncOp.append(myOxygenPlus.internalPartitionFunction(Temp))
     pFuncOpp.append(myOxygenPlusPlus.internalPartitionFunction(Temp))
 
 fig, ax = pyplot.subplots()
 
-ax.plot(Temps, pFuncO)
-ax.plot(Temps, pFuncOp)
-ax.plot(Temps, pFuncOpp)
+ax.semilogy(Temps, pFuncOO)
+ax.semilogy(Temps, pFuncO)
+ax.semilogy(Temps, pFuncOp)
+ax.semilogy(Temps, pFuncOpp)
 
+pyplot.show()

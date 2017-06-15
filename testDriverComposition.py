@@ -16,7 +16,7 @@ parser.add_argument("-te", help = "Temperature to stop calculating at, K", type 
 parserArgs = parser.parse_args()
 
 myComposition = lpc.composition(
-    speciesDictionary = { "O": [0, 1, 2] },
+    speciesDictionary = { "O": [2, 1.] },
     energyLevelFilePath = "NistData/LevelDataParsed/"
     )
 
@@ -24,10 +24,13 @@ Temps = np.linspace(parserArgs.ts, parserArgs.te, 1000)
 ratio01 = []
 ratio12 = []
 for Temp in Temps:
-    ratio01.append(myComposition.elementGroups[0].sahaRHS(0, Temp))
-    ratio12.append(myComposition.elementGroups[0].sahaRHS(1, Temp))
+    myComposition.elementGroups[0].recalcSahaTerms(Temp)
+    ratio01.append(myComposition.elementGroups[0].sahaTerms[0])
+    ratio12.append(myComposition.elementGroups[0].sahaTerms[1])
     
 fig, ax1 = pyplot.subplots()
 
 ax1.plot(Temps, ratio01, "b")
 ax1.semilogy(Temps, ratio12, "g--")
+
+pyplot.show()
