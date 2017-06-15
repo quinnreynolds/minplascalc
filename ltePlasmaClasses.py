@@ -87,7 +87,7 @@ class diatomicSpecie:
 # 2: Si+
 # 3: Si++
 # ...etc
-class elementGroup:
+class slagElementGroup:
     def __init__(self, **kwargs):
         self.element = kwargs.get("element")
         self.maximumIonCharge = kwargs.get("maximumIonCharge")
@@ -132,7 +132,7 @@ class elementGroup:
             self.equilibriumTerms[n] = self._equilibriumRHS(n, T)
 
 
-class composition:
+class slagComposition:
     def __init__(self, **kwargs):
         speciesDict = kwargs.get("speciesDict")
         self.dataFilePath = kwargs.get("dataFilePath")
@@ -141,7 +141,7 @@ class composition:
         self.elementGroups = []
         self.elementMoleFractions = []
         for key, val in speciesDict.items():
-            self.elementGroups.append(elementGroup(element = key, chargeNumbers = val[0], energyLevelFilePath = self.energyLevelFilePath))
+            self.elementGroups.append(slagElementGroup(element = key, chargeNumbers = val[0], energyLevelFilePath = self.energyLevelFilePath))
             
         
         

@@ -15,7 +15,7 @@ parser.add_argument("-ts", help = "Temperature to start calculating at, K", type
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
 parserArgs = parser.parse_args()
 
-myOxygenGroup = lpc.elementGroup(
+myOxygenGroup = lpc.slagElementGroup(
     element = "O", 
     maximumIonCharge = 2,
     dataFilePath = "NistData/"

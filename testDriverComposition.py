@@ -15,7 +15,7 @@ parser.add_argument("-ts", help = "Temperature to start calculating at, K", type
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
 parserArgs = parser.parse_args()
 
-myComposition = lpc.composition(
+myComposition = lpc.slagComposition(
     speciesDictionary = { "O": [2, 1.] },
     energyLevelFilePath = "NistData/LevelDataParsed/"
     )
