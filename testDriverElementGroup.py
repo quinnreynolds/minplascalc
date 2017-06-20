@@ -4,6 +4,7 @@
 
 import argparse
 import numpy as np
+import timeit
 from matplotlib import pyplot
 import ltePlasmaClasses as lpc
 
@@ -20,6 +21,8 @@ myOxygenGroup = lpc.slagElementGroup(
     maximumIonCharge = 2,
     dataFilePath = "NistData/"
     )
+
+time1 = timeit.default_timer()
 
 Temps = np.linspace(parserArgs.ts, parserArgs.te, 1000)
 pFuncOO = []
@@ -38,6 +41,8 @@ for Temp in Temps:
     ratio12.append(myOxygenGroup._equilibriumRHS(1, Temp))
     ratio23.append(myOxygenGroup._equilibriumRHS(2, Temp))
     
+print(timeit.default_timer() - time1)
+
 fig, (ax1, ax2) = pyplot.subplots(nrows = 2)
 
 ax1.semilogy(Temps, pFuncOO)

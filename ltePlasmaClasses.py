@@ -51,11 +51,11 @@ class monatomicSpecie:
         return partitionVal
 
 
-# A bonded atom pair
+# A neutral bonded atom pair
 class diatomicSpecie:
     def __init__(self, **kwargs):
         self.name = kwargs.get("name")
-        self.chargeNumber = kwargs.get("chargeNumber")
+        self.chargeNumber = 0
         self.dataFile = kwargs.get("dataFile")
         
         self.numberDensity = 0.
@@ -96,6 +96,11 @@ class slagElementGroup:
         self.nSpecies = self.maximumIonCharge + 2
         self.equilibriumTerms = [0.] * (self.nSpecies - 1)
         
+        self.oxygenAtomSpecie = monatomicSpecie(
+            name = "OI",
+            chargeNumber = 0,
+            dataFile = self.dataFilePath + "OI.csv")
+        
         self.species = []
         self.species.append(diatomicSpecie(
             name = self.element + "O",
@@ -112,11 +117,13 @@ class slagElementGroup:
                 chargeNumber = n,
                 dataFile = self.dataFilePath + self.element + chargeString + ".csv"))
         
+        self.diatomicReducedMass = self.oxygenAtomSpecie.molecularMass * self.species[1].molecularMass / (self.oxygenAtomSpecie.molecularMass + self.species[1].molecularMass)
+        
     def _equilibriumRHS(self, n, T):
         if n < (self.nSpecies - 1):
             if n == 0:
-                partitionTerm = (self.species[n+1].internalPartitionFunction(T)) ** 2. / self.species[n].internalPartitionFunction(T)
-                translationTerm = (2. * math.pi * self.species[n+1].molecularMass * constants.boltzmann * T / constants.planck ** 2) ** 1.5
+                partitionTerm = self.species[n+1].internalPartitionFunction(T) * self.oxygenAtomSpecie.internalPartitionFunction(T) / self.species[n].internalPartitionFunction(T)
+                translationTerm = (2. * math.pi * self.diatomicReducedMass * constants.boltzmann * T / constants.planck ** 2) ** 1.5
                 expTerm = math.exp(-(self.species[n].dissociationEnergy) / (constants.boltzmann * T))
             else:                
                 partitionTerm = 2. * self.species[n+1].internalPartitionFunction(T) / self.species[n].internalPartitionFunction(T)
@@ -141,8 +148,8 @@ class slagComposition:
         self.elementGroups = []
         self.elementMoleFractions = []
         for key, val in speciesDict.items():
-            self.elementGroups.append(slagElementGroup(element = key, chargeNumbers = val[0], energyLevelFilePath = self.energyLevelFilePath))
-            
+            self.elementGroups.append(slagElementGroup(element = key, maximumIonCharge = val[0], energyLevelFilePath = self.energyLevelFilePath))
+            self.elementMoleFractions.append(val[1])
         
         
 ################################################################################
