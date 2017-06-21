@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 #
-# Simple classes for monatomic gas/plasma data and LTE calculations
+# Classes for gas/plasma data and LTE calculations with simple species
 #
 # Q Reynolds 2016-2017
 
 import math
+import json
 
 ################################################################################
 
@@ -24,52 +25,53 @@ class constants:
 # Single atoms and ions
 class monatomicSpecie:
     def __init__(self, **kwargs):
-        self.name = kwargs.get("name")
-        self.chargeNumber = kwargs.get("chargeNumber")
-        self.dataFile = kwargs.get("dataFile")
-        
-        self.numberDensity = 0.
+        self.numberDensity = kwargs.get("numberDensity", 0.)
 
-        with open(self.dataFile) as f:
-            energyFileData = f.readlines()  
-        self.molecularMass = float(energyFileData.pop(0)) / constants.avogadro
-        self.ionisationEnergy = constants.invCmToJ * float(energyFileData.pop(0))
+        # Construct a data object from JSON data file
+        with open(kwargs.get("dataFile")) as df:
+            jsonData = json.load(df)
+
+        # General specie data
+        self.name = jsonData["name"]
+        self.stoichiometry = jsonData["stoichiometry"]
+        self.molarMass = jsonData["molarMass"]
+
+        # Monatomic-specific specie data
+        self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"]["ionisationEnergy"]
         self.deltaIonisationEnergy = 0.
-
         self.energyLevels = []
-        for energyLevelLine in energyFileData:
-            energyLevelLineData = energyLevelLine.split(",")
-            energyLevelLineData[0] = float(energyLevelLineData[0])
-            energyLevelLineData[1] = constants.invCmToJ * float(energyLevelLineData[1])
-            self.energyLevels.append(energyLevelLineData)
+        for energyLevelLine in jsonData["monatomicData"]["energyLevels"]:
+            self.energyLevels.append([2. * energyLevelLine["J"] + 1., constants.invCmToJ * energyLevelLine["Ei"]])
             
     def internalPartitionFunction(self, T):
         partitionVal = 0.
         for eLevel in self.energyLevels:
             if eLevel[1] < (self.ionisationEnergy - self.deltaIonisationEnergy):
-                partitionVal += (2. * eLevel[0] + 1.) * math.exp(-eLevel[1] / (constants.boltzmann * T))
+                partitionVal += eLevel[0] * math.exp(-eLevel[1] / (constants.boltzmann * T))
+                
         return partitionVal
 
 
-# A neutral bonded atom pair
+# A bonded atom pair
 class diatomicSpecie:
     def __init__(self, **kwargs):
-        self.name = kwargs.get("name")
-        self.chargeNumber = 0
-        self.dataFile = kwargs.get("dataFile")
-        
-        self.numberDensity = 0.
+        self.numberDensity = kwargs.get("numberDensity", 0.)
 
-        with open(self.dataFile) as f:
-            energyFileData = f.readlines()  
-        self.molecularMass = float(energyFileData.pop(0)) / constants.avogadro
-        self.dissociationEnergy = constants.invCmToJ * float(energyFileData.pop(0))
-        self.sigmaS = float(energyFileData.pop(0))
-        
-        moleculeData = energyFileData[0].split(",")
-        self.g0 = float(moleculeData[0])
-        self.we = constants.invCmToJ * float(moleculeData[1])
-        self.Be = constants.invCmToJ * float(moleculeData[2])
+        # Construct a data object from JSON data file
+        with open(kwargs.get("dataFile")) as df:
+            jsonData = json.load(df)
+
+        # General specie data
+        self.name = jsonData["name"]
+        self.stoichiometry = jsonData["stoichiometry"]
+        self.molarMass = jsonData["molarMass"]
+
+        # Diatomic-specific specie data
+        self.dissociationEnergy = constants.invCmToJ * jsonData["diatomicData"]["dissociationEnergy"]
+        self.sigmaS = jsonData["diatomicData"]["sigmaS"]
+        self.g0 = jsonData["diatomicData"]["g0"]
+        self.we = constants.invCmToJ * jsonData["diatomicData"]["we"]
+        self.Be = constants.invCmToJ * jsonData["diatomicData"]["Be"]
         
     def internalPartitionFunction(self, T):
         electronicPartition = self.g0
@@ -146,7 +148,7 @@ class slagComposition:
         self.ne = 0.
         
         self.elementGroups = []
-        self.elementMoleFractions = []
+        self.elementStartingMoleFractions = []
         for key, val in speciesDict.items():
             self.elementGroups.append(slagElementGroup(element = key, maximumIonCharge = val[0], energyLevelFilePath = self.energyLevelFilePath))
             self.elementMoleFractions.append(val[1])

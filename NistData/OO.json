@@ -1,0 +1,17 @@
+{
+    "name": "O2",
+    "stoichiometry": 
+    {
+        "O": 2
+    },
+    "molarMass" : 0.0322504018,
+    "chargeNumber": 0,
+    "diatomicData": {
+        "dissociationEnergy": 41537.5539,
+        "sigmaS": 2,
+        "g0": 3,
+        "we": 1580.19,
+        "Be": 1.4376766
+    }
+}
+
