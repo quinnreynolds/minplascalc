@@ -1,0 +1,11 @@
+{
+    "name": "Oxygen Plasma Test",
+    "composition": 
+    {
+        "O2": { "dataFile": "NistData/OO.json", "x0": 1 },
+        "O": { "dataFile": "NistData/OI.json", "x0": 0 },
+        "O+": { "dataFile": "NistData/OII.json", "x0": 0 },
+        "O++": { "dataFile": "NistData/OIII.json", "x0": 0 }
+    }
+}
+

@@ -15,10 +15,10 @@ parser.add_argument("-ts", help = "Temperature to start calculating at, K", type
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 35000.)
 parserArgs = parser.parse_args()
 
-myOxygenMolecule = lpc.diatomicSpecie(dataFile = "NistData/OO.json")
-myOxygenAtom = lpc.monatomicSpecie(dataFile = "NistData/OI.json")
-myOxygenPlus = lpc.monatomicSpecie(dataFile = "NistData/OII.json")
-myOxygenPlusPlus = lpc.monatomicSpecie(dataFile = "NistData/OIII.json")
+myOxygenMolecule = lpc.specie(dataFile = "NistData/OO.json")
+myOxygenAtom = lpc.specie(dataFile = "NistData/OI.json")
+myOxygenPlus = lpc.specie(dataFile = "NistData/OII.json")
+myOxygenPlusPlus = lpc.specie(dataFile = "NistData/OIII.json")
 
 print(myOxygenPlus.stoichiometry.get("O", 0))
 print(myOxygenPlus.stoichiometry.get("Si", 0))
