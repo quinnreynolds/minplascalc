@@ -15,4 +15,4 @@ parser.add_argument("-ts", help = "Temperature to start calculating at, K", type
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
 parserArgs = parser.parse_args()
 
-myComposition = lpc.compositionGFE(specFile = "Compositions/OxygenPlasma.json")
+myComposition = lpc.compositionGFE(compositionFile = "Compositions/OxygenPlasma.json")

@@ -32,11 +32,11 @@ class specie:
             jsonData = json.load(df)
 
         # General specie data
-        self.name = jsonData["defaultName"]
+        self.name = jsonData["name"]
         self.stoichiometry = jsonData["stoichiometry"]
         self.molarMass = jsonData["molarMass"]
         self.chargeNumber = jsonData["chargeNumber"]
-
+            
         if "monatomicData" in jsonData:
             # Monatomic-specific specie data
             self.monatomicYN = True
@@ -45,6 +45,7 @@ class specie:
             self.energyLevels = []
             for energyLevelLine in jsonData["monatomicData"]["energyLevels"]:
                 self.energyLevels.append([2. * energyLevelLine["J"] + 1., constants.invCmToJ * energyLevelLine["Ei"]])
+        
         else:
             # Diatomic-specific specie data
             self.monatomicYN = False
@@ -53,8 +54,14 @@ class specie:
             self.g0 = jsonData["diatomicData"]["g0"]
             self.we = constants.invCmToJ * jsonData["diatomicData"]["we"]
             self.Be = constants.invCmToJ * jsonData["diatomicData"]["Be"]
+
+        if self.chargeNumber != 0 and self.monatomicYN == False:
+            print("Warning! Charged diatomic molecules not implemented yet, results will probably be wrong")
+
+        if self.chargeNumber < 0:
+            print("Warning! Negatively charged ions not implemented yet, results will probably be wrong")
     
-    def getReactionEnergy(self):
+    def getRxnEnergy(self):
         if self.monatomicYN:
             return self.ionisationEnergy - self.deltaIonisationEnergy
         else:
@@ -77,14 +84,14 @@ class specie:
 # Composition class form Gibbs Free Energy minimisation calculation
 class compositionGFE:
     def __init__(self, **kwargs):
-        with open(kwargs.get("specFile")) as sf:
+        with open(kwargs.get("compositionFile")) as sf:
             jsonData = json.load(sf)
         
         self.species = {}
-        for key in jsonData["composition"]:
-            self.species[key] = specie(dataFile = jsonData["composition"][key]["dataFile"])
-            self.species[key].name = key
-            self.species[key].x0 = jsonData["composition"][key]["x0"]
+        for spData in jsonData["speciesList"]:
+            sp = specie(dataFile = spData["specie"])
+            self.species[sp.name] = sp
+            self.species[sp.name].x0 = spData["x0"]
         
         self.elements = []
         for key, sp in self.species.items():
@@ -94,19 +101,30 @@ class compositionGFE:
                
         print(self.elements)
 
-        # generate minimal reaction paths
+        # set reference element energies
+        # (free electron reference energy also assumed to be zero)
+        
         for key, sp in self.species.items():
-            self.species[key].products = []
-            if sp.monatomicYN:
-                for key2, sp2 in self,species.items():
-                    if (sp2.stoichimetry == sp.stoichiometry) and (sp2.chargeNumber == sp.chargeNumber + 1):
-                        self.species.products.append[key2]
-            else:
-                #singly-charged diatomic ion
-                if sp.chargeNumber == 1:
-                    
-                
+            if sp.monatomicYN and sp.chargeNumber > 0:
+                for key2, sp2 in self.species.items():
+                    if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
+                        self.species[key].ionisedFrom = key2
+                        print(key, key2)
+                        
+        for key, sp in self.species.items():
+            if sp.chargeNumber == 0:
+                if sp.monatomicYN and sp.chargeNumber == 0:
+                    self.species[key].E0 = 0.
+                if sp.monatomicYN == False:
+                    self.species[key].E0 = -self.species[key].getRxnEnergy()
+            
     def recalcE0i(self):
+        for key, sp in self.species.items():
+            if sp.monatomicYN and sp.chargeNumber == 1:
+                
+                
+                
+            
             
 
                 
