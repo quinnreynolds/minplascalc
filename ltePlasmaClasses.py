@@ -92,7 +92,7 @@ class compositionGFE:
     def __init__(self, **kwargs):
         with open(kwargs.get("compositionFile")) as sf:
             jsonData = json.load(sf)
-        
+                
         self.species = {}
         for spData in jsonData["speciesList"]:
             sp = specie(dataFile = spData["specie"])
@@ -106,9 +106,7 @@ class compositionGFE:
             for skey in sp.stoichiometry:
                 self.elements.append(skey)
         self.elements = list(set(self.elements))
-               
-        print(self.elements)
-
+        
         # set ion source specie
         self.maxChargeNumber = 0
         for key, sp in self.species.items():
@@ -131,27 +129,55 @@ class compositionGFE:
         self.gfeMatrix = np.zeros((
             len(self.species) + len(self.elements) + 1, 
             len(self.species) + len(self.elements) + 1))
+        self.gfeVector = np.zeros(len(self.species) + len(self.elements) + 1)
+
+        self.speciesMultiplierDeltaV = []
+        for key, sp in self.species.items():
+            atomSum = 0
+            for key2, st in sp.stoichiometry.items():
+                atomSum += st
+            self.speciesMultiplierDeltaV.append(atomSum - 1)
+        
+        self.elementFractions = []
+        atomsNT = 0.
+        for j, key in enumerate(self.species):
+            atomsNT += self.species[key].x0 * (self.speciesMultiplierDeltaV[j] + 1)
+        for elm in self.elements:
+            eMF = 0.
+            for key, sp in self.species.items():
+                eMF += self.species[key].x0 * self.species[key].stoichiometry.get(elm, 0.)
+            self.elementFractions.append(eMF / atomsNT)
         
         for i, elm in enumerate(self.elements):
             for j, key in enumerate(self.species):
-                self.gfeMatrix[len(self.species) + i][j] = self.species[key].stoichiometry.get(elm, 0.)
+                self.gfeMatrix[len(self.species) + i][j] = self.species[key].stoichiometry.get(elm, 0.) - self.elementFractions[i] * self.speciesMultiplierDeltaV[j]
                 self.gfeMatrix[j][len(self.species) + i] = self.gfeMatrix[len(self.species) + i][j]
 
         for j, key in enumerate(self.species):
             self.gfeMatrix[-1][j] = self.species[key].chargeNumber
             self.gfeMatrix[j][-1] = self.gfeMatrix[-1][j]
         
-        print(self.gfeMatrix)
+        self.setTP(kwargs.get("T", 10000.), kwargs.get("P", 101325.))
         
-        for i in range(len(self.species)):
-            self.gfeMatrix[i][i] = 1e-20
-        print(np.linalg.inv(self.gfeMatrix))
+
         
+    def setTP(self, newT, newP):
+        self.T = newT
+        self.P = newP
+        self.totalNumberDensity = self.P / (constants.boltzmann * self.T)
+        for i, elm in enumerate(self.elements):
+            self.gfeVector[len(self.species) + i] = self.elementFractions[i] * self.totalNumberDensity
+                
     def recalcE0i(self):
         for cn in range(1, self.maxChargeNumber + 1):
             for key, sp in self.species.items():
                 if sp.chargeNumber == cn:
                     self.species[key].E0 = self.species[sp.ionisedFrom].E0 + self.species[sp.ionisedFrom].ionisationEnergy - self.species[sp.ionisedFrom].deltaIonisationEnergy
 
+    def recalcCoeffts(self, T):
+        for j, key in enumerate(self.species):
+            self.gfeMatrix[j][j] = constants.boltzmann * T / self.species[key].numberDensity
+            self.gfeVector[j] = (np.ln(self.species[key].internalPartitionFunction(T) / self.species[key].numberDensity) + 1.) * constants.boltzmann * T - self.species[key].E0
+            
 ################################################################################
 

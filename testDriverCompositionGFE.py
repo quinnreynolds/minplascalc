@@ -4,7 +4,7 @@
 
 import argparse
 import ltePlasmaClasses as lpc
-
+import numpy as np
 
 parser = argparse.ArgumentParser(
     description = "Test driver for ltePlasmaClasses."
@@ -15,5 +15,7 @@ parserArgs = parser.parse_args()
 
 myComposition = lpc.compositionGFE(compositionFile = "Compositions/OxygenPlasma.json")
 myComposition.recalcE0i()
-for key, value in myComposition.species.items():
-    print(key + " reference energy = " + str(value.E0))
+
+#myComposition.recalcMatrixCoeffts(10000.)
+print(myComposition.gfeMatrix)
+print(myComposition.gfeVector)
