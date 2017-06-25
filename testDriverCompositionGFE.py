@@ -16,3 +16,6 @@ parser.add_argument("-te", help = "Temperature to stop calculating at, K", type 
 parserArgs = parser.parse_args()
 
 myComposition = lpc.compositionGFE(compositionFile = "Compositions/OxygenPlasma.json")
+myComposition.recalcE0i()
+for key, value in myComposition.species.items():
+    print(key + " reference energy = " + str(value.E0))

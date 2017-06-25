@@ -6,9 +6,11 @@
     },
     "molarMass" : 0.0161246523,
     "chargeNumber": 1,
-    "monatomicData": {
+    "monatomicData": 
+    {
         "ionisationEnergy": 283270.9,
-        "energyLevels": [
+        "energyLevels": 
+        [
             {"J": 1.5, "Ei": 0.0},
             {"J": 2.5, "Ei": 26810.55},
             {"J": 1.5, "Ei": 26830.57},
@@ -257,6 +259,23 @@
             {"J": 2.5, "Ei": 278144.62},
             {"J": 0.5, "Ei": 282219.9}
         ]
-    }
+    },
+    "references":
+    [
+        {
+            "title": " NIST Atomic Spectra Database (ver. 5.3), [Online].",
+            "author": "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team",
+            "publication": "National Institute of Standards and Technology, Gaithersburg, MD.",
+            "doi": "NA",
+            "http": "http://physics.nist.gov/asd"
+        },
+        {
+            "title": "Thermal Plasmas: Fundamentals and Applications Volume II",
+            "author": "MI Boulos, P Fauchais, and E Pfender",
+            "publication": "Springer US, 1994",
+            "doi": "10.1007/978-1-4899-1337-1",
+            "http": "NA"
+        }
+    ]
 }
         

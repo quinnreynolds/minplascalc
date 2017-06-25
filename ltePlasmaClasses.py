@@ -50,23 +50,16 @@ class specie:
             # Diatomic-specific specie data
             self.monatomicYN = False
             self.dissociationEnergy = constants.invCmToJ * jsonData["diatomicData"]["dissociationEnergy"]
+            self.ionisationEnergy = constants.invCmToJ * jsonData["diatomicData"]["ionisationEnergy"]
+            self.deltaIonisationEnergy = 0.
             self.sigmaS = jsonData["diatomicData"]["sigmaS"]
             self.g0 = jsonData["diatomicData"]["g0"]
             self.we = constants.invCmToJ * jsonData["diatomicData"]["we"]
             self.Be = constants.invCmToJ * jsonData["diatomicData"]["Be"]
 
-        if self.chargeNumber != 0 and self.monatomicYN == False:
-            print("Warning! Charged diatomic molecules not implemented yet, results will probably be wrong")
-
         if self.chargeNumber < 0:
-            print("Warning! Negatively charged ions not implemented yet, results will probably be wrong")
-    
-    def getRxnEnergy(self):
-        if self.monatomicYN:
-            return self.ionisationEnergy - self.deltaIonisationEnergy
-        else:
-            return self.dissociationEnergy
-        
+            raise ValueError("Error! Negatively charged ions not implemented yet.")
+            
     def internalPartitionFunction(self, T):
         if self.monatomicYN:
             partitionVal = 0.
@@ -81,7 +74,7 @@ class specie:
             return electronicPartition * vibrationalPartition * rotationalPartition
 
 
-# Composition class form Gibbs Free Energy minimisation calculation
+# Composition class for Gibbs Free Energy minimisation calculation
 class compositionGFE:
     def __init__(self, **kwargs):
         with open(kwargs.get("compositionFile")) as sf:
@@ -102,32 +95,29 @@ class compositionGFE:
         print(self.elements)
 
         # set reference element energies
-        # (free electron reference energy also assumed to be zero)
+        # (free electron reference energy assumed to be zero)
         
+        self.maxChargeNumber = 0
         for key, sp in self.species.items():
-            if sp.monatomicYN and sp.chargeNumber > 0:
+            if sp.chargeNumber > self.maxChargeNumber:
+                self.maxChargeNumber = sp.chargeNumber
+            if sp.chargeNumber > 0:
                 for key2, sp2 in self.species.items():
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
                         self.species[key].ionisedFrom = key2
-                        print(key, key2)
                         
         for key, sp in self.species.items():
             if sp.chargeNumber == 0:
-                if sp.monatomicYN and sp.chargeNumber == 0:
+                if sp.monatomicYN:
                     self.species[key].E0 = 0.
-                if sp.monatomicYN == False:
-                    self.species[key].E0 = -self.species[key].getRxnEnergy()
+                else:
+                    self.species[key].E0 = -self.species[key].dissociationEnergy
             
     def recalcE0i(self):
-        for key, sp in self.species.items():
-            if sp.monatomicYN and sp.chargeNumber == 1:
-                
-                
-                
-            
-            
-
-                
-        
+        for cn in range(1, self.maxChargeNumber + 1):
+            for key, sp in self.species.items():
+                if sp.chargeNumber == cn:
+                    self.species[key].E0 = self.species[sp.ionisedFrom].E0 + self.species[sp.ionisedFrom].ionisationEnergy - self.species[sp.ionisedFrom].deltaIonisationEnergy
+                    
 ################################################################################
 

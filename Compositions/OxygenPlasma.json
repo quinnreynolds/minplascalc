@@ -3,6 +3,7 @@
     "speciesList": 
     [
         { "specie": "NistData/O2.json", "x0": 1 },
+        { "specie": "NistData/O2+.json", "x0": 0 },
         { "specie": "NistData/O.json", "x0": 0 },
         { "specie": "NistData/O+.json", "x0": 0 },
         { "specie": "NistData/O++.json", "x0": 0 }
