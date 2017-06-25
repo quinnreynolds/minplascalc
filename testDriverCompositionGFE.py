@@ -3,8 +3,6 @@
 # Q Reynolds 2017
 
 import argparse
-import numpy as np
-from matplotlib import pyplot
 import ltePlasmaClasses as lpc
 
 

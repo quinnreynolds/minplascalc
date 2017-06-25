@@ -6,6 +6,7 @@
 
 import math
 import json
+import numpy as np
 
 ################################################################################
 
@@ -74,6 +75,18 @@ class specie:
             return electronicPartition * vibrationalPartition * rotationalPartition
 
 
+class electronSpecie:
+    def __init__(self, **kwargs):
+        self.name = "e"
+        self.stoichiometry = {}
+        self.molarMass = constants.electronMass * constants.avogadro
+        self.chargeNumber = -1
+        self.numberDensity = kwargs.get("numberDensity", 0.)
+        
+    def internalPartitionFunction(self, T):
+        return 2.
+
+
 # Composition class for Gibbs Free Energy minimisation calculation
 class compositionGFE:
     def __init__(self, **kwargs):
@@ -84,7 +97,9 @@ class compositionGFE:
         for spData in jsonData["speciesList"]:
             sp = specie(dataFile = spData["specie"])
             self.species[sp.name] = sp
-            self.species[sp.name].x0 = spData["x0"]
+            self.species[sp.name].x0 = spData["x0"]        
+        self.species["e"] = electronSpecie()
+        self.species["e"].x0 = 0.
         
         self.elements = []
         for key, sp in self.species.items():
@@ -94,9 +109,7 @@ class compositionGFE:
                
         print(self.elements)
 
-        # set reference element energies
-        # (free electron reference energy assumed to be zero)
-        
+        # set ion source specie
         self.maxChargeNumber = 0
         for key, sp in self.species.items():
             if sp.chargeNumber > self.maxChargeNumber:
@@ -105,19 +118,40 @@ class compositionGFE:
                 for key2, sp2 in self.species.items():
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
                         self.species[key].ionisedFrom = key2
-                        
+        
+        # set specie reference energies
         for key, sp in self.species.items():
             if sp.chargeNumber == 0:
                 if sp.monatomicYN:
                     self.species[key].E0 = 0.
                 else:
                     self.species[key].E0 = -self.species[key].dissociationEnergy
-            
+        self.species["e"].E0 = 0.
+        
+        self.gfeMatrix = np.zeros((
+            len(self.species) + len(self.elements) + 1, 
+            len(self.species) + len(self.elements) + 1))
+        
+        for i, elm in enumerate(self.elements):
+            for j, key in enumerate(self.species):
+                self.gfeMatrix[len(self.species) + i][j] = self.species[key].stoichiometry.get(elm, 0.)
+                self.gfeMatrix[j][len(self.species) + i] = self.gfeMatrix[len(self.species) + i][j]
+
+        for j, key in enumerate(self.species):
+            self.gfeMatrix[-1][j] = self.species[key].chargeNumber
+            self.gfeMatrix[j][-1] = self.gfeMatrix[-1][j]
+        
+        print(self.gfeMatrix)
+        
+        for i in range(len(self.species)):
+            self.gfeMatrix[i][i] = 1e-20
+        print(np.linalg.inv(self.gfeMatrix))
+        
     def recalcE0i(self):
         for cn in range(1, self.maxChargeNumber + 1):
             for key, sp in self.species.items():
                 if sp.chargeNumber == cn:
                     self.species[key].E0 = self.species[sp.ionisedFrom].E0 + self.species[sp.ionisedFrom].ionisationEnergy - self.species[sp.ionisedFrom].deltaIonisationEnergy
-                    
+
 ################################################################################
 
