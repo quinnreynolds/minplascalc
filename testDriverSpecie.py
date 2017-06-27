@@ -12,16 +12,13 @@ parser = argparse.ArgumentParser(
     description = "Test driver for ltePlasmaClasses."
     )
 parser.add_argument("-ts", help = "Temperature to start calculating at, K", type = float, default = 1000.)
-parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 35000.)
+parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
 parserArgs = parser.parse_args()
 
-myOxygenMolecule = lpc.specie(dataFile = "NistData/OO.json")
-myOxygenAtom = lpc.specie(dataFile = "NistData/OI.json")
-myOxygenPlus = lpc.specie(dataFile = "NistData/OII.json")
-myOxygenPlusPlus = lpc.specie(dataFile = "NistData/OIII.json")
-
-print(myOxygenPlus.stoichiometry.get("O", 0))
-print(myOxygenPlus.stoichiometry.get("Si", 0))
+myOxygenMolecule = lpc.specie(dataFile = "NistData/O2.json")
+myOxygenAtom = lpc.specie(dataFile = "NistData/O.json")
+myOxygenPlus = lpc.specie(dataFile = "NistData/O+.json")
+myOxygenPlusPlus = lpc.specie(dataFile = "NistData/O++.json")
 
 Temps = np.linspace(parserArgs.ts, parserArgs.te, 1000)
 pFuncOO = []

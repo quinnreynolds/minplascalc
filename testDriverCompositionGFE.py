@@ -4,7 +4,6 @@
 
 import argparse
 import ltePlasmaClasses as lpc
-import numpy as np
 
 parser = argparse.ArgumentParser(
     description = "Test driver for ltePlasmaClasses."
@@ -13,9 +12,18 @@ parser.add_argument("-ts", help = "Temperature to start calculating at, K", type
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
 parserArgs = parser.parse_args()
 
-myComposition = lpc.compositionGFE(compositionFile = "Compositions/OxygenPlasma.json")
+myComposition = lpc.compositionGFE(
+    compositionFile = "Compositions/OxygenPlasma4sp.json",
+    T = 5000.,
+    P = 101325.)
+    
 myComposition.recalcE0i()
 
-#myComposition.recalcMatrixCoeffts(10000.)
+for niter in range(50):
+    myComposition.solveGFE()
+
 print(myComposition.gfeMatrix)
 print(myComposition.gfeVector)
+
+for key, sp in myComposition.species.items():
+    print(key, sp.numberDensity)

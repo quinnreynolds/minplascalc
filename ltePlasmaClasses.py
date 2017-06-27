@@ -4,7 +4,6 @@
 #
 # Q Reynolds 2016-2017
 
-import math
 import json
 import numpy as np
 
@@ -66,15 +65,18 @@ class specie:
             partitionVal = 0.
             for eLevel in self.energyLevels:
                 if eLevel[1] < (self.ionisationEnergy - self.deltaIonisationEnergy):
-                    partitionVal += eLevel[0] * math.exp(-eLevel[1] / (constants.boltzmann * T))                    
+                    partitionVal += eLevel[0] * np.exp(-eLevel[1] / (constants.boltzmann * T))                    
             return partitionVal
         else:
             electronicPartition = self.g0
-            vibrationalPartition = 1. / (1. - math.exp(-self.we / (constants.boltzmann * T)))
+            vibrationalPartition = 1. / (1. - np.exp(-self.we / (constants.boltzmann * T)))
             rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)            
             return electronicPartition * vibrationalPartition * rotationalPartition
 
-
+    def totalPartitionFunction(self, T):
+        translationalPartition = (2 * np.pi * self.molarMass * constants.boltzmann * T / (constants.avogadro * constants.planck ** 2)) ** (1.5)
+        return translationalPartition * self.internalPartitionFunction(T)
+        
 class electronSpecie:
     def __init__(self, **kwargs):
         self.name = "e"
@@ -86,6 +88,9 @@ class electronSpecie:
     def internalPartitionFunction(self, T):
         return 2.
 
+    def totalPartitionFunction(self, T):
+        translationalPartition = (2 * np.pi * self.molarMass * constants.boltzmann * T / (constants.avogadro * constants.planck ** 2)) ** (1.5)
+        return translationalPartition * self.internalPartitionFunction(T)
 
 # Composition class for Gibbs Free Energy minimisation calculation
 class compositionGFE:
@@ -126,6 +131,7 @@ class compositionGFE:
                     self.species[key].E0 = -self.species[key].dissociationEnergy
         self.species["e"].E0 = 0.
         
+        # set up A matrix and b vector for GFE minimiser
         self.gfeMatrix = np.zeros((
             len(self.species) + len(self.elements) + 1, 
             len(self.species) + len(self.elements) + 1))
@@ -159,7 +165,7 @@ class compositionGFE:
         
         self.setTP(kwargs.get("T", 10000.), kwargs.get("P", 101325.))
         
-
+        self.setInitialGuess()
         
     def setTP(self, newT, newP):
         self.T = newT
@@ -168,16 +174,37 @@ class compositionGFE:
         for i, elm in enumerate(self.elements):
             self.gfeVector[len(self.species) + i] = self.elementFractions[i] * self.totalNumberDensity
                 
+    def setInitialGuess(self):
+        neMultiplier = 0
+        for key, sp in self.species.items():
+            if key != "e":            
+                neMultiplier += sp.chargeNumber
+        nsp = len(self.species) - 1
+        niInitial = self.totalNumberDensity / (neMultiplier + nsp)
+        for key, sp in self.species.items():
+            sp.numberDensity = niInitial
+        self.species["e"].numberDensity = neMultiplier * niInitial
+        
     def recalcE0i(self):
+        #recalculation of deltaIonisationEnergy's here
         for cn in range(1, self.maxChargeNumber + 1):
             for key, sp in self.species.items():
                 if sp.chargeNumber == cn:
                     self.species[key].E0 = self.species[sp.ionisedFrom].E0 + self.species[sp.ionisedFrom].ionisationEnergy - self.species[sp.ionisedFrom].deltaIonisationEnergy
 
-    def recalcCoeffts(self, T):
+    def recalcCoeffts(self):
         for j, key in enumerate(self.species):
-            self.gfeMatrix[j][j] = constants.boltzmann * T / self.species[key].numberDensity
-            self.gfeVector[j] = (np.ln(self.species[key].internalPartitionFunction(T) / self.species[key].numberDensity) + 1.) * constants.boltzmann * T - self.species[key].E0
-            
+            self.gfeMatrix[j][j] = constants.boltzmann * self.T / self.species[key].numberDensity
+            self.gfeVector[j] = (np.log(self.species[key].totalPartitionFunction(self.T) / self.species[key].numberDensity) + 1.) * constants.boltzmann * self.T - self.species[key].E0
+    
+    def solveGFE(self):
+        self.recalcE0i()
+        self.recalcCoeffts()
+        ni = np.linalg.solve(self.gfeMatrix, self.gfeVector)
+        for j, key in enumerate(self.species):
+            if ni[j] < 0:
+                ni[j] = 1e8
+            self.species[key].numberDensity = ni[j]
+        
 ################################################################################
 
