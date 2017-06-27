@@ -86,6 +86,13 @@ class electronSpecie:
         return 2.
 
 
+class element:
+    def __init__(self, **kwargs):
+        self.name = kwargs.get("name", "")
+        self.stoichiometricCoeffts = np.array(kwargs.get("stoichiometricCoeffts", []))
+        self.totalNumber = kwargs.get("totalNumber", 0.)
+    
+    
 # Composition class for Gibbs Free Energy minimisation calculation
 class compositionGFE:
     def __init__(self, **kwargs):
@@ -100,11 +107,14 @@ class compositionGFE:
         self.species["e"] = electronSpecie()
         self.species["e"].x0 = 0.
         
-        self.elements = []
+        self.elements = {}
+        elmList = []
         for key, sp in self.species.items():
             for skey in sp.stoichiometry:
-                self.elements.append(skey)
-        self.elements = list(set(self.elements))
+                elmList.append(skey)
+        elmList = list(set(elmList))
+        for elm in elmList:
+            self.elements[elm] = element(name = elm)
         
         # set ion source specie
         self.maxChargeNumber = 0
@@ -125,80 +135,56 @@ class compositionGFE:
                     self.species[key].E0 = -self.species[key].dissociationEnergy
         self.species["e"].E0 = 0.
         
-        # set up A matrix and b vector for GFE minimiser
-        self.gfeMatrix = np.zeros((
-            len(self.species) + len(self.elements) + 1, 
-            len(self.species) + len(self.elements) + 1))
-        self.gfeVector = np.zeros(len(self.species) + len(self.elements) + 1)
-
-        self.speciesMultiplierDeltaV = []
-        for key, sp in self.species.items():
-            atomSum = 0
-            for key2, st in sp.stoichiometry.items():
-                atomSum += st
-            self.speciesMultiplierDeltaV.append(atomSum - 1)
-        
-        self.elementFractions = []
-        atomsNT = 0.
-        for j, key in enumerate(self.species):
-            atomsNT += self.species[key].x0 * (self.speciesMultiplierDeltaV[j] + 1)
-        for elm in self.elements:
-            eMF = 0.
-            for key, sp in self.species.items():
-                eMF += self.species[key].x0 * self.species[key].stoichiometry.get(elm, 0.)
-            self.elementFractions.append(eMF / atomsNT)
-        
+        # set stoichiometry and charge coefficient arrays for constraints
         for i, elm in enumerate(self.elements):
             for j, key in enumerate(self.species):
-                self.gfeMatrix[len(self.species) + i][j] = self.species[key].stoichiometry.get(elm, 0.) - self.elementFractions[i] * self.speciesMultiplierDeltaV[j]
-                self.gfeMatrix[j][len(self.species) + i] = self.gfeMatrix[len(self.species) + i][j]
-
+                self.elements[elm].stoichiometricCoeffts = np.append(self.elements[elm].stoichiometricCoeffts, self.species[key].stoichiometry.get(elm, 0.))
+        
+        self.chargeCoeffts = np.array([])
+        for key, sp in self.species.items():
+            self.chargeCoeffts = np.append(self.chargeCoeffts, sp.chargeNumber)
+        
+        #set element totals from initial conditions for constraints
+        self.T = kwargs.get("T", 10000.)
+        self.P = kwargs.get("P", 101325.)
+        nT0 = self.P / (constants.boltzmann * self.T)
+        for keyElm, elm in self.elements.items():
+            elm.totalNumber = 0
+            for j, key in enumerate(self.species):
+                elm.totalNumber += nT0 * elm.stoichiometricCoeffts[j] * self.species[key].x0
+        
+    def minFunctionGFE(self, ni):
+        nT = sum(ni)
+        V = nT * constants.boltzmann * self.T / self.P
+        gibbsFreeEnergy = 0.
         for j, key in enumerate(self.species):
-            self.gfeMatrix[-1][j] = self.species[key].chargeNumber
-            self.gfeMatrix[j][-1] = self.gfeMatrix[-1][j]
+            translationalPartition = V * ((2 * np.pi * self.species[key].molarMass * constants.boltzmann * self.T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
+            totalPartition = translationalPartition * self.species[key].internalPartitionFunction()
+            gibbsFreeEnergy += ni[j] * (-constants.boltzmann * self.T * np.log(totalPartition / ni[j]) + self.species[key].E0)
+        return gibbsFreeEnergy
         
-        self.setTP(kwargs.get("T", 10000.), kwargs.get("P", 101325.))
-        
-        self.setInitialGuess()
-        
-    def setTP(self, newT, newP):
-        self.T = newT
-        self.P = newP
-        self.totalNumberDensity = self.P / (constants.boltzmann * self.T)
-        for i, elm in enumerate(self.elements):
-            self.gfeVector[len(self.species) + i] = self.elementFractions[i] * self.totalNumberDensity
-                
-    def setInitialGuess(self):
-        neMultiplier = 0
-        for key, sp in self.species.items():
-            if key != "e":            
-                neMultiplier += sp.chargeNumber
-        nsp = len(self.species) - 1
-        niInitial = self.totalNumberDensity / (neMultiplier + nsp)
-        for key, sp in self.species.items():
-            sp.numberDensity = niInitial
-        self.species["e"].numberDensity = neMultiplier * niInitial
+    def minFunctionConstraint(self, ni, vi, RHS):
+        conVal = 0
+        for j in len(ni):
+            conVal += vi[j] * ni[j]
+        return conVal - RHS
+                            
+#    def setInitialGuess(self):
+#        neMultiplier = 0
+#        for key, sp in self.species.items():
+#            if key != "e":            
+#                neMultiplier += sp.chargeNumber
+#        nsp = len(self.species) - 1
+#        niInitial = self.totalNumberDensity / (neMultiplier + nsp)
+#        for key, sp in self.species.items():
+#            sp.numberDensity = niInitial
+#        self.species["e"].numberDensity = neMultiplier * niInitial
         
     def recalcE0i(self):
-        #recalculation of deltaIonisationEnergy's here
+        # TODO recalculation of deltaIonisationEnergies here...
         for cn in range(1, self.maxChargeNumber + 1):
             for key, sp in self.species.items():
                 if sp.chargeNumber == cn:
                     self.species[key].E0 = self.species[sp.ionisedFrom].E0 + self.species[sp.ionisedFrom].ionisationEnergy - self.species[sp.ionisedFrom].deltaIonisationEnergy
-
-    def recalcCoeffts(self):
-        for j, key in enumerate(self.species):
-            self.gfeMatrix[j][j] = constants.boltzmann * self.T / self.species[key].numberDensity
-            self.gfeVector[j] = (np.log(self.species[key].totalPartitionFunction(self.T) / self.species[key].numberDensity) + 1.) * constants.boltzmann * self.T - self.species[key].E0
-    
-    def solveGFE(self):
-        self.recalcE0i()
-        self.recalcCoeffts()
-        ni = np.linalg.solve(self.gfeMatrix, self.gfeVector)
-        for j, key in enumerate(self.species):
-            if ni[j] < 0:
-                ni[j] = 1e8
-            self.species[key].numberDensity = ni[j]
-        
 ################################################################################
 

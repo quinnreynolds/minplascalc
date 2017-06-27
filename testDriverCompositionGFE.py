@@ -14,16 +14,12 @@ parserArgs = parser.parse_args()
 
 myComposition = lpc.compositionGFE(
     compositionFile = "Compositions/OxygenPlasma4sp.json",
-    T = 5000.,
+    T = 10000.,
     P = 101325.)
     
-myComposition.recalcE0i()
-
-for niter in range(50):
-    myComposition.solveGFE()
-
-print(myComposition.gfeMatrix)
-print(myComposition.gfeVector)
-
 for key, sp in myComposition.species.items():
     print(key, sp.numberDensity)
+
+for key, elm in myComposition.elements.items():
+    print(elm.stoichiometricCoeffts, elm.totalNumber)
+    
