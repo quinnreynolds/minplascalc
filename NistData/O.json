@@ -247,6 +247,9 @@
             {"J": 1.0, "Ei": 109713.7}
         ]
     },
+    
+    "energyUnit": "1/cm",
+    "molarMassUnit": "kg/mol",
     "references":
     [
         {

@@ -15,6 +15,9 @@
         "we": 1904.7,
         "Be": 1.6913
     },
+    
+    "energyUnit": "1/cm",
+    "molarMassUnit": "kg/mol",
     "references": 
     [
         {
