@@ -73,9 +73,6 @@ class specie:
             rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)            
             return electronicPartition * vibrationalPartition * rotationalPartition
 
-    def totalPartitionFunction(self, T):
-        translationalPartition = (2 * np.pi * self.molarMass * constants.boltzmann * T / (constants.avogadro * constants.planck ** 2)) ** (1.5)
-        return translationalPartition * self.internalPartitionFunction(T)
         
 class electronSpecie:
     def __init__(self, **kwargs):
@@ -88,9 +85,6 @@ class electronSpecie:
     def internalPartitionFunction(self, T):
         return 2.
 
-    def totalPartitionFunction(self, T):
-        translationalPartition = (2 * np.pi * self.molarMass * constants.boltzmann * T / (constants.avogadro * constants.planck ** 2)) ** (1.5)
-        return translationalPartition * self.internalPartitionFunction(T)
 
 # Composition class for Gibbs Free Energy minimisation calculation
 class compositionGFE:
