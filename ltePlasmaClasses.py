@@ -6,6 +6,7 @@
 
 import json
 import numpy as np
+from scipy.optimize import minimize
 
 ################################################################################
 
@@ -126,7 +127,7 @@ class compositionGFE:
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
                         self.species[key].ionisedFrom = key2
         
-        # set specie reference energies
+        # set reference specie energies
         for key, sp in self.species.items():
             if sp.chargeNumber == 0:
                 if sp.monatomicYN:
@@ -134,15 +135,17 @@ class compositionGFE:
                 else:
                     self.species[key].E0 = -self.species[key].dissociationEnergy
         self.species["e"].E0 = 0.
+        self.recalcE0i()
         
         # set stoichiometry and charge coefficient arrays for constraints
         for i, elm in enumerate(self.elements):
+            self.elements[elm].stoichiometricCoeffts = np.zeros(len(self.species))
             for j, key in enumerate(self.species):
-                self.elements[elm].stoichiometricCoeffts = np.append(self.elements[elm].stoichiometricCoeffts, self.species[key].stoichiometry.get(elm, 0.))
+                self.elements[elm].stoichiometricCoeffts[j] = self.species[key].stoichiometry.get(elm, 0.)
         
-        self.chargeCoeffts = np.array([])
-        for key, sp in self.species.items():
-            self.chargeCoeffts = np.append(self.chargeCoeffts, sp.chargeNumber)
+        self.chargeCoeffts = np.zeros(len(self.species))
+        for j, key in enumerate(self.species):
+            self.chargeCoeffts[j] = self.species[key].chargeNumber
         
         #set element totals from initial conditions for constraints
         self.T = kwargs.get("T", 10000.)
@@ -152,39 +155,43 @@ class compositionGFE:
             elm.totalNumber = 0
             for j, key in enumerate(self.species):
                 elm.totalNumber += nT0 * elm.stoichiometricCoeffts[j] * self.species[key].x0
+
+        # set up constraints and bounds for optimiser
+        self.constraints = []
+        for i, elm in enumerate(self.elements):
+            self.constraints.append({})
+            self.constraints[-1]["type"] = "eq"
+            self.constraints[-1]["fun"] = lambda x: np.dot(x, self.elements[elm].stoichiometricCoeffts) - self.elements[elm].totalNumber
+        self.constraints.append({})
+        self.constraints[-1]["type"] = "eq"
+        self.constraints[-1]["fun"] = lambda x: np.dot(x, self.chargeCoeffts)
+        self.constraints = tuple(self.constraints)
         
-    def minFunctionGFE(self, ni):
-        nT = sum(ni)
-        V = nT * constants.boltzmann * self.T / self.P
-        gibbsFreeEnergy = 0.
+        self.bounds = []
         for j, key in enumerate(self.species):
-            translationalPartition = V * ((2 * np.pi * self.species[key].molarMass * constants.boltzmann * self.T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
-            totalPartition = translationalPartition * self.species[key].internalPartitionFunction()
-            gibbsFreeEnergy += ni[j] * (-constants.boltzmann * self.T * np.log(totalPartition / ni[j]) + self.species[key].E0)
-        return gibbsFreeEnergy
-        
-    def minFunctionConstraint(self, ni, vi, RHS):
-        conVal = 0
-        for j in len(ni):
-            conVal += vi[j] * ni[j]
-        return conVal - RHS
-                            
-#    def setInitialGuess(self):
-#        neMultiplier = 0
-#        for key, sp in self.species.items():
-#            if key != "e":            
-#                neMultiplier += sp.chargeNumber
-#        nsp = len(self.species) - 1
-#        niInitial = self.totalNumberDensity / (neMultiplier + nsp)
-#        for key, sp in self.species.items():
-#            sp.numberDensity = niInitial
-#        self.species["e"].numberDensity = neMultiplier * niInitial
-        
+            self.bounds.append((0., None))
+        self.bounds = tuple(self.bounds)
+                
     def recalcE0i(self):
         # TODO recalculation of deltaIonisationEnergies here...
         for cn in range(1, self.maxChargeNumber + 1):
             for key, sp in self.species.items():
                 if sp.chargeNumber == cn:
                     self.species[key].E0 = self.species[sp.ionisedFrom].E0 + self.species[sp.ionisedFrom].ionisationEnergy - self.species[sp.ionisedFrom].deltaIonisationEnergy
+        
+    def minFunctionGFE(self, ni):
+        V = ni.sum() * constants.boltzmann * self.T / self.P
+        gibbsFreeEnergy = 0.
+        for j, key in enumerate(self.species):
+            translationalPartition = V * ((2 * np.pi * self.species[key].molarMass * constants.boltzmann * self.T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
+            totalPartition = translationalPartition * self.species[key].internalPartitionFunction(self.T)
+            gibbsFreeEnergy += ni[j] * (-constants.boltzmann * self.T * np.log(totalPartition / ni[j]) + self.species[key].E0)
+        return gibbsFreeEnergy
+                
+    def calculateGFE(self):
+        self.recalcE0i()
+        ni = np.full(len(self.species), 1e23)
+        res = minimize(self.minFunctionGFE, ni, bounds = self.bounds, constraints = self.constraints)
+        print(res)
 ################################################################################
 

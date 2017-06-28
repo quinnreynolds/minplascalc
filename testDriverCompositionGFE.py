@@ -3,6 +3,7 @@
 # Q Reynolds 2017
 
 import argparse
+import numpy as np
 import ltePlasmaClasses as lpc
 
 parser = argparse.ArgumentParser(
@@ -13,7 +14,7 @@ parser.add_argument("-te", help = "Temperature to stop calculating at, K", type 
 parserArgs = parser.parse_args()
 
 myComposition = lpc.compositionGFE(
-    compositionFile = "Compositions/OxygenPlasma4sp.json",
+    compositionFile = "Compositions/OxygenPlasma3sp.json",
     T = 10000.,
     P = 101325.)
     
@@ -22,4 +23,6 @@ for key, sp in myComposition.species.items():
 
 for key, elm in myComposition.elements.items():
     print(elm.stoichiometricCoeffts, elm.totalNumber)
-    
+print(myComposition.chargeCoeffts, 0.)
+
+myComposition.calculateGFE()
