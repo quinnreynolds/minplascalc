@@ -24,5 +24,5 @@ A simple set of tools for doing calculations of thermal plasma compositions rele
 
 * Admin, General Science Officer: quinnr@mintek.co.za
 * Support, Chief Caffeine Officer: markuse@mintek.co.za
-* Python, Unit Testing, Code, Awesomeness: carl.sandrock@gmail.com
+* Python, Unit Testing, Code, Beer: carl.sandrock@gmail.com
 * Plasma Radiation Calculations, All Round Smart Person: benbowman4@gmail.com
