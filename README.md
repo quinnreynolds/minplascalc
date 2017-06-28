@@ -4,25 +4,24 @@ A simple set of tools for doing calculations of thermal plasma compositions rele
 
 ### What is this repository for? ###
 
-* You're here because you want to calculate LTE plasma compositions, thermodynamics, and physical and radiative properties. One day this tool might be able to do all that :-), but for now you can scrape NIST data from their webpages, convert it to a pretty format, and run plasma composition calculations using it.
+* You're here because you want to calculate LTE plasma compositions, thermodynamics, and physical and radiative properties. Some day this tool might be able to do all that, but for now you can use scraped content from the very epic NIST internet databases, convert it to a pretty format, and run plasma composition calculations using it.
 * Version 0.x alpha
 
 ### How do I get set up? ###
 
-* Getting started: Clone into the repo. You'll get the module (ltePlasmaClasses.py) and some test drivers.
+* Getting started: Clone into the repo. You'll get the module (MinPlasCalc.py) and some test drivers.
 * Configuration: It is pitch black. You are likely to be eaten by a grue.
 * Dependencies: You will need an implementation of Python 3 (duh), and relatively recent versions of numpy and scipy.
-* How to run tests: TBA
+* How to run tests: It is pitch black. You are likely to be eaten by a grue.
 
 ### Contribution guidelines ###
 
-* Writing tests: TBA
-* Code review: TBA
-* Other guidelines: TBA
+* Writing tests: It is pitch black. You are likely to be eaten by a grue.
+* Code review: It is pitch black. You are likely to be eaten by a grue.
+* Other guidelines: It is pitch black. You are likely to be eaten by a grue.
 
 ### Who do I talk to? ###
 
 * Admin, General Science Officer: quinnr@mintek.co.za
 * Support, Chief Caffeine Officer: markuse@mintek.co.za
-* Python, Unit Testing, Code, Beer: carl.sandrock@gmail.com
-* Plasma Radiation Calculations, All Round Smart Person: benbowman4@gmail.com
+* Python, Unit Testing, Chief Beer Officer: carl.sandrock@gmail.com
