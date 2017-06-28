@@ -4,33 +4,22 @@
 
 import argparse
 import numpy as np
-from matplotlib import pyplot
-import ltePlasmaClasses as lpc
+import MinPlasCalc as mpc
 
-
-parser = argparse.ArgumentParser(
-    description = "Test driver for ltePlasmaClasses."
-    )
+parser = argparse.ArgumentParser(description = "Test driver for MinPlasCalc - simple oxygen plasma composition calculation.")
 parser.add_argument("-ts", help = "Temperature to start calculating at, K", type = float, default = 5000.)
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
+parser.add_argument("-p", help = "Pressure to calculate at, Pa", type = float, default = 101325.)
 parserArgs = parser.parse_args()
 
-myComposition = lpc.slagComposition(
-    speciesDictionary = { "O": [2, 1.] },
-    energyLevelFilePath = "NistData/LevelDataParsed/"
-    )
+myComposition = mpc.compositionGFE(
+    compositionFile = "Compositions/OxygenPlasma5sp.json",
+    T = parserArgs.ts,
+    P = parserArgs.p)
 
-Temps = np.linspace(parserArgs.ts, parserArgs.te, 1000)
-ratio01 = []
-ratio12 = []
-for Temp in Temps:
-    myComposition.elementGroups[0].recalcSahaTerms(Temp)
-    ratio01.append(myComposition.elementGroups[0].sahaTerms[0])
-    ratio12.append(myComposition.elementGroups[0].sahaTerms[1])
-    
-fig, ax1 = pyplot.subplots()
+myComposition.initialiseNi([1e23 for i in range(len(myComposition.species))])
 
-ax1.plot(Temps, ratio01, "b")
-ax1.semilogy(Temps, ratio12, "g--")
+myComposition.solveGfe()
 
-pyplot.show()
+for spKey, sp in myComposition.species.items():
+    print(sp.name, sp.numberDensity)
