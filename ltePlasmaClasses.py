@@ -60,6 +60,9 @@ class specie:
 
         if self.chargeNumber < 0:
             raise ValueError("Error! Negatively charged ions not implemented yet.")
+
+    def translationalPartitionFunction(self, T):
+        return ((2 * np.pi * self.molarMass * constants.boltzmann * T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
             
     def internalPartitionFunction(self, T):
         if self.monatomicYN:
@@ -83,6 +86,9 @@ class electronSpecie:
         self.chargeNumber = -1
         self.numberDensity = kwargs.get("numberDensity", 0.)
         
+    def translationalPartitionFunction(self, T):
+        return ((2 * np.pi * self.molarMass * constants.boltzmann * T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
+
     def internalPartitionFunction(self, T):
         return 2.
 
@@ -169,7 +175,7 @@ class compositionGFE:
         
         self.bounds = []
         for j, key in enumerate(self.species):
-            self.bounds.append((0., None))
+            self.bounds.append((0., 1e24))
         self.bounds = tuple(self.bounds)
                 
     def recalcE0i(self):
@@ -178,20 +184,19 @@ class compositionGFE:
             for key, sp in self.species.items():
                 if sp.chargeNumber == cn:
                     self.species[key].E0 = self.species[sp.ionisedFrom].E0 + self.species[sp.ionisedFrom].ionisationEnergy - self.species[sp.ionisedFrom].deltaIonisationEnergy
-        
-    def minFunctionGFE(self, ni):
-        V = ni.sum() * constants.boltzmann * self.T / self.P
-        gibbsFreeEnergy = 0.
-        for j, key in enumerate(self.species):
-            translationalPartition = V * ((2 * np.pi * self.species[key].molarMass * constants.boltzmann * self.T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
-            totalPartition = translationalPartition * self.species[key].internalPartitionFunction(self.T)
-            gibbsFreeEnergy += ni[j] * (-constants.boltzmann * self.T * np.log(totalPartition / ni[j]) + self.species[key].E0)
-        return gibbsFreeEnergy
-                
+
     def calculateGFE(self):
         self.recalcE0i()
-        ni = np.full(len(self.species), 1e23)
-        res = minimize(self.minFunctionGFE, ni, bounds = self.bounds, constraints = self.constraints)
+        x = np.full(len(self.species), 1e23)
+            
+        res = minimize(
+            self.minFunctionGFE, 
+            x, 
+            method = "SLSQP", 
+            jac = self.jacFunctionGFE, 
+            bounds = self.bounds, 
+            constraints = self.constraints)
+
         print(res)
 ################################################################################
 
