@@ -1,5 +1,5 @@
 {
-    "name": "Oxygen Plasma Test, no diatomics",
+    "name": "Oxygen Plasma Test, with uncharged diatomic species",
     "speciesList": 
     [
         { "specie": "NistData/O2.json", "x0": 0 },
