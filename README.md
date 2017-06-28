@@ -1,10 +1,10 @@
 # README #
 
-A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems in Python 3.
+A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3.
 
 ### What is this repository for? ###
 
-* You're here because you want to calculate LTE plasma compositions, thermodynamics, and physical and radiative properties. One day you might be able to do all that here :-), but for now you can scrape NIST data from their webpages using our conversion tools and run plasma composition calculations using it.
+* You're here because you want to calculate LTE plasma compositions, thermodynamics, and physical and radiative properties. One day this tool might be able to do all that :-), but for now you can scrape NIST data from their webpages, convert it to a pretty format, and run plasma composition calculations using it.
 * Version 0.x alpha
 
 ### How do I get set up? ###
