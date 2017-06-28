@@ -11,18 +11,17 @@ parser = argparse.ArgumentParser(
     )
 parser.add_argument("-ts", help = "Temperature to start calculating at, K", type = float, default = 5000.)
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
+parser.add_argument("-p", help = "Pressure to calculate at, Pa", type = float, default = 101325.)
 parserArgs = parser.parse_args()
 
 myComposition = lpc.compositionGFE(
-    compositionFile = "Compositions/OxygenPlasma3sp.json",
-    T = 10000.,
-    P = 101325.)
-    
-for key, sp in myComposition.species.items():
-    print(key, sp.numberDensity)
+    compositionFile = "Compositions/OxygenPlasma5sp.json",
+    T = parserArgs.ts,
+    P = parserArgs.p)
 
-for key, elm in myComposition.elements.items():
-    print(elm.stoichiometricCoeffts, elm.totalNumber)
-print(myComposition.chargeCoeffts, 0.)
+myComposition.initialiseNi([1e23 for i in range(len(myComposition.species))])
 
-myComposition.calculateGFE()
+myComposition.solveGfe()
+
+for spKey, sp in myComposition.species.items():
+    print(sp.name, sp.numberDensity)
