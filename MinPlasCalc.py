@@ -225,11 +225,10 @@ class compositionGFE:
             for j2, spKey2 in enumerate(self.species):
                 self.gfeVector[j] += offDiagonal * self.ni[j2]
             
-    def solveGfe(self):
-        governorFactor = 0.75
-        relativeTolerance = 1e-10
-        thresholdNi = 1.
-        maxIters = 10000
+    def solveGfe(self, **kwargs):
+        governorFactor = kwargs.get("governorFactor", 0.5)
+        relativeTolerance = kwargs.get("relativeTolerance", 1e-10)
+        maxIters = kwargs.get("maxIters", 1000)
         
         self.readNi()
 
@@ -242,26 +241,17 @@ class compositionGFE:
             newNi = np.linalg.solve(self.gfeMatrix, self.gfeVector)
             
             deltaNi = abs(newNi[0:len(self.species)] - self.ni)            
-            maxDeltaNi = governorFactor * self.ni
+            maxAllowedDeltaNi = governorFactor * self.ni
             
-            thresholdNewNi = np.array(newNi)
-            thresholdNewNiYN = newNi < thresholdNi
-            thresholdNewNi[thresholdNewNiYN] = thresholdNi
-
-            relTols = deltaNi / thresholdNewNi[0:len(self.species)]
-            relTol = relTols.max()
+            maxNiIndex = newNi.argmax()
+            relTol = deltaNi[maxNiIndex] / newNi[maxNiIndex]
             
-            lowDeltaNiYN = deltaNi < maxDeltaNi
-            deltaNi[lowDeltaNiYN] = maxDeltaNi[lowDeltaNiYN]
-
-            newRelaxFactors = maxDeltaNi / deltaNi
+            lowDeltaNiYN = deltaNi < maxAllowedDeltaNi
+            deltaNi[lowDeltaNiYN] = maxAllowedDeltaNi[lowDeltaNiYN]
+            newRelaxFactors = maxAllowedDeltaNi / deltaNi
             relaxFactor = newRelaxFactors.min()
             
             self.ni = (1. - relaxFactor) * self.ni + relaxFactor * newNi[0:len(self.species)]
-            
-            #print(relaxFactor, relTol)
-            #print(self.ni)
-            #print(newRelaxFactors)
             
             iters += 1
             if iters > maxIters:
@@ -269,6 +259,10 @@ class compositionGFE:
                 print("Warning! Max iters reached")
                 break
             
+
+        print(iters, relaxFactor, relTol)
+        print(self.ni)
+
         self.writeNi()
         self.writeNumberDensity()        
 

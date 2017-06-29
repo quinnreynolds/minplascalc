@@ -27,10 +27,11 @@ nOplus = []
 nOplusplus = []
 ne = []
 
+#temperatures = [ 1100 ]
 for T in temperatures:
-    myComposition.T = T
     myComposition.initialiseNi([1e23 for i in range(len(myComposition.species))])
-    myComposition.solveGfe()
+    myComposition.T = T
+    myComposition.solveGfe(governorFactor = 0.7)
 
     nO2.append(myComposition.species["O2"].numberDensity)
     nO.append(myComposition.species["O"].numberDensity)
@@ -43,11 +44,11 @@ fig, ax = pyplot.subplots()
 
 ax.set_ylim(1e15, 2e25)
 
+ax.semilogy(temperatures, ne, lw=3)
 ax.semilogy(temperatures, nO2)
 ax.semilogy(temperatures, nO)
 ax.semilogy(temperatures, nO2plus)
 ax.semilogy(temperatures, nOplus)
 ax.semilogy(temperatures, nOplusplus)
-ax.semilogy(temperatures, ne)
 
 pyplot.show()
