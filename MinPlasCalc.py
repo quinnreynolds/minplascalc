@@ -26,6 +26,16 @@ class constants:
 # Diatomic molecules, single atoms, and ions
 class specie:
     def __init__(self, **kwargs):
+        """Class describing a single chemical specie in the plasma, eg O2 or Si+
+        
+        Parameters
+        ----------
+        numberOfParticles : float
+            Initial particle count (default 0)
+        dataFile : string
+            Path to a JSON data file describing the electronic and molecular properties of the specie
+        """
+        
         self.numberOfParticles = kwargs.get("numberOfParticles", 0.)
         self.numberDensity = 0.
 
@@ -60,6 +70,7 @@ class specie:
             self.Be = constants.invCmToJ * jsonData["diatomicData"]["Be"]
 
         if self.chargeNumber < 0:
+            # TODO is this the right exception to raise?
             raise ValueError("Error! Negatively charged ions not implemented yet.")
 
     def translationalPartitionFunction(self, T):
@@ -81,6 +92,13 @@ class specie:
         
 class electronSpecie:
     def __init__(self, **kwargs):
+        """Class describing electrons as a specie in the plasma
+        
+        Parameters
+        ----------
+        numberOfParticles : float
+            Initial particle count (default 0)
+        """
         self.name = "e"
         self.stoichiometry = {}
         self.molarMass = constants.electronMass * constants.avogadro
@@ -97,14 +115,37 @@ class electronSpecie:
 
 class element:
     def __init__(self, **kwargs):
+        """Class acting as struct to hold some information about different elements in the plasma
+        
+        Parameters
+        ----------
+        name : string
+            Name of element, eg "O" (default empty string)
+        stoichiometricCoeffts : array_like
+            List of number of atoms of this element present in each specie, in same order as compositionGFE.species (default empty list)
+        totalNumber : float
+            Total number of atoms of this element present in the simulation, calculated from initial conditions during instantiation of compositionGFE (default 0)
+        """
+
         self.name = kwargs.get("name", "")
         self.stoichiometricCoeffts = kwargs.get("stoichiometricCoeffts", [])
         self.totalNumber = kwargs.get("totalNumber", 0.)
     
     
-# Composition class for Gibbs Free Energy minimisation calculation
 class compositionGFE:
     def __init__(self, **kwargs):
+        """Class representing a thermal plasma specification with multiple species, and methods for calculating equilibrium species concentrations at different temperatures and pressures using the principle of Gibbs free energy minimisation
+        
+        Parameters
+        ----------
+        T : float
+            Temperature value in K, for initialisation (default 10000)
+        P : float
+            Pressure value in Pa, for initialisation (default 101325)
+        compositionFile : string
+            Path to a JSON data file containing species and initial mole fractions
+        """            
+            
         self.T = kwargs.get("T", 10000.)
         self.P = kwargs.get("P", 101325.)
 
@@ -150,7 +191,6 @@ class compositionGFE:
                 else:
                     sp.E0 = -sp.dissociationEnergy
         self.species["e"].E0 = 0.
-        self.recalcE0i()
         
         # Set stoichiometry and charge coefficient arrays for mass action and 
         # electroneutrality constraints
@@ -170,7 +210,7 @@ class compositionGFE:
             for j, spKey in enumerate(self.species):
                 elm.totalNumber += nT0 * elm.stoichiometricCoeffts[j] * self.species[spKey].x0
 
-        # Set up A matrix,  b and ni vectors for GFE minimiser
+        # Set up A matrix, b and ni vectors for GFE minimiser
         minimiserDOF = len(self.species) + len(self.elements) + 1
         self.gfeMatrix = np.zeros((minimiserDOF, minimiserDOF))
         self.gfeVector = np.zeros(minimiserDOF)
@@ -204,7 +244,21 @@ class compositionGFE:
             self.species[spKey].numberDensity = self.ni[j] / V
             
     def recalcE0i(self):
-        # deltaIonisationEnergy recalculation here...
+        # deltaIonisationEnergy recalculation, using limitation theory of 
+        # Stewart & Pyatt 1966
+        weightedChargeSumSqd = 0
+        weightedChargeSum = 0
+        for j, spKey in enumerate(self.species):
+            if self.species[spKey].chargeNumber > 0:
+                weightedChargeSum += self.ni[j] * self.species[spKey].chargeNumber
+                weightedChargeSumSqd += self.ni[j] * self.species[spKey].chargeNumber ** 2
+        zStar = weightedChargeSumSqd / weightedChargeSum
+        debyeD = np.sqrt(constants.boltzmann * self.T / (4. * np.pi * (zStar + 1.) * self.ni[-1] * constants.fundamentalCharge ** 2))
+        for j, spKey in enumerate(self.species):
+            if spKey != "e":
+                ai = (3. * (self.species[spKey].chargeNumber + 1.) / (4. * np.pi * self.ni[-1])) ** (1 / 3)
+                self.species[spKey].deltaIonisationEnergy = constants.boltzmann * self.T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
+                
         for cn in range(1, self.maxChargeNumber + 1):
             for key, sp in self.species.items():
                 if sp.chargeNumber == cn:
@@ -271,7 +325,7 @@ class compositionGFE:
             
         if not successYN:
             # TODO need to raise a proper warning or even exception here
-            print("Warning! Minimiser could not reach convergence, results may be inaccurate.")
+            print("Warning! Minimiser could not find a converged solution, results may be inaccurate.")
         
         print(governorIters, relaxFactor, relTol)
         print(self.ni)

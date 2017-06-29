@@ -14,7 +14,7 @@ parser.add_argument("-p", help = "Pressure to calculate at, Pa", type = float, d
 parserArgs = parser.parse_args()
 
 
-# Instatiate a plasma composition object using data from a JSON file.
+# Instantiate a plasma composition object using data from a JSON file.
 # T, P are just initial placeholder values, can be changed at any time.
 myComposition = mpc.compositionGFE(
     compositionFile = "Compositions/OxygenPlasma5sp.json",
@@ -43,7 +43,7 @@ ax.set_xlabel(r"$T, K$")
 ax.set_ylabel(r"$n_i, m^{-3}$")
 ax.set_ylim(1e15, 5e25)
 
-# These are specific to the 5-species case
+# These are specific to the 5-species test case at 100 kPa
 positionIndexT = [5, 30, 25, 15, 80, 75]
 positionFactorN = [2, 2, 2, 0.25, 0.25, 2]
 plotColours = ["blue", "red", "green", "darkcyan", "darkred", "y"]
