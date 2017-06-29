@@ -27,6 +27,7 @@ class constants:
 class specie:
     def __init__(self, **kwargs):
         self.numberOfParticles = kwargs.get("numberOfParticles", 0.)
+        self.numberDensity = 0.
 
         # Construct a data object from JSON data file
         with open(kwargs.get("dataFile")) as df:
@@ -85,6 +86,7 @@ class electronSpecie:
         self.molarMass = constants.electronMass * constants.avogadro
         self.chargeNumber = -1
         self.numberOfParticles = kwargs.get("numberOfParticles", 0.)
+        self.numberDensity = 0.
         
     def translationalPartitionFunction(self, T):
         return ((2 * np.pi * self.molarMass * constants.boltzmann * T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
@@ -126,7 +128,7 @@ class compositionGFE:
         for elmKey in elmList:
             self.elements[elmKey] = element(name = elmKey)
         
-        # set specie which charged ions derive from
+        # set specie which each +ve charged ion derives from
         self.maxChargeNumber = 0
         for spKey, sp in self.species.items():
             if sp.chargeNumber > self.maxChargeNumber:
@@ -226,7 +228,8 @@ class compositionGFE:
     def solveGfe(self):
         governorFactor = 0.75
         relativeTolerance = 1e-10
-        maxIters = 1000
+        thresholdNi = 1.
+        maxIters = 10000
         
         self.readNi()
 
@@ -238,9 +241,14 @@ class compositionGFE:
     
             newNi = np.linalg.solve(self.gfeMatrix, self.gfeVector)
             
-            deltaNi = abs(newNi[0:len(self.species)] - self.ni)
+            deltaNi = abs(newNi[0:len(self.species)] - self.ni)            
             maxDeltaNi = governorFactor * self.ni
-            relTols = deltaNi / newNi[0:len(self.species)]
+            
+            thresholdNewNi = np.array(newNi)
+            thresholdNewNiYN = newNi < thresholdNi
+            thresholdNewNi[thresholdNewNiYN] = thresholdNi
+
+            relTols = deltaNi / thresholdNewNi[0:len(self.species)]
             relTol = relTols.max()
             
             lowDeltaNiYN = deltaNi < maxDeltaNi

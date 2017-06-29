@@ -7,7 +7,6 @@ import numpy as np
 from matplotlib import pyplot
 import MinPlasCalc as mpc
 
-
 parser = argparse.ArgumentParser(description = "Test driver for MinPlasCalc - oxygen plasma species calculations.")
 parser.add_argument("-ts", help = "Temperature to start calculating at, K", type = float, default = 1000.)
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
