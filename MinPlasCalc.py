@@ -6,7 +6,7 @@
 
 import json
 import numpy as np
-from scipy.optimize import minimize
+import collections
 
 ################################################################################
 
@@ -110,8 +110,10 @@ class compositionGFE:
 
         with open(kwargs.get("compositionFile")) as sf:
             jsonData = json.load(sf)
-                
-        self.species = {}
+        
+        # Random order upsets the nonlinearities in the minimiser, resulting in
+        # non-reproducibility between runs - hence OrderedDict
+        self.species = collections.OrderedDict()
         for spData in jsonData["speciesList"]:
             sp = specie(dataFile = spData["specie"])
             self.species[sp.name] = sp
@@ -119,7 +121,9 @@ class compositionGFE:
         self.species["e"] = electronSpecie()
         self.species["e"].x0 = 0.
         
-        self.elements = {}
+        # Random order upsets the nonlinearities in the minimiser, resulting in
+        # non-reproducibility between runs - hence OrderedDict
+        self.elements = collections.OrderedDict()
         elmList = []
         for spKey, sp in self.species.items():
             for stKey in sp.stoichiometry:
@@ -128,7 +132,7 @@ class compositionGFE:
         for elmKey in elmList:
             self.elements[elmKey] = element(name = elmKey)
         
-        # set specie which each +ve charged ion derives from
+        # Set specie which each +ve charged ion originates from
         self.maxChargeNumber = 0
         for spKey, sp in self.species.items():
             if sp.chargeNumber > self.maxChargeNumber:
@@ -138,7 +142,7 @@ class compositionGFE:
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
                         sp.ionisedFrom = spKey2
         
-        # set specie reference energies
+        # Set specie reference energies
         for spKey, sp in self.species.items():
             if sp.chargeNumber == 0:
                 if sp.monatomicYN:
@@ -148,7 +152,7 @@ class compositionGFE:
         self.species["e"].E0 = 0.
         self.recalcE0i()
         
-        # set stoichiometry and charge coefficient arrays for mass action and 
+        # Set stoichiometry and charge coefficient arrays for mass action and 
         # electroneutrality constraints
         for elmKey, elm in self.elements.items():
             elm.stoichiometricCoeffts = []
@@ -159,14 +163,14 @@ class compositionGFE:
         for spKey, sp in self.species.items():
             self.chargeCoeffts.append(sp.chargeNumber)
         
-        #set element totals for constraints from provided initial conditions
+        # Set element totals for constraints from provided initial conditions
         nT0 = self.P / (constants.boltzmann * self.T)
         for elmKey, elm in self.elements.items():
             elm.totalNumber = 0
             for j, spKey in enumerate(self.species):
                 elm.totalNumber += nT0 * elm.stoichiometricCoeffts[j] * self.species[spKey].x0
 
-        # set up A matrix,  b and ni vectors for GFE minimiser
+        # Set up A matrix,  b and ni vectors for GFE minimiser
         minimiserDOF = len(self.species) + len(self.elements) + 1
         self.gfeMatrix = np.zeros((minimiserDOF, minimiserDOF))
         self.gfeVector = np.zeros(minimiserDOF)
@@ -265,7 +269,6 @@ class compositionGFE:
 
         self.writeNi()
         self.writeNumberDensity()        
-
 
 ################################################################################
 

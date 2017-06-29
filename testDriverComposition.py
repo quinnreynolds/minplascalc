@@ -13,42 +13,49 @@ parser.add_argument("-te", help = "Temperature to stop calculating at, K", type 
 parser.add_argument("-p", help = "Pressure to calculate at, Pa", type = float, default = 101325.)
 parserArgs = parser.parse_args()
 
+
+# Set up the composition class using a JSON input file.
+# T, P are just initial placeholder values, can be changed at any time.
 myComposition = mpc.compositionGFE(
     compositionFile = "Compositions/OxygenPlasma5sp.json",
     T = parserArgs.ts,
     P = parserArgs.p)
 
+
+# Run the GFE minimiser calculation at a range of temperatures
 temperatures = np.linspace(parserArgs.ts, parserArgs.te, num = 100)
-
-nO2 = []
-nO = []
-nO2plus = []
-nOplus = []
-nOplusplus = []
-ne = []
-
-#temperatures = [ 1100 ]
+ndi = [ [] for j in range(len(myComposition.species)) ]
+plotText = []
 for T in temperatures:
     myComposition.initialiseNi([1e23 for i in range(len(myComposition.species))])
     myComposition.T = T
     myComposition.solveGfe(governorFactor = 0.7)
 
-    nO2.append(myComposition.species["O2"].numberDensity)
-    nO.append(myComposition.species["O"].numberDensity)
-    nO2plus.append(myComposition.species["O2+"].numberDensity)
-    nOplus.append(myComposition.species["O+"].numberDensity)
-    nOplusplus.append(myComposition.species["O++"].numberDensity)
-    ne.append(myComposition.species["e"].numberDensity)
+    for j, spKey in enumerate(myComposition.species):
+        ndi[j].append(myComposition.species[spKey].numberDensity)
+        plotText.append(spKey)
 
+
+# Draw a graph of the results
 fig, ax = pyplot.subplots()
 
-ax.set_ylim(1e15, 2e25)
+ax.set_xlabel(r"$T, K$")
+ax.set_ylabel(r"$n_i, m^{-3}$")
+ax.set_ylim(1e15, 5e25)
 
-ax.semilogy(temperatures, ne, lw=3)
-ax.semilogy(temperatures, nO2)
-ax.semilogy(temperatures, nO)
-ax.semilogy(temperatures, nO2plus)
-ax.semilogy(temperatures, nOplus)
-ax.semilogy(temperatures, nOplusplus)
+positionIndexT = [5, 30, 25, 15, 80, 75]
+positionFactorN = [2, 2, 2, 0.25, 0.25, 2]
+plotColours = ["blue", "red", "green", "darkcyan", "darkred", "y"]
+
+for j in range(len(ndi)):
+    ax.semilogy(temperatures, ndi[j], lw = 2, color = plotColours[j])
+
+for j in range(len(positionIndexT)):
+    ax.text(
+        temperatures[positionIndexT[j]], 
+        positionFactorN[j] * ndi[j][positionIndexT[j]], 
+        plotText[j], 
+        fontdict = {"color": plotColours[j]} )
 
 pyplot.show()
+
