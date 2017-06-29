@@ -14,7 +14,7 @@ parser.add_argument("-p", help = "Pressure to calculate at, Pa", type = float, d
 parserArgs = parser.parse_args()
 
 
-# Set up the composition class using a JSON input file.
+# Instatiate a plasma composition object using data from a JSON file.
 # T, P are just initial placeholder values, can be changed at any time.
 myComposition = mpc.compositionGFE(
     compositionFile = "Compositions/OxygenPlasma5sp.json",
@@ -27,9 +27,9 @@ temperatures = np.linspace(parserArgs.ts, parserArgs.te, num = 100)
 ndi = [ [] for j in range(len(myComposition.species)) ]
 plotText = []
 for T in temperatures:
-    myComposition.initialiseNi([1e23 for i in range(len(myComposition.species))])
+    myComposition.initialiseNi([1e20 for i in range(len(myComposition.species))])
     myComposition.T = T
-    myComposition.solveGfe(governorFactor = 0.7)
+    myComposition.solveGfe()
 
     for j, spKey in enumerate(myComposition.species):
         ndi[j].append(myComposition.species[spKey].numberDensity)
@@ -43,6 +43,7 @@ ax.set_xlabel(r"$T, K$")
 ax.set_ylabel(r"$n_i, m^{-3}$")
 ax.set_ylim(1e15, 5e25)
 
+# These are specific to the 5-species case
 positionIndexT = [5, 30, 25, 15, 80, 75]
 positionFactorN = [2, 2, 2, 0.25, 0.25, 2]
 plotColours = ["blue", "red", "green", "darkcyan", "darkred", "y"]

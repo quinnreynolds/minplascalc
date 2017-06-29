@@ -111,7 +111,7 @@ class compositionGFE:
         with open(kwargs.get("compositionFile")) as sf:
             jsonData = json.load(sf)
         
-        # Random order upsets the nonlinearities in the minimiser, resulting in
+        # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs - hence OrderedDict
         self.species = collections.OrderedDict()
         for spData in jsonData["speciesList"]:
@@ -121,7 +121,7 @@ class compositionGFE:
         self.species["e"] = electronSpecie()
         self.species["e"].x0 = 0.
         
-        # Random order upsets the nonlinearities in the minimiser, resulting in
+        # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs - hence OrderedDict
         self.elements = collections.OrderedDict()
         elmList = []
@@ -230,41 +230,50 @@ class compositionGFE:
                 self.gfeVector[j] += offDiagonal * self.ni[j2]
             
     def solveGfe(self, **kwargs):
-        governorFactor = kwargs.get("governorFactor", 0.5)
         relativeTolerance = kwargs.get("relativeTolerance", 1e-10)
         maxIters = kwargs.get("maxIters", 1000)
         
         self.readNi()
 
-        relTol = relativeTolerance * 10.
-        iters = 0
-        while relTol > relativeTolerance:
-            self.recalcE0i()
-            self.recalcGfeArrays()
-    
-            newNi = np.linalg.solve(self.gfeMatrix, self.gfeVector)
+        governorFactors = np.linspace(0.9, 0.1, 9)
+        successYN = False
+        governorIters = 0
+        while not successYN:
+            successYN = True            
+            governorFactor = governorFactors[governorIters]
+            relTol = relativeTolerance * 10.
+            minimiserIters = 0
+            while relTol > relativeTolerance:
+                self.recalcE0i()
+                self.recalcGfeArrays()
+        
+                newNi = np.linalg.solve(self.gfeMatrix, self.gfeVector)
+                
+                deltaNi = abs(newNi[0:len(self.species)] - self.ni)            
+                maxAllowedDeltaNi = governorFactor * self.ni
+                
+                maxNiIndex = newNi.argmax()
+                relTol = deltaNi[maxNiIndex] / newNi[maxNiIndex]
+                
+                lowDeltaNiYN = deltaNi < maxAllowedDeltaNi
+                deltaNi[lowDeltaNiYN] = maxAllowedDeltaNi[lowDeltaNiYN]
+                newRelaxFactors = maxAllowedDeltaNi / deltaNi
+                relaxFactor = newRelaxFactors.min()
+                
+                self.ni = (1. - relaxFactor) * self.ni + relaxFactor * newNi[0:len(self.species)]
+                
+                minimiserIters += 1
+                if minimiserIters > maxIters:
+                    successYN = False
+                    break
             
-            deltaNi = abs(newNi[0:len(self.species)] - self.ni)            
-            maxAllowedDeltaNi = governorFactor * self.ni
+            governorIters += 1
             
-            maxNiIndex = newNi.argmax()
-            relTol = deltaNi[maxNiIndex] / newNi[maxNiIndex]
-            
-            lowDeltaNiYN = deltaNi < maxAllowedDeltaNi
-            deltaNi[lowDeltaNiYN] = maxAllowedDeltaNi[lowDeltaNiYN]
-            newRelaxFactors = maxAllowedDeltaNi / deltaNi
-            relaxFactor = newRelaxFactors.min()
-            
-            self.ni = (1. - relaxFactor) * self.ni + relaxFactor * newNi[0:len(self.species)]
-            
-            iters += 1
-            if iters > maxIters:
-                # TODO need to raise proper warning here
-                print("Warning! Max iters reached")
-                break
-            
-
-        print(iters, relaxFactor, relTol)
+        if not successYN:
+            # TODO need to raise a proper warning or even exception here
+            print("Warning! Minimiser could not reach convergence, results may be inaccurate.")
+        
+        print(governorIters, relaxFactor, relTol)
         print(self.ni)
 
         self.writeNi()
