@@ -22,6 +22,7 @@ A simple set of tools for doing calculations of thermal plasma compositions rele
 
 ### Who do I talk to? ###
 
-* Admin, General Science Officer: quinnr@mintek.co.za
-* Support, Chief Caffeine Officer: markuse@mintek.co.za
-* Python, Unit Testing, Chief Beer Officer: carl.sandrock@gmail.com
+* Admin, Science, Chief Pizza Officer: quinnr@mintek.co.za
+* Support, Metallurgy, Chief Caffeine Officer: markuse@mintek.co.za
+* Python, Code, Chief Beer Officer: carl.sandrock@gmail.com
+

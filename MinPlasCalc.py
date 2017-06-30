@@ -11,8 +11,16 @@ import collections
 
 # utility functions ############################################################
 
+
+def molarMassCalculator(nProtons, nNeutrons, nElectrons):
+    """Return the molar mass in kg/mol of a specie based on its nuclear and electronic structure
+    """
+    
+    return constants.avogadro * (nProtons * constants.protonMass + nElectrons * constants.electronMass + nNeutrons * (constants.protonMass + constants.electronMass))
+    
+    
 def nistCleanAndSplit(nistString):
-    """Helper function to tidy up data copied from NIST online databases
+    """Helper function to tidy up a string of data copied from NIST online databases
     """
     
     dataStr = "".join(nistString.split())
@@ -45,14 +53,14 @@ def nistCleanAndSplit(nistString):
 
     
 def buildMonatomicSpeciesJSON(**kwargs):
-    """Function to take text data retrieved from NIST websites or other sources and build a JSON object file for a monatomic plasma specie
+    """Function to take text data retrieved from NIST websites or other sources and build a JSON object file for a monatomic plasma specie, with specified electron energy levels and degeneracies
     
     Parameters
     ----------
     name : string
-        Specie name (also name of the JSON output file)
+        A unique identifier for the specie (also the name of the JSON output file)
     stoichiometry : dictionary
-        Dictionary describing the elemental stoichiometry of the specie (e.g. {"C": 1} for C or C+)
+        Dictionary describing the elemental stoichiometry of the specie (e.g. {"O": 1} for O or O+)
     molarMass : float
         Molar mass of the specie in kg/mol
     chargeNumber : int
@@ -107,11 +115,81 @@ def buildMonatomicSpeciesJSON(**kwargs):
         
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent = 4)
+
+
+def buildDiatomicSpeciesJSON(**kwargs):
+    """Function to take text data retrieved from NIST websites or other sources and build a JSON object file for a diatomic plasma specie, with specified ground state degeneracy and rotational & vibrational parameters
+    
+    Parameters
+    ----------
+    name : string
+        A unique identifier for the specie (also the name of the JSON output file)
+    stoichiometry : dictionary
+        Dictionary describing the elemental stoichiometry of the specie (e.g. {"Si": 1, "O": 1} for SiO or SiO+)
+    molarMass : float
+        Molar mass of the specie in kg/mol
+    chargeNumber : int
+        Charge on the specie (in integer units of the fundamental charge)    
+    ionisationEnergy : float
+        Ionisation energy of the specie in 1/cm
+    dissociationEnergy : float
+        Dissociation energy of the specie in 1/cm
+    sigmaS : int
+        Symmetry constant (=2 for homonuclear molecules, =1 for heteronuclear)
+    g0 : float
+        Ground state electronic energy level degeneracy
+    we : float
+        Vibrational energy level constant in 1/cm
+    Be : float
+        Rotational energy level constant in 1/cm
+    sources : list of dictionaries
+        Each dictionary represents a reference source from which the data was obtained (defaults to NIST Chemistry Webbook)
+    """
+    
+    speciesDict = collections.OrderedDict()
+
+    speciesDict["name"] = kwargs.get("name")
+    speciesDict["stoichiometry"] = kwargs.get("stoichiometry")
+    speciesDict["molarMass"] = kwargs.get("molarMass")
+    speciesDict["chargeNumber"] = kwargs.get("chargeNumber")
+                
+    speciesDict["diatomicData"] = collections.OrderedDict()
+    speciesDict["diatomicData"]["ionisationEnergy"] = kwargs.get("ionisationEnergy")
+    speciesDict["diatomicData"]["dissociationEnergy"] = kwargs.get("dissociationEnergy")
+    speciesDict["diatomicData"]["sigmaS"] = kwargs.get("sigmaS")
+    speciesDict["diatomicData"]["g0"] = kwargs.get("g0")
+    speciesDict["diatomicData"]["we"] = kwargs.get("we")
+    speciesDict["diatomicData"]["Be"] = kwargs.get("Be")
+    
+    speciesDict["energyUnit"] = "1/cm"
+    speciesDict["molarMassUnit"] = "kg/mol"
+    speciesDict["sources"] = kwargs.get("sources", [])
+    
+    if len(speciesDict["sources"]) == 0:
+        speciesDict["sources"].append(collections.OrderedDict())        
+        speciesDict["sources"][-1]["title"] = "NIST Chemistry WebBook, NIST Standard Reference Database Number 69"
+        speciesDict["sources"][-1]["author"] = "PJ Linstrom and WG Mallard (Editors)"
+        speciesDict["sources"][-1]["publicationInfo"] = "National Institute of Standards and Technology, Gaithersburg MD., 20899"
+        speciesDict["sources"][-1]["http"] = "http://webbook.nist.gov/chemistry/"
+        speciesDict["sources"][-1]["doi"] = "10.18434/T4D303"
+    else:
+        for sourceDict in speciesDict["sources"]:
+            speciesDict["sources"].append(collections.OrderedDict())        
+            speciesDict["sources"][-1]["title"] = sourceDict["title"]
+            speciesDict["sources"][-1]["author"] = sourceDict["author"]
+            speciesDict["sources"][-1]["publicationInfo"] = sourceDict["publicationInfo"]
+            speciesDict["sources"][-1]["http"] = sourceDict["http"]
+            speciesDict["sources"][-1]["doi"] = sourceDict["doi"]
+        
+    with open(speciesDict["name"] + ".json", "w") as jf:
+        json.dump(speciesDict, jf, indent = 4)
+
         
 # classes ######################################################################
 
+
 class constants:
-    """A collection of physical constants useful in plasma calculations
+    """A collection of physical and unit-conversion constants useful in plasma calculations
     """
     
     protonMass = 1.6726219e-27
@@ -124,12 +202,13 @@ class constants:
     eVtoK = 11604.505
     eVtoJ = 1.60217653e-19
     invCmToJ = 1.9864456e-23
-
+    JperMolToInvCm = 0.0835934811
+    eVtoInvCm = 8065.54446
 
 # Diatomic molecules, single atoms, and ions
 class specie:
     def __init__(self, **kwargs):
-        """Class describing a single chemical specie in the plasma, eg O2 or Si+
+        """Class describing a single monatomic or diatomic chemical specie in the plasma, eg O2 or Si+
         
         Parameters
         ----------
