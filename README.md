@@ -2,7 +2,7 @@
 
 A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3.
 
-*Quinn Reynolds*
+Quinn Reynolds
 MINTEK Pyrometallurgy Division
 July 2017
 
