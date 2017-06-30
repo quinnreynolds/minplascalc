@@ -8,6 +8,8 @@ import MinPlasCalc as mpc
 parser = argparse.ArgumentParser(description = "Test driver for JSON file conversion using NIST website data.")
 parserArgs = parser.parse_args()
 
+
+# Demo of how to build a JSON data file for a monatomic species
 mpc.buildMonatomicSpeciesJSON(
     name = "C+", 
     stoichiometry = { "C": 1 },
@@ -16,6 +18,8 @@ mpc.buildMonatomicSpeciesJSON(
     ionisationEnergy = 90820.45,
     nistDataFile = "NistData/RawData/nist_C+")
 
+
+# Demo of how to build a JSON data file for a diatomic species
 mpc.buildDiatomicSpeciesJSON(
     name = "CO", 
     stoichiometry = { "C": 1, "O": 1 },

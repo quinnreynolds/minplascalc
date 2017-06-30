@@ -12,11 +12,15 @@ parser.add_argument("-ts", help = "Temperature to start calculating at, K", type
 parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
 parserArgs = parser.parse_args()
 
+
+# Load up some species
 myOxygenMolecule = mpc.specie(dataFile = "NistData/O2.json")
 myOxygenAtom = mpc.specie(dataFile = "NistData/O.json")
 myOxygenPlus = mpc.specie(dataFile = "NistData/O+.json")
 myOxygenPlusPlus = mpc.specie(dataFile = "NistData/O++.json")
 
+
+# Calculate their internal partition functions
 Temps = np.linspace(parserArgs.ts, parserArgs.te, 1000)
 pFuncOO = []
 pFuncO = []
@@ -28,6 +32,8 @@ for Temp in Temps:
     pFuncOp.append(myOxygenPlus.internalPartitionFunction(Temp))
     pFuncOpp.append(myOxygenPlusPlus.internalPartitionFunction(Temp))
 
+
+# Draw a nice graph
 fig, ax = pyplot.subplots()
 
 ax.semilogy(Temps, pFuncOO)
