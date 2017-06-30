@@ -16,7 +16,7 @@ mpc.buildMonatomicSpeciesJSON(
     molarMass = 0.0120107,
     chargeNumber = 1,
     ionisationEnergy = 90820.45,
-    nistDataFile = "NistData/RawData/nist_C+")
+    nistDataFile = "NistData/RawLevelData/nist_C+")
 
 
 # Demo of how to build a JSON data file for a diatomic species
