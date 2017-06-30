@@ -38,7 +38,6 @@ for T in temperatures:
         ndi[j].append(myComposition.species[spKey].numberDensity)
         plotText.append(spKey)
 
-
 # Draw a graph of the results
 fig, (ax1, ax2) = pyplot.subplots(2, 1, figsize = [7.5, 10], sharex = True)
 
