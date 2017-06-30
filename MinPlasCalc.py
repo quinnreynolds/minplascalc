@@ -2,15 +2,118 @@
 #
 # Classes for gas/plasma data and LTE calculations with simple species
 #
-# Q Reynolds 2016-2017
+# Q Reynolds 2017
 
 import json
 import numpy as np
 import collections
 
-################################################################################
+
+# utility functions ############################################################
+
+def nistCleanAndSplit(nistString):
+    """Helper function to tidy up data copied from NIST online databases
+    """
+    
+    dataStr = "".join(nistString.split())
+    dataStr = dataStr.replace("+x", "")
+    dataStr = dataStr.replace("?", "")
+    dataStr = dataStr.replace("[", "")
+    dataStr = dataStr.replace("]", "")
+    dataSplit = dataStr.split("|")
+    dataSplit.pop(-1)
+    
+    returnData = []
+    acceptableStringYN = True
+
+    for dataVal in dataSplit:
+        if "/" in dataVal:
+            try:
+                quotientVals = dataVal.split("/")
+                dataVal = float(quotientVals[0]) / float(quotientVals[1])
+            except ValueError:
+                returnData.append(dataVal)
+                acceptableStringYN = False
+        try:
+            float(dataVal)
+            returnData.append(float(dataVal))
+        except ValueError:
+            returnData.append(dataVal)
+            acceptableStringYN = False
+    
+    return acceptableStringYN, returnData
+
+    
+def buildMonatomicSpeciesJSON(**kwargs):
+    """Function to take text data retrieved from NIST websites or other sources and build a JSON object file for a monatomic plasma specie
+    
+    Parameters
+    ----------
+    name : string
+        Specie name (also name of the JSON output file)
+    stoichiometry : dictionary
+        Dictionary describing the elemental stoichiometry of the specie (e.g. {"C": 1} for C or C+)
+    molarMass : float
+        Molar mass of the specie in kg/mol
+    chargeNumber : int
+        Charge on the specie (in integer units of the fundamental charge)    
+    ionisationEnergy : float
+        Ionisation energy of the specie in 1/cm
+    nistDataFile : string
+        Path to text file containing raw energy level data (in NIST Atomic Spectra Database format)
+    sources : list of dictionaries
+        Each dictionary represents a reference source from which the data was obtained (defaults to NIST Atomic Spectra Database)
+    """
+    
+    speciesDict = collections.OrderedDict()
+
+    speciesDict["name"] = kwargs.get("name")
+    speciesDict["stoichiometry"] = kwargs.get("stoichiometry")
+    speciesDict["molarMass"] = kwargs.get("molarMass")
+    speciesDict["chargeNumber"] = kwargs.get("chargeNumber")
+                
+    speciesDict["monatomicData"] = collections.OrderedDict()
+    speciesDict["monatomicData"]["ionisationEnergy"] = kwargs.get("ionisationEnergy")
+    dataFile = kwargs.get("nistDataFile")
+    with open(dataFile) as f:
+        data = f.readlines()
+    speciesDict["monatomicData"]["energyLevels"] = []
+    for i, dataLine in enumerate(data):
+        testYN, dataVals = nistCleanAndSplit(dataLine)
+        if testYN:
+            speciesDict["monatomicData"]["energyLevels"].append({"J": dataVals[0], "Ei": dataVals[1]})
+        else:
+            print("Ignoring line", i, "in", dataFile, "with non-numeric data: ", dataVals)
+
+    speciesDict["energyUnit"] = "1/cm"
+    speciesDict["molarMassUnit"] = "kg/mol"
+    speciesDict["sources"] = kwargs.get("sources", [])
+    
+    if len(speciesDict["sources"]) == 0:
+        speciesDict["sources"].append(collections.OrderedDict())        
+        speciesDict["sources"][-1]["title"] = "NIST Atomic Spectra Database (ver. 5.3), [Online]."
+        speciesDict["sources"][-1]["author"] = "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team"
+        speciesDict["sources"][-1]["publicationInfo"] = "National Institute of Standards and Technology, Gaithersburg, MD."
+        speciesDict["sources"][-1]["http"] = "http://physics.nist.gov/asd"
+        speciesDict["sources"][-1]["doi"] = "NA"
+    else:
+        for sourceDict in speciesDict["sources"]:
+            speciesDict["sources"].append(collections.OrderedDict())        
+            speciesDict["sources"][-1]["title"] = sourceDict["title"]
+            speciesDict["sources"][-1]["author"] = sourceDict["author"]
+            speciesDict["sources"][-1]["publicationInfo"] = sourceDict["publicationInfo"]
+            speciesDict["sources"][-1]["http"] = sourceDict["http"]
+            speciesDict["sources"][-1]["doi"] = sourceDict["doi"]
+        
+    with open(speciesDict["name"] + ".json", "w") as jf:
+        json.dump(speciesDict, jf, indent = 4)
+        
+# classes ######################################################################
 
 class constants:
+    """A collection of physical constants useful in plasma calculations
+    """
+    
     protonMass = 1.6726219e-27
     electronMass = 9.10938356e-31
     fundamentalCharge = 1.60217662e-19
@@ -99,6 +202,7 @@ class electronSpecie:
         numberOfParticles : float
             Initial particle count (default 0)
         """
+        
         self.name = "e"
         self.stoichiometry = {}
         self.molarMass = constants.electronMass * constants.avogadro

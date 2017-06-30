@@ -18,7 +18,7 @@
     
     "energyUnit": "1/cm",
     "molarMassUnit": "kg/mol",
-    "references": 
+    "sources": 
     [
         {
             "title": "NIST Chemistry WebBook, NIST Standard Reference Database Number 69",
@@ -26,13 +26,6 @@
             "publication": "National Institute of Standards and Technology, Gaithersburg MD, 20899",
             "doi": "10.18434/T4D303",
             "http": "http://webbook.nist.gov/chemistry/"
-        },
-        { 
-            "title": "Calculation of electrical and thermal conductivities of metallurgical plasmas",
-            "author": "Dunn GJ and Eagar TW",
-            "publication": "Welding Research Council Bulletin, 357, 1990",
-            "doi": "NA",
-            "http": "http://eagar.mit.edu/Publications/Eagar118.pdf"
         }
     ]
 }

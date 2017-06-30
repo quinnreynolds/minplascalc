@@ -250,7 +250,7 @@
     
     "energyUnit": "1/cm",
     "molarMassUnit": "kg/mol",
-    "references":
+    "sources":
     [
         {
             "title": " NIST Atomic Spectra Database (ver. 5.3), [Online].",
@@ -258,13 +258,6 @@
             "publication": "National Institute of Standards and Technology, Gaithersburg, MD.",
             "doi": "NA",
             "http": "http://physics.nist.gov/asd"
-        },
-        {
-            "title": "Thermal Plasmas: Fundamentals and Applications Volume II",
-            "author": "MI Boulos, P Fauchais, and E Pfender",
-            "publication": "Springer US, 1994",
-            "doi": "10.1007/978-1-4899-1337-1",
-            "http": "NA"
         }
     ]
 }
