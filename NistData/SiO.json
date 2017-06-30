@@ -1,17 +1,18 @@
 {
-    "name": "O2",
+    "name": "SiO",
     "stoichiometry": {
-        "O": 2
+        "O": 1,
+        "Si": 1
     },
-    "molarMass": 0.0319988,
+    "molarMass": 0.044084899999999996,
     "chargeNumber": 0,
     "diatomicData": {
-        "ionisationEnergy": 97348.7,
-        "dissociationEnergy": 41537.55,
-        "sigmaS": 2,
-        "g0": 3,
-        "we": 1580.19,
-        "Be": 1.4376766
+        "ionisationEnergy": 92673.11,
+        "dissociationEnergy": 66707.6,
+        "sigmaS": 1,
+        "g0": 1,
+        "we": 1241.55,
+        "Be": 0.7267512
     },
     "energyUnit": "1/cm",
     "molarMassUnit": "kg/mol",

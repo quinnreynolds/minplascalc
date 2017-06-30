@@ -1,17 +1,18 @@
 {
-    "name": "O2",
+    "name": "CO",
     "stoichiometry": {
-        "O": 2
+        "C": 1,
+        "O": 1
     },
-    "molarMass": 0.0319988,
+    "molarMass": 0.0280101,
     "chargeNumber": 0,
     "diatomicData": {
-        "ionisationEnergy": 97348.7,
-        "dissociationEnergy": 41537.55,
-        "sigmaS": 2,
-        "g0": 3,
-        "we": 1580.19,
-        "Be": 1.4376766
+        "ionisationEnergy": 113030.54,
+        "dissociationEnergy": 89862.0,
+        "sigmaS": 1,
+        "g0": 1,
+        "we": 2169.81358,
+        "Be": 1.93128087
     },
     "energyUnit": "1/cm",
     "molarMassUnit": "kg/mol",

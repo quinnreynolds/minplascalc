@@ -1,32 +1,27 @@
 {
     "name": "O2+",
-    "stoichiometry": 
-    {
+    "stoichiometry": {
         "O": 2
     },
-    "molarMass" : 0.0322498532,
+    "molarMass": 0.0319988,
     "chargeNumber": 1,
-    "diatomicData": 
-    {
-        "dissociationEnergy": -1,
+    "diatomicData": {
         "ionisationEnergy": -1,
+        "dissociationEnergy": -1,
         "sigmaS": 2,
         "g0": 2,
         "we": 1904.7,
         "Be": 1.6913
     },
-    
     "energyUnit": "1/cm",
     "molarMassUnit": "kg/mol",
-    "sources": 
-    [
+    "sources": [
         {
             "title": "NIST Chemistry WebBook, NIST Standard Reference Database Number 69",
             "author": "PJ Linstrom and WG Mallard (Editors)",
-            "publication": "National Institute of Standards and Technology, Gaithersburg MD, 20899",
-            "doi": "10.18434/T4D303",
-            "http": "http://webbook.nist.gov/chemistry/"
+            "publicationInfo": "National Institute of Standards and Technology, Gaithersburg MD., 20899",
+            "http": "http://webbook.nist.gov/chemistry/",
+            "doi": "10.18434/T4D303"
         }
     ]
 }
-
