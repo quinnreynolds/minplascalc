@@ -2,9 +2,9 @@
 
 A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3.
 
-*Quinn Reynolds*
-*MINTEK Pyrometallurgy Division*
-*July 2017*
+*Quinn Reynolds*\n
+*MINTEK Pyrometallurgy Division*\n
+*July 2017*\n
 
 ### What is this repository for? ###
 
@@ -29,4 +29,3 @@ A simple set of tools for doing calculations of thermal plasma compositions rele
 * Admin, Science, Chief Pizza Officer: quinnr@mintek.co.za
 * Support, Metallurgy, Chief Caffeine Officer: markuse@mintek.co.za
 * Python, Code, Chief Beer Officer: carl.sandrock@gmail.com
-
