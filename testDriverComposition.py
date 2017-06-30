@@ -22,26 +22,28 @@ myComposition = mpc.compositionGFE(
     P = parserArgs.p)
 
 
-# Run the GFE minimiser calculation at a range of temperatures
+# Run the GFE minimiser calculation at a range of temperatures, and calculate 
+# the plasma density
 temperatures = np.linspace(parserArgs.ts, parserArgs.te, num = 100)
 ndi = [ [] for j in range(len(myComposition.species)) ]
 plotText = []
+density = []
 for T in temperatures:
     myComposition.initialiseNi([1e20 for i in range(len(myComposition.species))])
     myComposition.T = T
     myComposition.solveGfe()
 
+    density.append(myComposition.calculateDensity())
     for j, spKey in enumerate(myComposition.species):
         ndi[j].append(myComposition.species[spKey].numberDensity)
         plotText.append(spKey)
 
 
 # Draw a graph of the results
-fig, ax = pyplot.subplots()
+fig, (ax1, ax2) = pyplot.subplots(2, 1, figsize = [7.5, 10], sharex = True)
 
-ax.set_xlabel(r"$T, K$")
-ax.set_ylabel(r"$n_i, m^{-3}$")
-ax.set_ylim(1e15, 5e25)
+ax1.set_ylabel(r"$n_i, m^{-3}$")
+ax1.set_ylim(1e15, 5e25)
 
 # NB: These are specific to the 5-species test case at 100 kPa
 positionIndexT = [5, 30, 25, 15, 80, 75]
@@ -49,14 +51,18 @@ positionFactorN = [2, 2, 2, 0.25, 0.25, 2]
 plotColours = ["blue", "red", "green", "darkcyan", "darkred", "y"]
 
 for j in range(len(ndi)):
-    ax.semilogy(temperatures, ndi[j], lw = 2, color = plotColours[j])
+    ax1.semilogy(temperatures, ndi[j], lw = 2, color = plotColours[j])
 
 for j in range(len(positionIndexT)):
-    ax.text(
+    ax1.text(
         temperatures[positionIndexT[j]], 
         positionFactorN[j] * ndi[j][positionIndexT[j]], 
         plotText[j], 
         fontdict = {"color": plotColours[j]} )
+
+ax2.set_xlabel(r"$T, K$")
+ax2.set_ylabel(r"$\rho, kg/m^3$")
+ax2.semilogy(temperatures, density, lw = 2)
 
 pyplot.show()
 

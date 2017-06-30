@@ -13,14 +13,16 @@ import collections
 
 
 def molarMassCalculator(nProtons, nNeutrons, nElectrons):
-    """Return the molar mass in kg/mol of a specie based on its nuclear and electronic structure
+    """Estimate the molar mass in kg/mol of a specie based on its nuclear and 
+    electronic structure, if you can't get it anywhere else for some reason.
     """
     
     return constants.avogadro * (nProtons * constants.protonMass + nElectrons * constants.electronMass + nNeutrons * (constants.protonMass + constants.electronMass))
     
     
 def nistCleanAndSplit(nistString):
-    """Helper function to tidy up a string of data copied from NIST online databases
+    """Helper function to tidy up a string of data copied from NIST online 
+    databases.
     """
     
     dataStr = "".join(nistString.split())
@@ -53,14 +55,18 @@ def nistCleanAndSplit(nistString):
 
     
 def buildMonatomicSpeciesJSON(**kwargs):
-    """Function to take text data retrieved from NIST websites or other sources and build a JSON object file for a monatomic plasma specie, with specified electron energy levels and degeneracies
+    """Function to take text data retrieved from NIST websites or other sources 
+    and build a JSON object file for a monatomic plasma specie, with specified 
+    electron energy levels and degeneracies.
     
     Parameters
     ----------
     name : string
-        A unique identifier for the specie (also the name of the JSON output file)
+        A unique identifier for the specie (also the name of the JSON output 
+        file)
     stoichiometry : dictionary
-        Dictionary describing the elemental stoichiometry of the specie (e.g. {"O": 1} for O or O+)
+        Dictionary describing the elemental stoichiometry of the specie (e.g. 
+        {"O": 1} for O or O+)
     molarMass : float
         Molar mass of the specie in kg/mol
     chargeNumber : int
@@ -68,9 +74,11 @@ def buildMonatomicSpeciesJSON(**kwargs):
     ionisationEnergy : float
         Ionisation energy of the specie in 1/cm
     nistDataFile : string
-        Path to text file containing raw energy level data (in NIST Atomic Spectra Database format)
+        Path to text file containing raw energy level data (in NIST Atomic 
+        Spectra Database format)
     sources : list of dictionaries
-        Each dictionary represents a reference source from which the data was obtained (defaults to NIST Atomic Spectra Database)
+        Each dictionary represents a reference source from which the data was 
+        obtained (defaults to NIST Atomic Spectra Database)
     """
     
     speciesDict = collections.OrderedDict()
@@ -118,14 +126,18 @@ def buildMonatomicSpeciesJSON(**kwargs):
 
 
 def buildDiatomicSpeciesJSON(**kwargs):
-    """Function to take text data retrieved from NIST websites or other sources and build a JSON object file for a diatomic plasma specie, with specified ground state degeneracy and rotational & vibrational parameters
+    """Function to take text data retrieved from NIST websites or other sources 
+    and build a JSON object file for a diatomic plasma specie, with specified 
+    ground state degeneracy and rotational & vibrational parameters.
     
     Parameters
     ----------
     name : string
-        A unique identifier for the specie (also the name of the JSON output file)
+        A unique identifier for the specie (also the name of the JSON output 
+        file)
     stoichiometry : dictionary
-        Dictionary describing the elemental stoichiometry of the specie (e.g. {"Si": 1, "O": 1} for SiO or SiO+)
+        Dictionary describing the elemental stoichiometry of the specie (e.g. 
+        {"Si": 1, "O": 1} for SiO or SiO+)
     molarMass : float
         Molar mass of the specie in kg/mol
     chargeNumber : int
@@ -143,7 +155,8 @@ def buildDiatomicSpeciesJSON(**kwargs):
     Be : float
         Rotational energy level constant in 1/cm
     sources : list of dictionaries
-        Each dictionary represents a reference source from which the data was obtained (defaults to NIST Chemistry Webbook)
+        Each dictionary represents a reference source from which the data was 
+        obtained (defaults to NIST Chemistry Webbook)
     """
     
     speciesDict = collections.OrderedDict()
@@ -189,7 +202,8 @@ def buildDiatomicSpeciesJSON(**kwargs):
 
 
 class constants:
-    """A collection of physical and unit-conversion constants useful in plasma calculations
+    """A collection of physical and unit-conversion constants useful in plasma 
+    calculations.
     """
     
     protonMass = 1.6726219e-27
@@ -274,7 +288,7 @@ class specie:
         
 class electronSpecie:
     def __init__(self, **kwargs):
-        """Class describing electrons as a specie in the plasma
+        """Class describing electrons as a specie in the plasma.
         
         Parameters
         ----------
@@ -298,16 +312,20 @@ class electronSpecie:
 
 class element:
     def __init__(self, **kwargs):
-        """Class acting as struct to hold some information about different elements in the plasma
+        """Class acting as struct to hold some information about different 
+        elements in the plasma.
         
         Parameters
         ----------
         name : string
             Name of element, eg "O" (default empty string)
         stoichiometricCoeffts : array_like
-            List of number of atoms of this element present in each specie, in same order as compositionGFE.species (default empty list)
+            List of number of atoms of this element present in each specie, in 
+            same order as compositionGFE.species (default empty list)
         totalNumber : float
-            Total number of atoms of this element present in the simulation, calculated from initial conditions during instantiation of compositionGFE (default 0)
+            Total number of atoms of this element present in the simulation 
+            (conserved), calculated from initial conditions during instantiation
+            of compositionGFE (default 0)
         """
 
         self.name = kwargs.get("name", "")
@@ -317,7 +335,10 @@ class element:
     
 class compositionGFE:
     def __init__(self, **kwargs):
-        """Class representing a thermal plasma specification with multiple species, and methods for calculating equilibrium species concentrations at different temperatures and pressures using the principle of Gibbs free energy minimisation
+        """Class representing a thermal plasma specification with multiple 
+        species, and methods for calculating equilibrium species concentrations 
+        at different temperatures and pressures using the principle of Gibbs 
+        free energy minimisation.
         
         Parameters
         ----------
@@ -326,7 +347,8 @@ class compositionGFE:
         P : float
             Pressure value in Pa, for initialisation (default 101325)
         compositionFile : string
-            Path to a JSON data file containing species and initial mole fractions
+            Path to a JSON data file containing species and initial mole 
+            fractions
         """            
             
         self.T = kwargs.get("T", 10000.)
@@ -514,7 +536,52 @@ class compositionGFE:
         print(self.ni)
 
         self.writeNi()
-        self.writeNumberDensity()        
+        self.writeNumberDensity()
+        
+    def calculateDensity(self):
+        """Calculate the density of the plasma in kg/m3 based on current 
+        conditions and specie composition.
+        """
+        
+        density = 0        
+        for spKey, sp in self.species.items():
+            density += sp.numberDensity * sp.molarMass / constants.avogadro
+        return density
+            
+    def calculateHeatCapacity(self):
+        """Calculate the heat capacity of the plasma in J/kg.K based on current 
+        conditions and specie composition. 
+        """
+
+        raise NotImplementedError
+        
+    def calculateViscosity(self):
+        """Calculate the viscosity of the plasma in Pa.s based on current 
+        conditions and specie composition.
+        """
+
+        raise NotImplementedError
+
+    def calculateThermalConductivity(self):
+        """Calculate the thermal conductivity of the plasma in W/m.K based on 
+        current conditions and specie composition.
+        """
+
+        raise NotImplementedError
+
+    def calculateElectricalConductivity(self):
+        """Calculate the electrical conductivity of the plasma in 1/ohm.m based 
+        on current conditions and specie composition.
+        """
+
+        raise NotImplementedError
+    
+    def calculateTotalEmissionCoefficient(self):
+        """Calculate the total radiation emission coefficient of the plasma in 
+        W/m3 based on current conditions and specie composition.
+        """
+
+        raise NotImplementedError
 
 ################################################################################
 
