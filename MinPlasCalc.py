@@ -23,24 +23,52 @@ def molarMassCalculator(nProtons, nNeutrons, nElectrons):
                                                 + constants.electronMass))
 
 
-def nistCleanAndSplit(nistString):
-    """Helper function to tidy up a string of data copied from NIST online 
+def parse_values(nist_line):
+    """Helper function to tidy up a string of data copied from NIST online
     databases.
     """
 
     table = str.maketrans('', '', '+x?[]')
-    dataStr = "".join(nistString.split()).translate(table)
-    dataSplit = dataStr.split("|")[:-1]
+    line = "".join(nist_line.split()).translate(table)
+    records = line.split("|")[:-1]
 
-    returnData = []
+    values = []
+    for record in records:
+        if "/" in record:
+            num, den = record.split("/")
+            value = float(num) / float(den)
+        else:
+            value = float(record)
+        values.append(value)
+    return values
 
-    for dataVal in dataSplit:
-        if "/" in dataVal:
-            num, den = dataVal.split("/")
-            dataVal = float(num) / float(den)
-        returnData.append(float(dataVal))
 
-    return returnData
+def read_energylevels(datafile):
+    """ Read a NIST energy level file
+
+    Parameters
+    ----------
+    datafile : str
+        Filename of a NIST energy level file
+
+
+    Return
+    ------
+    energylevels : list of dict
+         Energy levels. Each dict contains fields J and Ei.
+    """
+    energylevels = []
+
+    with open(datafile) as data:
+        for i, line in enumerate(data):
+            try:
+                J, Ei = parse_values(line)
+                energylevels.append({"J": J, "Ei": Ei})
+            except ValueError as exception:
+                print("Ignoring line", i, "in", datafile)
+                print(exception)
+
+    return energylevels
 
 
 def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
@@ -71,7 +99,15 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         obtained (defaults to NIST Atomic Spectra Database)
     """
 
-    energylevels = []
+    if sources is None:
+        sources = [collections.OrderedDict([
+            ("title", "NIST Atomic Spectra Database (ver. 5.3), [Online]."),
+            ("author", "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team"),
+            ("publicationInfo", "National Institute of Standards and Technology, Gaithersburg, MD."),
+            ("http", "http://physics.nist.gov/asd"),
+            ("doi", "NA"),
+        ])]
+
     speciesDict = collections.OrderedDict([
         ("name", name),
         ("stoichiometry", stoichiometry),
@@ -79,30 +115,12 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ("chargeNumber", chargeNumber),
         ("monatomicData", collections.OrderedDict([
             ("ionisationEnergy", ionisationEnergy),
-            ("energyLevels", energylevels),
+            ("energyLevels", read_energylevels(nistDataFile)),
         ])),
         ("energyUnit", "1/cm"),
         ("molarMassUnit", "kg/mol"),
-        ("sources", [] if sources is None else sources),
+        ("sources", sources),
     ])
-
-    with open(nistDataFile) as data:
-        for i, dataLine in enumerate(data):
-            try:
-                J, Ei = nistCleanAndSplit(dataLine)
-                energylevels.append({"J": J, "Ei": Ei})
-            except ValueError as exception:
-                print("Ignoring line", i, "in", nistDataFile)
-                print(exception)
-
-    if len(speciesDict["sources"]) == 0:
-        speciesDict["sources"].append(collections.OrderedDict([
-            ("title", "NIST Atomic Spectra Database (ver. 5.3), [Online]."),
-            ("author", "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team"),
-            ("publicationInfo", "National Institute of Standards and Technology, Gaithersburg, MD."),
-            ("http", "http://physics.nist.gov/asd"),
-            ("doi", "NA"),
-        ]))
 
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent=4)
@@ -143,6 +161,14 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         Each dictionary represents a reference source from which the data was 
         obtained (defaults to NIST Chemistry Webbook)
     """
+    if sources is None:
+        sources = [collections.OrderedDict([
+            ("title", "NIST Chemistry WebBook, NIST Standard Reference Database Number 69"),
+            ("author", "PJ Linstrom and WG Mallard (Editors)"),
+            ("publicationInfo", "National Institute of Standards and Technology, Gaithersburg MD., 20899"),
+            ("http", "http://webbook.nist.gov/chemistry/"),
+            ("doi", "10.18434/T4D303"),
+        ])]
 
     speciesDict = collections.OrderedDict([
         ("name", name),
@@ -159,17 +185,9 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ])),
         ("energyUnit", "1/cm"),
         ("molarMassUnit", "kg/mol"),
-        ("sources", [] if sources is None else sources),
+        ("sources", sources),
     ])
 
-    if len(speciesDict["sources"]) == 0:
-        speciesDict["sources"].append(collections.OrderedDict([
-            ("title", "NIST Chemistry WebBook, NIST Standard Reference Database Number 69"),
-            ("author", "PJ Linstrom and WG Mallard (Editors)"),
-            ("publicationInfo", "National Institute of Standards and Technology, Gaithersburg MD., 20899"),
-            ("http", "http://webbook.nist.gov/chemistry/"),
-            ("doi", "10.18434/T4D303"),
-        ]))
 
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent=4)
