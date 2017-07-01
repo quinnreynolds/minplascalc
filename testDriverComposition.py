@@ -7,24 +7,27 @@ import numpy as np
 from matplotlib import pyplot
 import MinPlasCalc as mpc
 
-parser = argparse.ArgumentParser(description = "Test driver for MinPlasCalc - simple oxygen plasma composition calculation.")
-parser.add_argument("-ts", help = "Temperature to start calculating at, K", type = float, default = 1000.)
-parser.add_argument("-te", help = "Temperature to stop calculating at, K", type = float, default = 25000.)
-parser.add_argument("-p", help = "Pressure to calculate at, Pa", type = float, default = 101325.)
+parser = argparse.ArgumentParser(description="Test driver for MinPlasCalc - simple oxygen plasma composition calculation.")
+parser.add_argument("-ts", help="Temperature to start calculating at, K",
+                    type=float, default=1000.)
+parser.add_argument("-te", help = "Temperature to stop calculating at, K",
+                    type=float, default=25000.)
+parser.add_argument("-p", help = "Pressure to calculate at, Pa",
+                    type=float, default=101325.)
 parserArgs = parser.parse_args()
 
 
 # Instantiate a plasma composition object using data from a JSON file.
 # T, P are just initial placeholder values, can be changed at any time.
 myComposition = mpc.compositionGFE(
-    compositionFile = "Compositions/OxygenPlasma5sp.json",
-    T = parserArgs.ts,
-    P = parserArgs.p)
+    compositionFile="Compositions/OxygenPlasma5sp.json",
+    T=parserArgs.ts,
+    P=parserArgs.p)
 
 
 # Run the GFE minimiser calculation at a range of temperatures, and calculate 
 # the plasma density
-temperatures = np.linspace(parserArgs.ts, parserArgs.te, num = 100)
+temperatures = np.linspace(parserArgs.ts, parserArgs.te, num=100)
 ndi = [ [] for j in range(len(myComposition.species)) ]
 plotText = []
 density = []
@@ -39,7 +42,7 @@ for T in temperatures:
         plotText.append(spKey)
 
 # Draw a graph of the results
-fig, (ax1, ax2) = pyplot.subplots(2, 1, figsize = [7.5, 10], sharex = True)
+fig, (ax1, ax2) = pyplot.subplots(2, 1, figsize=[7.5, 10], sharex=True)
 
 ax1.set_ylabel(r"$n_i, m^{-3}$")
 ax1.set_ylim(1e15, 5e25)
@@ -50,18 +53,18 @@ positionFactorN = [2, 2, 2, 0.25, 0.25, 2]
 plotColours = ["blue", "red", "green", "darkcyan", "darkred", "y"]
 
 for j in range(len(ndi)):
-    ax1.semilogy(temperatures, ndi[j], lw = 2, color = plotColours[j])
+    ax1.semilogy(temperatures, ndi[j], lw=2, color=plotColours[j])
 
 for j in range(len(positionIndexT)):
     ax1.text(
         temperatures[positionIndexT[j]], 
         positionFactorN[j] * ndi[j][positionIndexT[j]], 
         plotText[j], 
-        fontdict = {"color": plotColours[j]} )
+        fontdict={"color": plotColours[j]})
 
 ax2.set_xlabel(r"$T, K$")
 ax2.set_ylabel(r"$\rho, kg/m^3$")
-ax2.semilogy(temperatures, density, lw = 2)
+ax2.semilogy(temperatures, density, lw=2)
 
 pyplot.show()
 

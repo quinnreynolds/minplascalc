@@ -212,22 +212,22 @@ class constants:
 
 # Diatomic molecules, single atoms, and ions
 class specie:
-    def __init__(self, **kwargs):
+    def __init__(self, dataFile, numberOfParticles=0):
         """Class describing a single monatomic or diatomic chemical specie in the plasma, eg O2 or Si+
         
         Parameters
         ----------
-        numberOfParticles : float
-            Initial particle count (default 0)
         dataFile : string
             Path to a JSON data file describing the electronic and molecular properties of the specie
+        numberOfParticles : float
+            Initial particle count (default 0)
         """
         
-        self.numberOfParticles = kwargs.get("numberOfParticles", 0.)
+        self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
 
         # Construct a data object from JSON data file
-        with open(kwargs.get("dataFile")) as df:
+        with open(dataFile) as df:
             jsonData = json.load(df)
 
         # General specie data
@@ -278,7 +278,7 @@ class specie:
 
         
 class electronSpecie:
-    def __init__(self, **kwargs):
+    def __init__(self, numberOfParticles=0):
         """Class describing electrons as a specie in the plasma.
         
         Parameters
@@ -291,7 +291,7 @@ class electronSpecie:
         self.stoichiometry = {}
         self.molarMass = constants.electronMass * constants.avogadro
         self.chargeNumber = -1
-        self.numberOfParticles = kwargs.get("numberOfParticles", 0.)
+        self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
         
     def translationalPartitionFunction(self, T):
@@ -302,7 +302,7 @@ class electronSpecie:
 
 
 class element:
-    def __init__(self, **kwargs):
+    def __init__(self, name="", stoichiometricCoeffts=None, totalNumber=0.):
         """Class acting as struct to hold some information about different 
         elements in the plasma.
         
@@ -319,13 +319,13 @@ class element:
             of compositionGFE (default 0)
         """
 
-        self.name = kwargs.get("name", "")
-        self.stoichiometricCoeffts = kwargs.get("stoichiometricCoeffts", [])
-        self.totalNumber = kwargs.get("totalNumber", 0.)
+        self.name = name
+        self.stoichiometricCoeffts = [] if stoichiometricCoeffts is None else stoichiometricCoeffts
+        self.totalNumber = totalNumber
     
     
 class compositionGFE:
-    def __init__(self, **kwargs):
+    def __init__(self, compositionFile, T=10000., P=101325):
         """Class representing a thermal plasma specification with multiple 
         species, and methods for calculating equilibrium species concentrations 
         at different temperatures and pressures using the principle of Gibbs 
@@ -333,19 +333,19 @@ class compositionGFE:
         
         Parameters
         ----------
+        compositionFile : string
+            Path to a JSON data file containing species and initial mole
+            fractions
         T : float
             Temperature value in K, for initialisation (default 10000)
         P : float
             Pressure value in Pa, for initialisation (default 101325)
-        compositionFile : string
-            Path to a JSON data file containing species and initial mole 
-            fractions
-        """            
+        """
             
-        self.T = kwargs.get("T", 10000.)
-        self.P = kwargs.get("P", 101325.)
+        self.T = T
+        self.P = P
 
-        with open(kwargs.get("compositionFile")) as sf:
+        with open(compositionFile) as sf:
             jsonData = json.load(sf)
         
         # Random order upsets the nonlinearities in the minimiser resulting in
@@ -479,10 +479,7 @@ class compositionGFE:
             for j2, spKey2 in enumerate(self.species):
                 self.gfeVector[j] += offDiagonal * self.ni[j2]
             
-    def solveGfe(self, **kwargs):
-        relativeTolerance = kwargs.get("relativeTolerance", 1e-10)
-        maxIters = kwargs.get("maxIters", 1000)
-        
+    def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.readNi()
 
         governorFactors = np.linspace(0.9, 0.1, 9)
