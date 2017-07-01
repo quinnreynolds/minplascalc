@@ -4,6 +4,7 @@
 
 import MinPlasCalc as mpc
 import pathlib
+import json
 
 def test_buildMonatomicSpeciesJSON():
     # Demo of how to build a JSON data file for a monatomic species
@@ -17,6 +18,8 @@ def test_buildMonatomicSpeciesJSON():
 
     outputfile = pathlib.Path('C+.json')
     assert outputfile.exists()
+    result = json.load(outputfile.open())
+    assert len(result["monatomicData"]["energyLevels"]) == 85
     outputfile.unlink()
 
 def test_buildDiatomicSpeciesJSON():
@@ -35,4 +38,5 @@ def test_buildDiatomicSpeciesJSON():
 
     outputfile = pathlib.Path('CO.json')
     assert outputfile.exists()
+    result = json.load(outputfile.open())
     outputfile.unlink()
