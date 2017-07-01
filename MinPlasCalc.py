@@ -40,7 +40,8 @@ def nistCleanAndSplit(nistString):
     return returnData
 
     
-def buildMonatomicSpeciesJSON(**kwargs):
+def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
+                              ionisationEnergy, nistDataFile, sources=None):
     """Function to take text data retrieved from NIST websites or other sources 
     and build a JSON object file for a monatomic plasma specie, with specified 
     electron energy levels and degeneracies.
@@ -67,47 +68,47 @@ def buildMonatomicSpeciesJSON(**kwargs):
         obtained (defaults to NIST Atomic Spectra Database)
     """
     
-    speciesDict = collections.OrderedDict()
+    speciesDict = collections.OrderedDict([
+        ("name", name),
+        ("stoichiometry", stoichiometry),
+        ("molarMass", molarMass),
+        ("chargeNumber", chargeNumber),
+        ("monatomicData", collections.OrderedDict([
+            ("ionisationEnergy", ionisationEnergy),
+            ("energyLevels", []),
+        ])),
+        ("energyUnit", "1/cm"),
+        ("molarMassUnit", "kg/mol"),
+        ("sources", [] if sources is None else sources),
+    ])
 
-    speciesDict["name"] = kwargs.get("name")
-    speciesDict["stoichiometry"] = kwargs.get("stoichiometry")
-    speciesDict["molarMass"] = kwargs.get("molarMass")
-    speciesDict["chargeNumber"] = kwargs.get("chargeNumber")
-                
-    speciesDict["monatomicData"] = collections.OrderedDict()
-    speciesDict["monatomicData"]["ionisationEnergy"] = kwargs.get("ionisationEnergy")
-    dataFile = kwargs.get("nistDataFile")
-
-    speciesDict["monatomicData"]["energyLevels"] = []
-    with open(dataFile) as data:
+    with open(nistDataFile) as data:
         for i, dataLine in enumerate(data):
             try:
                 J, Ei = nistCleanAndSplit(dataLine)
                 speciesDict["monatomicData"]["energyLevels"].append({"J": J, "Ei": Ei})
             except ValueError as exception:
-                print("Ignoring line", i, "in", dataFile)
+                print("Ignoring line", i, "in", nistDataFile)
                 print(exception)
 
-    speciesDict["energyUnit"] = "1/cm"
-    speciesDict["molarMassUnit"] = "kg/mol"
-    speciesDict["sources"] = kwargs.get("sources", [])
-    
     if len(speciesDict["sources"]) == 0:
-        speciesDict["sources"].append(collections.OrderedDict())        
-        speciesDict["sources"][-1]["title"] = "NIST Atomic Spectra Database (ver. 5.3), [Online]."
-        speciesDict["sources"][-1]["author"] = "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team"
-        speciesDict["sources"][-1]["publicationInfo"] = "National Institute of Standards and Technology, Gaithersburg, MD."
-        speciesDict["sources"][-1]["http"] = "http://physics.nist.gov/asd"
-        speciesDict["sources"][-1]["doi"] = "NA"
+        speciesDict["sources"].append(collections.OrderedDict([
+            ("title", "NIST Atomic Spectra Database (ver. 5.3), [Online]."),
+            ("author", "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team"),
+            ("publicationInfo", "National Institute of Standards and Technology, Gaithersburg, MD."),
+            ("http", "http://physics.nist.gov/asd"),
+            ("doi", "NA"),
+        ]))
     else:
         for sourceDict in speciesDict["sources"]:
-            speciesDict["sources"].append(collections.OrderedDict())        
-            speciesDict["sources"][-1]["title"] = sourceDict["title"]
-            speciesDict["sources"][-1]["author"] = sourceDict["author"]
-            speciesDict["sources"][-1]["publicationInfo"] = sourceDict["publicationInfo"]
-            speciesDict["sources"][-1]["http"] = sourceDict["http"]
-            speciesDict["sources"][-1]["doi"] = sourceDict["doi"]
-        
+            speciesDict["sources"].append(collections.OrderedDict([
+                ("title", sourceDict["title"]),
+                ("author", sourceDict["author"]),
+                ("publicationInfo", sourceDict["publicationInfo"]),
+                ("http", sourceDict["http"]),
+                ("doi", sourceDict["doi"]),
+            ]))
+
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent = 4)
 
