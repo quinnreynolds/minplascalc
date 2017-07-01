@@ -103,15 +103,6 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
             ("http", "http://physics.nist.gov/asd"),
             ("doi", "NA"),
         ]))
-    else:
-        for sourceDict in speciesDict["sources"]:
-            speciesDict["sources"].append(collections.OrderedDict([
-                ("title", sourceDict["title"]),
-                ("author", sourceDict["author"]),
-                ("publicationInfo", sourceDict["publicationInfo"]),
-                ("http", sourceDict["http"]),
-                ("doi", sourceDict["doi"]),
-            ]))
 
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent=4)
@@ -179,15 +170,6 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
             ("http", "http://webbook.nist.gov/chemistry/"),
             ("doi", "10.18434/T4D303"),
         ]))
-    else:
-        for sourceDict in speciesDict["sources"]:
-            speciesDict["sources"].append(collections.OrderedDict([
-                ("title", sourceDict["title"]),
-                ("author", sourceDict["author"]),
-                ("publicationInfo", sourceDict["publicationInfo"]),
-                ("http", sourceDict["http"]),
-                ("doi", sourceDict["doi"]),
-            ]))
 
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent=4)
