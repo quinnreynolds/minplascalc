@@ -34,24 +34,14 @@ def nistCleanAndSplit(nistString):
     dataSplit.pop(-1)
     
     returnData = []
-    acceptableStringYN = True
 
     for dataVal in dataSplit:
         if "/" in dataVal:
-            try:
-                quotientVals = dataVal.split("/")
-                dataVal = float(quotientVals[0]) / float(quotientVals[1])
-            except ValueError:
-                returnData.append(dataVal)
-                acceptableStringYN = False
-        try:
-            float(dataVal)
-            returnData.append(float(dataVal))
-        except ValueError:
-            returnData.append(dataVal)
-            acceptableStringYN = False
-    
-    return acceptableStringYN, returnData
+            num, den = dataVal.split("/")
+            dataVal = float(num) / float(den)
+        returnData.append(float(dataVal))
+
+    return returnData
 
     
 def buildMonatomicSpeciesJSON(**kwargs):
@@ -91,15 +81,16 @@ def buildMonatomicSpeciesJSON(**kwargs):
     speciesDict["monatomicData"] = collections.OrderedDict()
     speciesDict["monatomicData"]["ionisationEnergy"] = kwargs.get("ionisationEnergy")
     dataFile = kwargs.get("nistDataFile")
-    with open(dataFile) as f:
-        data = f.readlines()
+
     speciesDict["monatomicData"]["energyLevels"] = []
-    for i, dataLine in enumerate(data):
-        testYN, dataVals = nistCleanAndSplit(dataLine)
-        if testYN:
-            speciesDict["monatomicData"]["energyLevels"].append({"J": dataVals[0], "Ei": dataVals[1]})
-        else:
-            print("Ignoring line", i, "in", dataFile, "with non-numeric data: ", dataVals)
+    with open(dataFile) as data:
+        for i, dataLine in enumerate(data):
+            try:
+                J, Ei = nistCleanAndSplit(dataLine)
+                speciesDict["monatomicData"]["energyLevels"].append({"J": J, "Ei": Ei})
+            except ValueError as exception:
+                print("Ignoring line", i, "in", dataFile)
+                print(exception)
 
     speciesDict["energyUnit"] = "1/cm"
     speciesDict["molarMassUnit"] = "kg/mol"
