@@ -13,7 +13,7 @@ import collections
 
 
 def molarMassCalculator(nProtons, nNeutrons, nElectrons):
-    """Estimate the molar mass in kg/mol of a specie based on its nuclear and 
+    """Estimate the molar mass in kg/mol of a species based on its nuclear and
     electronic structure, if you can't get it anywhere else for some reason.
     """
 
@@ -46,23 +46,23 @@ def nistCleanAndSplit(nistString):
 def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                               ionisationEnergy, nistDataFile, sources=None):
     """Function to take text data retrieved from NIST websites or other sources 
-    and build a JSON object file for a monatomic plasma specie, with specified 
+    and build a JSON object file for a monatomic plasma species, with specified
     electron energy levels and degeneracies.
     
     Parameters
     ----------
     name : string
-        A unique identifier for the specie (also the name of the JSON output 
+        A unique identifier for the species (also the name of the JSON output
         file)
     stoichiometry : dictionary
-        Dictionary describing the elemental stoichiometry of the specie (e.g. 
+        Dictionary describing the elemental stoichiometry of the species (e.g.
         {"O": 1} for O or O+)
     molarMass : float
-        Molar mass of the specie in kg/mol
+        Molar mass of the species in kg/mol
     chargeNumber : int
-        Charge on the specie (in integer units of the fundamental charge)    
+        Charge on the species (in integer units of the fundamental charge)
     ionisationEnergy : float
-        Ionisation energy of the specie in 1/cm
+        Ionisation energy of the species in 1/cm
     nistDataFile : string
         Path to text file containing raw energy level data (in NIST Atomic 
         Spectra Database format)
@@ -112,25 +112,25 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                              ionisationEnergy, dissociationEnergy, sigmaS,
                              g0, we, Be, sources=None):
     """Function to take text data retrieved from NIST websites or other sources 
-    and build a JSON object file for a diatomic plasma specie, with specified 
+    and build a JSON object file for a diatomic plasma species, with specified
     ground state degeneracy and rotational & vibrational parameters.
     
     Parameters
     ----------
     name : string
-        A unique identifier for the specie (also the name of the JSON output 
+        A unique identifier for the species (also the name of the JSON output
         file)
     stoichiometry : dictionary
-        Dictionary describing the elemental stoichiometry of the specie (e.g. 
+        Dictionary describing the elemental stoichiometry of the species (e.g.
         {"Si": 1, "O": 1} for SiO or SiO+)
     molarMass : float
-        Molar mass of the specie in kg/mol
+        Molar mass of the species in kg/mol
     chargeNumber : int
-        Charge on the specie (in integer units of the fundamental charge)    
+        Charge on the species (in integer units of the fundamental charge)
     ionisationEnergy : float
-        Ionisation energy of the specie in 1/cm
+        Ionisation energy of the species in 1/cm
     dissociationEnergy : float
-        Dissociation energy of the specie in 1/cm
+        Dissociation energy of the species in 1/cm
     sigmaS : int
         Symmetry constant (=2 for homonuclear molecules, =1 for heteronuclear)
     g0 : float
@@ -198,14 +198,14 @@ class constants:
 
 
 # Diatomic molecules, single atoms, and ions
-class specie:
+class Species:
     def __init__(self, dataFile, numberOfParticles=0):
-        """Class describing a single monatomic or diatomic chemical specie in the plasma, eg O2 or Si+
+        """Class describing a single monatomic or diatomic chemical species in the plasma, eg O2 or Si+
         
         Parameters
         ----------
         dataFile : string
-            Path to a JSON data file describing the electronic and molecular properties of the specie
+            Path to a JSON data file describing the electronic and molecular properties of the species
         numberOfParticles : float
             Initial particle count (default 0)
         """
@@ -217,14 +217,14 @@ class specie:
         with open(dataFile) as df:
             jsonData = json.load(df)
 
-        # General specie data
+        # General species data
         self.name = jsonData["name"]
         self.stoichiometry = jsonData["stoichiometry"]
         self.molarMass = jsonData["molarMass"]
         self.chargeNumber = jsonData["chargeNumber"]
 
         if "monatomicData" in jsonData:
-            # Monatomic-specific specie data
+            # Monatomic-specific species data
             self.monatomicYN = True
             self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"]["ionisationEnergy"]
             self.deltaIonisationEnergy = 0.
@@ -232,7 +232,7 @@ class specie:
             for energyLevelLine in jsonData["monatomicData"]["energyLevels"]:
                 self.energyLevels.append([2. * energyLevelLine["J"] + 1., constants.invCmToJ * energyLevelLine["Ei"]])
         else:
-            # Diatomic-specific specie data
+            # Diatomic-specific species data
             self.monatomicYN = False
             self.dissociationEnergy = constants.invCmToJ * jsonData["diatomicData"]["dissociationEnergy"]
             self.ionisationEnergy = constants.invCmToJ * jsonData["diatomicData"]["ionisationEnergy"]
@@ -264,9 +264,9 @@ class specie:
             return electronicPartition * vibrationalPartition * rotationalPartition
 
 
-class electronSpecie:
+class ElectronSpecies:
     def __init__(self, numberOfParticles=0):
-        """Class describing electrons as a specie in the plasma.
+        """Class describing electrons as a species in the plasma.
         
         Parameters
         ----------
@@ -289,7 +289,7 @@ class electronSpecie:
         return 2.
 
 
-class element:
+class Element:
     def __init__(self, name="", stoichiometricCoeffts=None, totalNumber=0.):
         """Class acting as struct to hold some information about different 
         elements in the plasma.
@@ -299,7 +299,7 @@ class element:
         name : string
             Name of element, eg "O" (default empty string)
         stoichiometricCoeffts : array_like
-            List of number of atoms of this element present in each specie, in 
+            List of number of atoms of this element present in each species, in
             same order as compositionGFE.species (default empty list)
         totalNumber : float
             Total number of atoms of this element present in the simulation 
@@ -340,10 +340,10 @@ class compositionGFE:
         # non-reproducibility between runs - hence OrderedDict
         self.species = collections.OrderedDict()
         for spData in jsonData["speciesList"]:
-            sp = specie(dataFile=spData["specie"])
+            sp = Species(dataFile=spData["species"])
             self.species[sp.name] = sp
             self.species[sp.name].x0 = spData["x0"]
-        self.species["e"] = electronSpecie()
+        self.species["e"] = ElectronSpecies()
         self.species["e"].x0 = 0.
 
         # Random order upsets the nonlinearities in the minimiser resulting in
@@ -355,9 +355,9 @@ class compositionGFE:
                 elmList.append(stKey)
         elmList = list(set(elmList))
         for elmKey in elmList:
-            self.elements[elmKey] = element(name=elmKey)
+            self.elements[elmKey] = Element(name=elmKey)
 
-        # Set specie which each +ve charged ion originates from
+        # Set species which each +ve charged ion originates from
         self.maxChargeNumber = 0
         for spKey, sp in self.species.items():
             if sp.chargeNumber > self.maxChargeNumber:
@@ -367,7 +367,7 @@ class compositionGFE:
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
                         sp.ionisedFrom = spKey2
 
-        # Set specie reference energies
+        # Set species reference energies
         for spKey, sp in self.species.items():
             if sp.chargeNumber == 0:
                 if sp.monatomicYN:
@@ -523,7 +523,7 @@ class compositionGFE:
 
     def calculateDensity(self):
         """Calculate the density of the plasma in kg/m3 based on current 
-        conditions and specie composition.
+        conditions and species composition.
         """
 
         density = 0
@@ -533,35 +533,35 @@ class compositionGFE:
 
     def calculateHeatCapacity(self):
         """Calculate the heat capacity of the plasma in J/kg.K based on current 
-        conditions and specie composition. 
+        conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateViscosity(self):
         """Calculate the viscosity of the plasma in Pa.s based on current 
-        conditions and specie composition.
+        conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateThermalConductivity(self):
         """Calculate the thermal conductivity of the plasma in W/m.K based on 
-        current conditions and specie composition.
+        current conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateElectricalConductivity(self):
         """Calculate the electrical conductivity of the plasma in 1/ohm.m based 
-        on current conditions and specie composition.
+        on current conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateTotalEmissionCoefficient(self):
         """Calculate the total radiation emission coefficient of the plasma in 
-        W/m3 based on current conditions and specie composition.
+        W/m3 based on current conditions and species composition.
         """
 
         raise NotImplementedError

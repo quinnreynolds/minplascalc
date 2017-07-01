@@ -7,7 +7,7 @@ def test_molarmass():
 
 @pytest.fixture
 def sample_species():
-    return mpc.specie(dataFile="NistData/O2.json")
+    return mpc.Species(dataFile="NistData/O2.json")
 
 def test_translational_partition_function(sample_species):
     assert sample_species.translationalPartitionFunction(0.) == 0.

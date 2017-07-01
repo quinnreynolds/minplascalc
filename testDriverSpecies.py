@@ -16,10 +16,10 @@ parserArgs = parser.parse_args()
 
 
 # Load up some species
-myOxygenMolecule = mpc.specie(dataFile = "NistData/O2.json")
-myOxygenAtom = mpc.specie(dataFile = "NistData/O.json")
-myOxygenPlus = mpc.specie(dataFile = "NistData/O+.json")
-myOxygenPlusPlus = mpc.specie(dataFile = "NistData/O++.json")
+myOxygenMolecule = mpc.Species(dataFile ="NistData/O2.json")
+myOxygenAtom = mpc.Species(dataFile ="NistData/O.json")
+myOxygenPlus = mpc.Species(dataFile ="NistData/O+.json")
+myOxygenPlusPlus = mpc.Species(dataFile ="NistData/O++.json")
 
 
 # Calculate their internal partition functions
