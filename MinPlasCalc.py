@@ -24,15 +24,11 @@ def nistCleanAndSplit(nistString):
     """Helper function to tidy up a string of data copied from NIST online 
     databases.
     """
-    
-    dataStr = "".join(nistString.split())
-    dataStr = dataStr.replace("+x", "")
-    dataStr = dataStr.replace("?", "")
-    dataStr = dataStr.replace("[", "")
-    dataStr = dataStr.replace("]", "")
-    dataSplit = dataStr.split("|")
-    dataSplit.pop(-1)
-    
+
+    table = str.maketrans('', '', '+x?[]')
+    dataStr = "".join(nistString.split()).translate(table)
+    dataSplit = dataStr.split("|")[:-1]
+
     returnData = []
 
     for dataVal in dataSplit:
