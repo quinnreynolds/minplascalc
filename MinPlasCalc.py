@@ -113,7 +113,9 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         json.dump(speciesDict, jf, indent = 4)
 
 
-def buildDiatomicSpeciesJSON(**kwargs):
+def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
+                             ionisationEnergy, dissociationEnergy, sigmaS,
+                             g0, we, Be, sources=None):
     """Function to take text data retrieved from NIST websites or other sources 
     and build a JSON object file for a diatomic plasma specie, with specified 
     ground state degeneracy and rotational & vibrational parameters.
@@ -147,45 +149,46 @@ def buildDiatomicSpeciesJSON(**kwargs):
         obtained (defaults to NIST Chemistry Webbook)
     """
     
-    speciesDict = collections.OrderedDict()
-
-    speciesDict["name"] = kwargs.get("name")
-    speciesDict["stoichiometry"] = kwargs.get("stoichiometry")
-    speciesDict["molarMass"] = kwargs.get("molarMass")
-    speciesDict["chargeNumber"] = kwargs.get("chargeNumber")
-                
-    speciesDict["diatomicData"] = collections.OrderedDict()
-    speciesDict["diatomicData"]["ionisationEnergy"] = kwargs.get("ionisationEnergy")
-    speciesDict["diatomicData"]["dissociationEnergy"] = kwargs.get("dissociationEnergy")
-    speciesDict["diatomicData"]["sigmaS"] = kwargs.get("sigmaS")
-    speciesDict["diatomicData"]["g0"] = kwargs.get("g0")
-    speciesDict["diatomicData"]["we"] = kwargs.get("we")
-    speciesDict["diatomicData"]["Be"] = kwargs.get("Be")
-    
-    speciesDict["energyUnit"] = "1/cm"
-    speciesDict["molarMassUnit"] = "kg/mol"
-    speciesDict["sources"] = kwargs.get("sources", [])
+    speciesDict = collections.OrderedDict([
+        ("name", name),
+        ("stoichiometry", stoichiometry),
+        ("molarMass", molarMass),
+        ("chargeNumber", chargeNumber),
+        ("diatomicData", collections.OrderedDict([
+            ("ionisationEnergy", ionisationEnergy),
+            ("dissociationEnergy", dissociationEnergy),
+            ("sigmaS", sigmaS),
+            ("g0", g0),
+            ("we", we),
+            ("Be", Be),
+            ])),
+        ("energyUnit", "1/cm"),
+        ("molarMassUnit", "kg/mol"),
+        ("sources", [] if sources is None else sources),
+    ])
     
     if len(speciesDict["sources"]) == 0:
-        speciesDict["sources"].append(collections.OrderedDict())        
-        speciesDict["sources"][-1]["title"] = "NIST Chemistry WebBook, NIST Standard Reference Database Number 69"
-        speciesDict["sources"][-1]["author"] = "PJ Linstrom and WG Mallard (Editors)"
-        speciesDict["sources"][-1]["publicationInfo"] = "National Institute of Standards and Technology, Gaithersburg MD., 20899"
-        speciesDict["sources"][-1]["http"] = "http://webbook.nist.gov/chemistry/"
-        speciesDict["sources"][-1]["doi"] = "10.18434/T4D303"
+        speciesDict["sources"].append(collections.OrderedDict([
+            ("title", "NIST Chemistry WebBook, NIST Standard Reference Database Number 69"),
+            ("author", "PJ Linstrom and WG Mallard (Editors)"),
+            ("publicationInfo", "National Institute of Standards and Technology, Gaithersburg MD., 20899"),
+            ("http", "http://webbook.nist.gov/chemistry/"),
+            ("doi", "10.18434/T4D303"),
+        ]))
     else:
         for sourceDict in speciesDict["sources"]:
-            speciesDict["sources"].append(collections.OrderedDict())        
-            speciesDict["sources"][-1]["title"] = sourceDict["title"]
-            speciesDict["sources"][-1]["author"] = sourceDict["author"]
-            speciesDict["sources"][-1]["publicationInfo"] = sourceDict["publicationInfo"]
-            speciesDict["sources"][-1]["http"] = sourceDict["http"]
-            speciesDict["sources"][-1]["doi"] = sourceDict["doi"]
-        
+            speciesDict["sources"].append(collections.OrderedDict([
+                ("title", sourceDict["title"]),
+                ("author", sourceDict["author"]),
+                ("publicationInfo", sourceDict["publicationInfo"]),
+                ("http", sourceDict["http"]),
+                ("doi", sourceDict["doi"]),
+            ]))
+
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent = 4)
 
-        
+
 # classes ######################################################################
 
 
@@ -193,7 +196,7 @@ class constants:
     """A collection of physical and unit-conversion constants useful in plasma 
     calculations.
     """
-    
+
     protonMass = 1.6726219e-27
     electronMass = 9.10938356e-31
     fundamentalCharge = 1.60217662e-19
