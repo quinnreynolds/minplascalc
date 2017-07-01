@@ -16,10 +16,13 @@ def molarMassCalculator(nProtons, nNeutrons, nElectrons):
     """Estimate the molar mass in kg/mol of a specie based on its nuclear and 
     electronic structure, if you can't get it anywhere else for some reason.
     """
-    
-    return constants.avogadro * (nProtons * constants.protonMass + nElectrons * constants.electronMass + nNeutrons * (constants.protonMass + constants.electronMass))
-    
-    
+
+    return constants.avogadro * (nProtons * constants.protonMass
+                                 + nElectrons * constants.electronMass
+                                 + nNeutrons * (constants.protonMass
+                                                + constants.electronMass))
+
+
 def nistCleanAndSplit(nistString):
     """Helper function to tidy up a string of data copied from NIST online 
     databases.
@@ -39,7 +42,7 @@ def nistCleanAndSplit(nistString):
 
     return returnData
 
-    
+
 def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                               ionisationEnergy, nistDataFile, sources=None):
     """Function to take text data retrieved from NIST websites or other sources 
@@ -67,7 +70,8 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         Each dictionary represents a reference source from which the data was 
         obtained (defaults to NIST Atomic Spectra Database)
     """
-    
+
+    energylevels = []
     speciesDict = collections.OrderedDict([
         ("name", name),
         ("stoichiometry", stoichiometry),
@@ -75,7 +79,7 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ("chargeNumber", chargeNumber),
         ("monatomicData", collections.OrderedDict([
             ("ionisationEnergy", ionisationEnergy),
-            ("energyLevels", []),
+            ("energyLevels", energylevels),
         ])),
         ("energyUnit", "1/cm"),
         ("molarMassUnit", "kg/mol"),
@@ -86,7 +90,7 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         for i, dataLine in enumerate(data):
             try:
                 J, Ei = nistCleanAndSplit(dataLine)
-                speciesDict["monatomicData"]["energyLevels"].append({"J": J, "Ei": Ei})
+                energylevels.append({"J": J, "Ei": Ei})
             except ValueError as exception:
                 print("Ignoring line", i, "in", nistDataFile)
                 print(exception)
@@ -110,7 +114,7 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
             ]))
 
     with open(speciesDict["name"] + ".json", "w") as jf:
-        json.dump(speciesDict, jf, indent = 4)
+        json.dump(speciesDict, jf, indent=4)
 
 
 def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
@@ -148,7 +152,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         Each dictionary represents a reference source from which the data was 
         obtained (defaults to NIST Chemistry Webbook)
     """
-    
+
     speciesDict = collections.OrderedDict([
         ("name", name),
         ("stoichiometry", stoichiometry),
@@ -161,12 +165,12 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
             ("g0", g0),
             ("we", we),
             ("Be", Be),
-            ])),
+        ])),
         ("energyUnit", "1/cm"),
         ("molarMassUnit", "kg/mol"),
         ("sources", [] if sources is None else sources),
     ])
-    
+
     if len(speciesDict["sources"]) == 0:
         speciesDict["sources"].append(collections.OrderedDict([
             ("title", "NIST Chemistry WebBook, NIST Standard Reference Database Number 69"),
@@ -186,7 +190,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
             ]))
 
     with open(speciesDict["name"] + ".json", "w") as jf:
-        json.dump(speciesDict, jf, indent = 4)
+        json.dump(speciesDict, jf, indent=4)
 
 
 # classes ######################################################################
@@ -210,6 +214,7 @@ class constants:
     JperMolToInvCm = 0.0835934811
     eVtoInvCm = 8065.54446
 
+
 # Diatomic molecules, single atoms, and ions
 class specie:
     def __init__(self, dataFile, numberOfParticles=0):
@@ -222,7 +227,7 @@ class specie:
         numberOfParticles : float
             Initial particle count (default 0)
         """
-        
+
         self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
 
@@ -235,7 +240,7 @@ class specie:
         self.stoichiometry = jsonData["stoichiometry"]
         self.molarMass = jsonData["molarMass"]
         self.chargeNumber = jsonData["chargeNumber"]
-            
+
         if "monatomicData" in jsonData:
             # Monatomic-specific specie data
             self.monatomicYN = True
@@ -244,7 +249,6 @@ class specie:
             self.energyLevels = []
             for energyLevelLine in jsonData["monatomicData"]["energyLevels"]:
                 self.energyLevels.append([2. * energyLevelLine["J"] + 1., constants.invCmToJ * energyLevelLine["Ei"]])
-        
         else:
             # Diatomic-specific specie data
             self.monatomicYN = False
@@ -261,22 +265,23 @@ class specie:
             raise ValueError("Error! Negatively charged ions not implemented yet.")
 
     def translationalPartitionFunction(self, T):
-        return ((2 * np.pi * self.molarMass * constants.boltzmann * T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
-            
+        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
+                / (constants.avogadro * constants.planck ** 2)) ** 1.5
+
     def internalPartitionFunction(self, T):
         if self.monatomicYN:
             partitionVal = 0.
             for eLevel in self.energyLevels:
                 if eLevel[1] < (self.ionisationEnergy - self.deltaIonisationEnergy):
-                    partitionVal += eLevel[0] * np.exp(-eLevel[1] / (constants.boltzmann * T))                    
+                    partitionVal += eLevel[0] * np.exp(-eLevel[1] / (constants.boltzmann * T))
             return partitionVal
         else:
             electronicPartition = self.g0
             vibrationalPartition = 1. / (1. - np.exp(-self.we / (constants.boltzmann * T)))
-            rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)            
+            rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)
             return electronicPartition * vibrationalPartition * rotationalPartition
 
-        
+
 class electronSpecie:
     def __init__(self, numberOfParticles=0):
         """Class describing electrons as a specie in the plasma.
@@ -286,16 +291,17 @@ class electronSpecie:
         numberOfParticles : float
             Initial particle count (default 0)
         """
-        
+
         self.name = "e"
         self.stoichiometry = {}
         self.molarMass = constants.electronMass * constants.avogadro
         self.chargeNumber = -1
         self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
-        
+
     def translationalPartitionFunction(self, T):
-        return ((2 * np.pi * self.molarMass * constants.boltzmann * T) / (constants.avogadro * constants.planck ** 2)) ** 1.5
+        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
+                / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
     def internalPartitionFunction(self, T):
         return 2.
@@ -322,8 +328,8 @@ class element:
         self.name = name
         self.stoichiometricCoeffts = [] if stoichiometricCoeffts is None else stoichiometricCoeffts
         self.totalNumber = totalNumber
-    
-    
+
+
 class compositionGFE:
     def __init__(self, compositionFile, T=10000., P=101325):
         """Class representing a thermal plasma specification with multiple 
@@ -341,23 +347,23 @@ class compositionGFE:
         P : float
             Pressure value in Pa, for initialisation (default 101325)
         """
-            
+
         self.T = T
         self.P = P
 
         with open(compositionFile) as sf:
             jsonData = json.load(sf)
-        
+
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs - hence OrderedDict
         self.species = collections.OrderedDict()
         for spData in jsonData["speciesList"]:
-            sp = specie(dataFile = spData["specie"])
+            sp = specie(dataFile=spData["specie"])
             self.species[sp.name] = sp
-            self.species[sp.name].x0 = spData["x0"]        
+            self.species[sp.name].x0 = spData["x0"]
         self.species["e"] = electronSpecie()
         self.species["e"].x0 = 0.
-        
+
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs - hence OrderedDict
         self.elements = collections.OrderedDict()
@@ -367,8 +373,8 @@ class compositionGFE:
                 elmList.append(stKey)
         elmList = list(set(elmList))
         for elmKey in elmList:
-            self.elements[elmKey] = element(name = elmKey)
-        
+            self.elements[elmKey] = element(name=elmKey)
+
         # Set specie which each +ve charged ion originates from
         self.maxChargeNumber = 0
         for spKey, sp in self.species.items():
@@ -378,7 +384,7 @@ class compositionGFE:
                 for spKey2, sp2 in self.species.items():
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
                         sp.ionisedFrom = spKey2
-        
+
         # Set specie reference energies
         for spKey, sp in self.species.items():
             if sp.chargeNumber == 0:
@@ -387,18 +393,19 @@ class compositionGFE:
                 else:
                     sp.E0 = -sp.dissociationEnergy
         self.species["e"].E0 = 0.
-        
+
         # Set stoichiometry and charge coefficient arrays for mass action and 
         # electroneutrality constraints
         for elmKey, elm in self.elements.items():
             elm.stoichiometricCoeffts = []
             for spKey, sp in self.species.items():
-                elm.stoichiometricCoeffts.append(sp.stoichiometry.get(elmKey, 0.))
-        
+                elm.stoichiometricCoeffts.append(
+                    sp.stoichiometry.get(elmKey, 0.))
+
         self.chargeCoeffts = []
         for spKey, sp in self.species.items():
             self.chargeCoeffts.append(sp.chargeNumber)
-        
+
         # Set element totals for constraints from provided initial conditions
         nT0 = self.P / (constants.boltzmann * self.T)
         for elmKey, elm in self.elements.items():
@@ -411,7 +418,7 @@ class compositionGFE:
         self.gfeMatrix = np.zeros((minimiserDOF, minimiserDOF))
         self.gfeVector = np.zeros(minimiserDOF)
         self.ni = np.zeros(len(self.species))
-        
+
         for i, elm in enumerate(self.elements):
             self.gfeVector[len(self.species) + i] = self.elements[elm].totalNumber
             for j, sC in enumerate(self.elements[elm].stoichiometricCoeffts):
@@ -420,12 +427,12 @@ class compositionGFE:
         for j, qC in enumerate(self.chargeCoeffts):
             self.gfeMatrix[-1, j] = qC
             self.gfeMatrix[j, -1] = qC
-            
+
     def initialiseNi(self, ni):
         for j, spKey in enumerate(self.species):
             self.ni[j] = ni[j]
             self.species[spKey].numberOfParticles = ni[j]
-        
+
     def readNi(self):
         for j, spKey in enumerate(self.species):
             self.ni[j] = self.species[spKey].numberOfParticles
@@ -438,7 +445,7 @@ class compositionGFE:
         V = self.ni.sum() * constants.boltzmann * self.T / self.P
         for j, spKey in enumerate(self.species):
             self.species[spKey].numberDensity = self.ni[j] / V
-            
+
     def recalcE0i(self):
         # deltaIonisationEnergy recalculation, using limitation theory of 
         # Stewart & Pyatt 1966
@@ -449,16 +456,21 @@ class compositionGFE:
                 weightedChargeSum += self.ni[j] * self.species[spKey].chargeNumber
                 weightedChargeSumSqd += self.ni[j] * self.species[spKey].chargeNumber ** 2
         zStar = weightedChargeSumSqd / weightedChargeSum
-        debyeD = np.sqrt(constants.boltzmann * self.T / (4. * np.pi * (zStar + 1.) * self.ni[-1] * constants.fundamentalCharge ** 2))
+        debyeD = np.sqrt(constants.boltzmann * self.T
+                         / (4. * np.pi * (zStar + 1.) * self.ni[-1]
+                            * constants.fundamentalCharge ** 2))
         for j, spKey in enumerate(self.species):
             if spKey != "e":
-                ai = (3. * (self.species[spKey].chargeNumber + 1.) / (4. * np.pi * self.ni[-1])) ** (1 / 3)
+                ai = (3. * (self.species[spKey].chargeNumber + 1.)
+                      / (4. * np.pi * self.ni[-1])) ** (1/3)
                 self.species[spKey].deltaIonisationEnergy = constants.boltzmann * self.T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
-                
+
         for cn in range(1, self.maxChargeNumber + 1):
             for key, sp in self.species.items():
                 if sp.chargeNumber == cn:
-                    self.species[key].E0 = self.species[sp.ionisedFrom].E0 + self.species[sp.ionisedFrom].ionisationEnergy - self.species[sp.ionisedFrom].deltaIonisationEnergy
+                    self.species[key].E0 = (self.species[sp.ionisedFrom].E0
+                                            + self.species[sp.ionisedFrom].ionisationEnergy
+                                            - self.species[sp.ionisedFrom].deltaIonisationEnergy)
 
     def recalcGfeArrays(self):
         niSum = self.ni.sum()
@@ -467,18 +479,19 @@ class compositionGFE:
 
         for j, spKey in enumerate(self.species):
             onDiagonal = constants.boltzmann * self.T / self.ni[j]
-            
+
             for j2, spKey2 in enumerate(self.species):
                 self.gfeMatrix[j, j2] = offDiagonal
             self.gfeMatrix[j, j] += onDiagonal
-            
-            totalPartitionFunction = V * self.species[spKey].translationalPartitionFunction(self.T) * self.species[spKey].internalPartitionFunction(self.T)
+
+            totalPartitionFunction = (V * self.species[spKey].translationalPartitionFunction(self.T)
+                                        * self.species[spKey].internalPartitionFunction(self.T))
             mu = -constants.boltzmann * self.T * np.log(totalPartitionFunction / self.ni[j]) + self.species[spKey].E0
-            
+
             self.gfeVector[j] = -mu + onDiagonal * self.ni[j]
             for j2, spKey2 in enumerate(self.species):
                 self.gfeVector[j] += offDiagonal * self.ni[j2]
-            
+
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.readNi()
 
@@ -486,63 +499,63 @@ class compositionGFE:
         successYN = False
         governorIters = 0
         while not successYN:
-            successYN = True            
+            successYN = True
             governorFactor = governorFactors[governorIters]
             relTol = relativeTolerance * 10.
             minimiserIters = 0
             while relTol > relativeTolerance:
                 self.recalcE0i()
                 self.recalcGfeArrays()
-        
+
                 newNi = np.linalg.solve(self.gfeMatrix, self.gfeVector)
-                
-                deltaNi = abs(newNi[0:len(self.species)] - self.ni)            
+
+                deltaNi = abs(newNi[0:len(self.species)] - self.ni)
                 maxAllowedDeltaNi = governorFactor * self.ni
-                
+
                 maxNiIndex = newNi.argmax()
                 relTol = deltaNi[maxNiIndex] / newNi[maxNiIndex]
-                
+
                 lowDeltaNiYN = deltaNi < maxAllowedDeltaNi
                 deltaNi[lowDeltaNiYN] = maxAllowedDeltaNi[lowDeltaNiYN]
                 newRelaxFactors = maxAllowedDeltaNi / deltaNi
                 relaxFactor = newRelaxFactors.min()
-                
+
                 self.ni = (1. - relaxFactor) * self.ni + relaxFactor * newNi[0:len(self.species)]
-                
+
                 minimiserIters += 1
                 if minimiserIters > maxIters:
                     successYN = False
                     break
-            
+
             governorIters += 1
-            
+
         if not successYN:
             # TODO need to raise a proper warning or even exception here
             print("Warning! Minimiser could not find a converged solution, results may be inaccurate.")
-        
+
         print(governorIters, relaxFactor, relTol)
         print(self.ni)
 
         self.writeNi()
         self.writeNumberDensity()
-        
+
     def calculateDensity(self):
         """Calculate the density of the plasma in kg/m3 based on current 
         conditions and specie composition.
         """
-        
-        density = 0        
+
+        density = 0
         for spKey, sp in self.species.items():
             density += sp.numberDensity * sp.molarMass / constants.avogadro
         return density
-            
+
     def calculateHeatCapacity(self):
         """Calculate the heat capacity of the plasma in J/kg.K based on current 
         conditions and specie composition. 
         """
 
         raise NotImplementedError
-        
+
     def calculateViscosity(self):
         """Calculate the viscosity of the plasma in Pa.s based on current 
         conditions and specie composition.
@@ -563,7 +576,7 @@ class compositionGFE:
         """
 
         raise NotImplementedError
-    
+
     def calculateTotalEmissionCoefficient(self):
         """Calculate the total radiation emission coefficient of the plasma in 
         W/m3 based on current conditions and specie composition.
@@ -572,4 +585,3 @@ class compositionGFE:
         raise NotImplementedError
 
 ################################################################################
-
