@@ -355,63 +355,59 @@ class compositionGFE:
             jsonData = json.load(sf)
 
         # Random order upsets the nonlinearities in the minimiser resulting in
-        # non-reproducibility between runs - hence OrderedDict
-        self.species = collections.OrderedDict()
+        # non-reproducibility between runs. Make sure this order is maintained
+        self.species = []
         for spData in jsonData["speciesList"]:
             sp = Species(dataFile=spData["species"])
-            self.species[sp.name] = sp
-            self.species[sp.name].x0 = spData["x0"]
-        self.species["e"] = ElectronSpecies()
-        self.species["e"].x0 = 0.
+            sp.x0 = spData["x0"]
+            self.species.append(sp)
+        electron = ElectronSpecies()
+        electron.x0 = 0
+        self.species.append(electron)
 
         # Random order upsets the nonlinearities in the minimiser resulting in
-        # non-reproducibility between runs - hence OrderedDict
-        self.elements = collections.OrderedDict()
-        elmList = []
-        for spKey, sp in self.species.items():
-            for stKey in sp.stoichiometry:
-                elmList.append(stKey)
-        elmList = list(set(elmList))
-        for elmKey in elmList:
-            self.elements[elmKey] = Element(name=elmKey)
+        # non-reproducibility between runs
+        elementset = set()
+        for sp in self.species:
+            elementset.update(sp.stoichiometry)
+
+        self.elements = [Element(name=element) for element in elementset]
 
         # Set species which each +ve charged ion originates from
         self.maxChargeNumber = 0
-        for spKey, sp in self.species.items():
+        for sp in self.species:
             if sp.chargeNumber > self.maxChargeNumber:
                 self.maxChargeNumber = sp.chargeNumber
             if sp.chargeNumber > 0:
-                for spKey2, sp2 in self.species.items():
+                for sp2 in self.species:
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
-                        sp.ionisedFrom = spKey2
+                        sp.ionisedFrom = sp2
 
         # Set species reference energies
-        for spKey, sp in self.species.items():
+        for sp in self.species:
             if sp.chargeNumber == 0:
                 if sp.monatomicYN:
                     sp.E0 = 0.
                 else:
                     sp.E0 = -sp.dissociationEnergy
-        self.species["e"].E0 = 0.
+        electron.E0 = 0.
 
         # Set stoichiometry and charge coefficient arrays for mass action and 
         # electroneutrality constraints
-        for elmKey, elm in self.elements.items():
-            elm.stoichiometricCoeffts = []
-            for spKey, sp in self.species.items():
-                elm.stoichiometricCoeffts.append(
-                    sp.stoichiometry.get(elmKey, 0.))
+        for element in self.elements:
+            element.stoichiometricCoeffts = []
+            for sp in self.species:
+                element.stoichiometricCoeffts.append(
+                    sp.stoichiometry.get(element.name, 0.))
 
-        self.chargeCoeffts = []
-        for spKey, sp in self.species.items():
-            self.chargeCoeffts.append(sp.chargeNumber)
+        self.chargeCoeffts = [sp.chargeNumber for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
         nT0 = self.P / (constants.boltzmann * self.T)
-        for elmKey, elm in self.elements.items():
+        for elm in self.elements:
             elm.totalNumber = 0
-            for j, spKey in enumerate(self.species):
-                elm.totalNumber += nT0 * elm.stoichiometricCoeffts[j] * self.species[spKey].x0
+            for c, sp in zip(elm.stoichiometricCoeffts, self.species):
+                elm.totalNumber += nT0 * c * sp.x0
 
         # Set up A matrix, b and ni vectors for GFE minimiser
         minimiserDOF = len(self.species) + len(self.elements) + 1
@@ -420,8 +416,8 @@ class compositionGFE:
         self.ni = np.zeros(len(self.species))
 
         for i, elm in enumerate(self.elements):
-            self.gfeVector[len(self.species) + i] = self.elements[elm].totalNumber
-            for j, sC in enumerate(self.elements[elm].stoichiometricCoeffts):
+            self.gfeVector[len(self.species) + i] = elm.totalNumber
+            for j, sC in enumerate(elm.stoichiometricCoeffts):
                 self.gfeMatrix[len(self.species) + i, j] = sC
                 self.gfeMatrix[j, len(self.species) + i] = sC
         for j, qC in enumerate(self.chargeCoeffts):
@@ -429,67 +425,68 @@ class compositionGFE:
             self.gfeMatrix[j, -1] = qC
 
     def initialiseNi(self, ni):
-        for j, spKey in enumerate(self.species):
+        for j, sp in enumerate(self.species):
             self.ni[j] = ni[j]
-            self.species[spKey].numberOfParticles = ni[j]
+            sp.numberOfParticles = ni[j]
 
     def readNi(self):
-        for j, spKey in enumerate(self.species):
-            self.ni[j] = self.species[spKey].numberOfParticles
+        for j, sp in enumerate(self.species):
+            self.ni[j] = sp.numberOfParticles
 
     def writeNi(self):
-        for j, spKey in enumerate(self.species):
-            self.species[spKey].numberOfParticles = self.ni[j]
+        for j, sp in enumerate(self.species):
+            sp.numberOfParticles = self.ni[j]
 
     def writeNumberDensity(self):
         V = self.ni.sum() * constants.boltzmann * self.T / self.P
-        for j, spKey in enumerate(self.species):
-            self.species[spKey].numberDensity = self.ni[j] / V
+        for j, sp in enumerate(self.species):
+            sp.numberDensity = self.ni[j] / V
 
     def recalcE0i(self):
         # deltaIonisationEnergy recalculation, using limitation theory of 
         # Stewart & Pyatt 1966
         weightedChargeSumSqd = 0
         weightedChargeSum = 0
-        for j, spKey in enumerate(self.species):
-            if self.species[spKey].chargeNumber > 0:
-                weightedChargeSum += self.ni[j] * self.species[spKey].chargeNumber
-                weightedChargeSumSqd += self.ni[j] * self.species[spKey].chargeNumber ** 2
+        for j, sp in enumerate(self.species):
+            if sp.chargeNumber > 0:
+                weightedChargeSum += self.ni[j] * sp.chargeNumber
+                weightedChargeSumSqd += self.ni[j] * sp.chargeNumber ** 2
         zStar = weightedChargeSumSqd / weightedChargeSum
         debyeD = np.sqrt(constants.boltzmann * self.T
                          / (4. * np.pi * (zStar + 1.) * self.ni[-1]
                             * constants.fundamentalCharge ** 2))
-        for j, spKey in enumerate(self.species):
-            if spKey != "e":
-                ai = (3. * (self.species[spKey].chargeNumber + 1.)
+        for j, sp in enumerate(self.species):
+            if sp.name != "e":
+                ai = (3. * (sp.chargeNumber + 1.)
                       / (4. * np.pi * self.ni[-1])) ** (1/3)
-                self.species[spKey].deltaIonisationEnergy = constants.boltzmann * self.T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
+                sp.deltaIonisationEnergy = constants.boltzmann * self.T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
 
         for cn in range(1, self.maxChargeNumber + 1):
-            for key, sp in self.species.items():
+            for sp in self.species:
                 if sp.chargeNumber == cn:
-                    self.species[key].E0 = (self.species[sp.ionisedFrom].E0
-                                            + self.species[sp.ionisedFrom].ionisationEnergy
-                                            - self.species[sp.ionisedFrom].deltaIonisationEnergy)
+                    sp.E0 = (sp.ionisedFrom.E0
+                             + sp.ionisedFrom.ionisationEnergy
+                             - sp.ionisedFrom.deltaIonisationEnergy)
+
 
     def recalcGfeArrays(self):
         niSum = self.ni.sum()
         V = niSum * constants.boltzmann * self.T / self.P
         offDiagonal = -constants.boltzmann * self.T / niSum
 
-        for j, spKey in enumerate(self.species):
+        for j, sp in enumerate(self.species):
             onDiagonal = constants.boltzmann * self.T / self.ni[j]
 
-            for j2, spKey2 in enumerate(self.species):
+            for j2, sp2 in enumerate(self.species):
                 self.gfeMatrix[j, j2] = offDiagonal
             self.gfeMatrix[j, j] += onDiagonal
 
-            totalPartitionFunction = (V * self.species[spKey].translationalPartitionFunction(self.T)
-                                        * self.species[spKey].internalPartitionFunction(self.T))
-            mu = -constants.boltzmann * self.T * np.log(totalPartitionFunction / self.ni[j]) + self.species[spKey].E0
+            totalPartitionFunction = (V * sp.translationalPartitionFunction(self.T)
+                                        * sp.internalPartitionFunction(self.T))
+            mu = -constants.boltzmann * self.T * np.log(totalPartitionFunction / self.ni[j]) + sp.E0
 
             self.gfeVector[j] = -mu + onDiagonal * self.ni[j]
-            for j2, spKey2 in enumerate(self.species):
+            for j2, sp2 in enumerate(self.species):
                 self.gfeVector[j] += offDiagonal * self.ni[j2]
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
@@ -545,7 +542,7 @@ class compositionGFE:
         """
 
         density = 0
-        for spKey, sp in self.species.items():
+        for sp in self.species:
             density += sp.numberDensity * sp.molarMass / constants.avogadro
         return density
 
