@@ -37,9 +37,9 @@ for T in temperatures:
     myComposition.solveGfe()
 
     density.append(myComposition.calculateDensity())
-    for j, spKey in enumerate(myComposition.species):
-        ndi[j].append(myComposition.species[spKey].numberDensity)
-        plotText.append(spKey)
+    for j, sp in enumerate(myComposition.species):
+        ndi[j].append(sp.numberDensity)
+        plotText.append(sp.name)
 
 # Draw a graph of the results
 fig, (ax1, ax2) = pyplot.subplots(2, 1, figsize=[7.5, 10], sharex=True)
