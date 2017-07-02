@@ -12,15 +12,15 @@ import collections
 # utility functions ############################################################
 
 
-def molarMassCalculator(nProtons, nNeutrons, nElectrons):
+def molar_mass_calculator(protons, neutrons, electrons):
     """Estimate the molar mass in kg/mol of a species based on its nuclear and
     electronic structure, if you can't get it anywhere else for some reason.
     """
 
-    return constants.avogadro * (nProtons * constants.protonMass
-                                 + nElectrons * constants.electronMass
-                                 + nNeutrons * (constants.protonMass
-                                                + constants.electronMass))
+    return constants.avogadro * (protons * constants.protonMass
+                                 + electrons * constants.electronMass
+                                 + neutrons * (constants.protonMass
+                                               + constants.electronMass))
 
 
 def parse_values(nist_line):

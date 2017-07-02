@@ -2,7 +2,7 @@ import MinPlasCalc as mpc
 import pytest
 
 def test_molarmass():
-    mm = mpc.molarMassCalculator(8, 8, 8)
+    mm = mpc.molar_mass_calculator(8, 8, 8)
     assert mm == pytest.approx(0.016, abs=1e-3)
 
 @pytest.fixture
