@@ -16,31 +16,21 @@ parserArgs = parser.parse_args()
 
 
 # Load up some species
-myOxygenMolecule = mpc.Species(dataFile ="NistData/O2.json")
-myOxygenAtom = mpc.Species(dataFile ="NistData/O.json")
-myOxygenPlus = mpc.Species(dataFile ="NistData/O+.json")
-myOxygenPlusPlus = mpc.Species(dataFile ="NistData/O++.json")
-
+species = [mpc.species_from_file(f) for f in ["NistData/O2.json",
+                                              "NistData/O.json",
+                                              "NistData/O+.json",
+                                              "NistData/O++.json"]]
 
 # Calculate their internal partition functions
 Temps = np.linspace(parserArgs.ts, parserArgs.te, 1000)
-pFuncOO = []
-pFuncO = []
-pFuncOp = []
-pFuncOpp = []
-for Temp in Temps:
-    pFuncOO.append(myOxygenMolecule.internalPartitionFunction(Temp))
-    pFuncO.append(myOxygenAtom.internalPartitionFunction(Temp))
-    pFuncOp.append(myOxygenPlus.internalPartitionFunction(Temp))
-    pFuncOpp.append(myOxygenPlusPlus.internalPartitionFunction(Temp))
 
+pfuncs = []
+for Temp in Temps:
+    pfuncs.append([sp.internalPartitionFunction(Temp) for sp in species])
 
 # Draw a nice graph
 fig, ax = pyplot.subplots()
 
-ax.semilogy(Temps, pFuncOO)
-ax.semilogy(Temps, pFuncO)
-ax.semilogy(Temps, pFuncOp)
-ax.semilogy(Temps, pFuncOpp)
+ax.semilogy(Temps, pfuncs)
 
 pyplot.show()

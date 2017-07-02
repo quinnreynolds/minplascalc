@@ -215,15 +215,36 @@ class constants:
     eVtoInvCm = 8065.54446
 
 
+def species_from_file(dataFile, numberofparticles=0):
+    """Create a species from a data file.
+
+    Parameters
+    ----------
+    dataFile : string
+        Path to a JSON data file describing the electronic and molecular properties of the species
+    numberOfParticles : float
+        Initial particle count (default 0)
+    """
+    # Construct a data object from JSON data file
+    with open(dataFile) as df:
+        jsonData = json.load(df)
+
+    if 'monatomicData' in jsonData:
+        return MonatomicSpecies(jsonData, numberofparticles)
+    else:
+        return DiatomicSpecies(jsonData, numberofparticles)
+
+
 # Diatomic molecules, single atoms, and ions
 class Species:
-    def __init__(self, dataFile, numberOfParticles=0):
-        """Class describing a single monatomic or diatomic chemical species in the plasma, eg O2 or Si+
+    def __init__(self, jsonData, numberOfParticles=0):
+        """Base class for species. Either single monatomic or diatomic chemical
+        species in the plasma, eg O2 or Si+
         
         Parameters
         ----------
-        dataFile : string
-            Path to a JSON data file describing the electronic and molecular properties of the species
+        jsonData : dict
+            JSON data describing the electronic and molecular properties of the species
         numberOfParticles : float
             Initial particle count (default 0)
         """
@@ -231,34 +252,11 @@ class Species:
         self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
 
-        # Construct a data object from JSON data file
-        with open(dataFile) as df:
-            jsonData = json.load(df)
-
         # General species data
         self.name = jsonData["name"]
         self.stoichiometry = jsonData["stoichiometry"]
         self.molarMass = jsonData["molarMass"]
         self.chargeNumber = jsonData["chargeNumber"]
-
-        if "monatomicData" in jsonData:
-            # Monatomic-specific species data
-            self.monatomicYN = True
-            self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"]["ionisationEnergy"]
-            self.deltaIonisationEnergy = 0.
-            self.energyLevels = []
-            for energyLevelLine in jsonData["monatomicData"]["energyLevels"]:
-                self.energyLevels.append([2. * energyLevelLine["J"] + 1., constants.invCmToJ * energyLevelLine["Ei"]])
-        else:
-            # Diatomic-specific species data
-            self.monatomicYN = False
-            self.dissociationEnergy = constants.invCmToJ * jsonData["diatomicData"]["dissociationEnergy"]
-            self.ionisationEnergy = constants.invCmToJ * jsonData["diatomicData"]["ionisationEnergy"]
-            self.deltaIonisationEnergy = 0.
-            self.sigmaS = jsonData["diatomicData"]["sigmaS"]
-            self.g0 = jsonData["diatomicData"]["g0"]
-            self.we = constants.invCmToJ * jsonData["diatomicData"]["we"]
-            self.Be = constants.invCmToJ * jsonData["diatomicData"]["Be"]
 
         if self.chargeNumber < 0:
             # TODO is this the right exception to raise?
@@ -269,17 +267,50 @@ class Species:
                 / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
     def internalPartitionFunction(self, T):
-        if self.monatomicYN:
-            partitionVal = 0.
-            for eLevel in self.energyLevels:
-                if eLevel[1] < (self.ionisationEnergy - self.deltaIonisationEnergy):
-                    partitionVal += eLevel[0] * np.exp(-eLevel[1] / (constants.boltzmann * T))
-            return partitionVal
-        else:
-            electronicPartition = self.g0
-            vibrationalPartition = 1. / (1. - np.exp(-self.we / (constants.boltzmann * T)))
-            rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)
-            return electronicPartition * vibrationalPartition * rotationalPartition
+        raise NotImplementedError
+
+
+class MonatomicSpecies(Species):
+    def __init__(self, jsonData, numberOfParticles=0):
+        super().__init__(jsonData, numberOfParticles)
+
+        self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"][
+            "ionisationEnergy"]
+        self.deltaIonisationEnergy = 0.
+        self.energyLevels = []
+        for energyLevelLine in jsonData["monatomicData"]["energyLevels"]:
+            self.energyLevels.append([2. * energyLevelLine["J"] + 1.,
+                                      constants.invCmToJ * energyLevelLine["Ei"]])
+        self.E0 = 0
+
+    def internalPartitionFunction(self, T):
+        partitionVal = 0.
+        for eLevel in self.energyLevels:
+            if eLevel[1] < (self.ionisationEnergy - self.deltaIonisationEnergy):
+                partitionVal += eLevel[0] * np.exp(-eLevel[1] / (constants.boltzmann * T))
+        return partitionVal
+
+
+class DiatomicSpecies(Species):
+    def __init__(self, jsonData, numberOfParticles=0):
+        super().__init__(jsonData, numberOfParticles)
+
+        self.dissociationEnergy = constants.invCmToJ * jsonData["diatomicData"][
+            "dissociationEnergy"]
+        self.ionisationEnergy = constants.invCmToJ * jsonData["diatomicData"][
+            "ionisationEnergy"]
+        self.deltaIonisationEnergy = 0.
+        self.sigmaS = jsonData["diatomicData"]["sigmaS"]
+        self.g0 = jsonData["diatomicData"]["g0"]
+        self.we = constants.invCmToJ * jsonData["diatomicData"]["we"]
+        self.Be = constants.invCmToJ * jsonData["diatomicData"]["Be"]
+        self.E0 = -self.dissociationEnergy
+
+    def internalPartitionFunction(self, T):
+        electronicPartition = self.g0
+        vibrationalPartition = 1. / (1. - np.exp(-self.we / (constants.boltzmann * T)))
+        rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)
+        return electronicPartition * vibrationalPartition * rotationalPartition
 
 
 class ElectronSpecies:
@@ -298,6 +329,7 @@ class ElectronSpecies:
         self.chargeNumber = -1
         self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
+        self.E0 = 0
 
     def translationalPartitionFunction(self, T):
         return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
@@ -358,7 +390,7 @@ class compositionGFE:
         # non-reproducibility between runs. Make sure this order is maintained
         self.species = []
         for spData in jsonData["speciesList"]:
-            sp = Species(dataFile=spData["species"])
+            sp = species_from_file(dataFile=spData["species"])
             sp.x0 = spData["x0"]
             self.species.append(sp)
         electron = ElectronSpecies()
@@ -383,16 +415,7 @@ class compositionGFE:
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
                         sp.ionisedFrom = sp2
 
-        # Set species reference energies
-        for sp in self.species:
-            if sp.chargeNumber == 0:
-                if sp.monatomicYN:
-                    sp.E0 = 0.
-                else:
-                    sp.E0 = -sp.dissociationEnergy
-        electron.E0 = 0.
-
-        # Set stoichiometry and charge coefficient arrays for mass action and 
+        # Set stoichiometry and charge coefficient arrays for mass action and
         # electroneutrality constraints
         for element in self.elements:
             element.stoichiometricCoeffts = []

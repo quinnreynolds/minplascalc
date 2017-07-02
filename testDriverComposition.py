@@ -32,7 +32,7 @@ ndi = [ [] for j in range(len(myComposition.species)) ]
 plotText = []
 density = []
 for T in temperatures:
-    myComposition.initialiseNi([1e20 for i in range(len(myComposition.species))])
+    myComposition.initialiseNi([1e20]*len(myComposition.species))
     myComposition.T = T
     myComposition.solveGfe()
 
