@@ -541,10 +541,8 @@ class compositionGFE:
         conditions and species composition.
         """
 
-        density = 0
-        for sp in self.species:
-            density += sp.numberDensity * sp.molarMass / constants.avogadro
-        return density
+        return sum(sp.numberDensity * sp.molarMass / constants.avogadro
+                   for sp in self.species)
 
     def calculateHeatCapacity(self):
         """Calculate the heat capacity of the plasma in J/kg.K based on current 
