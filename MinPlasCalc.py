@@ -465,20 +465,21 @@ class compositionGFE:
     def recalcE0i(self):
         # deltaIonisationEnergy recalculation, using limitation theory of 
         # Stewart & Pyatt 1966
+        V = self.ni.sum() * constants.boltzmann * self.T / self.P
         weightedChargeSumSqd = 0
         weightedChargeSum = 0
         for j, sp in enumerate(self.species):
             if sp.chargeNumber > 0:
-                weightedChargeSum += self.ni[j] * sp.chargeNumber
-                weightedChargeSumSqd += self.ni[j] * sp.chargeNumber ** 2
+                weightedChargeSum += (self.ni[j] / V) * sp.chargeNumber
+                weightedChargeSumSqd += (self.ni[j] / V) * sp.chargeNumber ** 2
         zStar = weightedChargeSumSqd / weightedChargeSum
         debyeD = np.sqrt(constants.boltzmann * self.T
-                         / (4. * np.pi * (zStar + 1.) * self.ni[-1]
+                         / (4. * np.pi * (zStar + 1.) * (self.ni[-1] / V)
                             * constants.fundamentalCharge ** 2))
         for j, sp in enumerate(self.species):
             if sp.name != "e":
                 ai = (3. * (sp.chargeNumber + 1.)
-                      / (4. * np.pi * self.ni[-1])) ** (1/3)
+                      / (4. * np.pi * (self.ni[-1] / V))) ** (1/3)
                 sp.deltaIonisationEnergy = constants.boltzmann * self.T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
 
         for cn in range(1, self.maxChargeNumber + 1):
