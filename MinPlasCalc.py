@@ -416,20 +416,18 @@ class compositionGFE:
 
         # Set stoichiometry and charge coefficient arrays for mass action and
         # electroneutrality constraints
-        for element in self.elements:
-            element.stoichiometricCoeffts = []
-            for sp in self.species:
-                element.stoichiometricCoeffts.append(
-                    sp.stoichiometry.get(element.name, 0.))
+        for elm in self.elements:
+            elm.stoichiometricCoeffts = [sp.stoichiometry.get(elm.name, 0.)
+                                         for sp in self.species]
 
         self.chargeCoeffts = [sp.chargeNumber for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
         nT0 = self.P / (constants.boltzmann * self.T)
         for elm in self.elements:
-            elm.totalNumber = 0
-            for c, sp in zip(elm.stoichiometricCoeffts, self.species):
-                elm.totalNumber += nT0 * c * sp.x0
+            elm.totalNumber = sum(nT0 * c * sp.x0
+                                  for c, sp in zip(elm.stoichiometricCoeffts,
+                                                   self.species))
 
         # Set up A matrix, b and ni vectors for GFE minimiser
         minimiserDOF = len(self.species) + len(self.elements) + 1
