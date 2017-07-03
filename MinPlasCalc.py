@@ -534,8 +534,7 @@ class compositionGFE:
                 maxNiIndex = new_ni.argmax()
                 relTol = deltaNi[maxNiIndex] / solution[maxNiIndex]
 
-                lowDeltaNiYN = deltaNi < maxAllowedDeltaNi
-                deltaNi[lowDeltaNiYN] = maxAllowedDeltaNi[lowDeltaNiYN]
+                deltaNi = deltaNi.clip(min=maxAllowedDeltaNi)
                 newRelaxFactors = maxAllowedDeltaNi / deltaNi
                 relaxFactor = newRelaxFactors.min()
 
