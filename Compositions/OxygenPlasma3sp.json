@@ -2,9 +2,9 @@
     "name": "Oxygen Plasma Test, no diatomics",
     "speciesList": 
     [
-        { "specie": "NistData/O.json", "x0": 1 },
-        { "specie": "NistData/O+.json", "x0": 0 },
-        { "specie": "NistData/O++.json", "x0": 0 }
+        { "species": "NistData/O.json", "x0": 1 },
+        { "species": "NistData/O+.json", "x0": 0 },
+        { "species": "NistData/O++.json", "x0": 0 }
     ]
 }
 
