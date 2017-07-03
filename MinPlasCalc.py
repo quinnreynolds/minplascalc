@@ -530,7 +530,7 @@ class compositionGFE:
                 deltaNi = abs(newNi[0:len(self.species)] - self.ni)
                 maxAllowedDeltaNi = governorFactor * self.ni
 
-                maxNiIndex = newNi.argmax()
+                maxNiIndex = newNi[0:len(self.species)].argmax()
                 relTol = deltaNi[maxNiIndex] / newNi[maxNiIndex]
 
                 lowDeltaNiYN = deltaNi < maxAllowedDeltaNi
