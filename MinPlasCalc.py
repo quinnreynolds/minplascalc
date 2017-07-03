@@ -525,20 +525,21 @@ class compositionGFE:
                 self.recalcE0i()
                 self.recalcGfeArrays()
 
-                newNi = np.linalg.solve(self.gfeMatrix, self.gfeVector)
+                solution = np.linalg.solve(self.gfeMatrix, self.gfeVector)
 
-                deltaNi = abs(newNi[0:len(self.species)] - self.ni)
+                new_ni = solution[0:len(self.species)]
+                deltaNi = abs(new_ni - self.ni)
                 maxAllowedDeltaNi = governorFactor * self.ni
 
-                maxNiIndex = newNi[0:len(self.species)].argmax()
-                relTol = deltaNi[maxNiIndex] / newNi[maxNiIndex]
+                maxNiIndex = new_ni.argmax()
+                relTol = deltaNi[maxNiIndex] / solution[maxNiIndex]
 
                 lowDeltaNiYN = deltaNi < maxAllowedDeltaNi
                 deltaNi[lowDeltaNiYN] = maxAllowedDeltaNi[lowDeltaNiYN]
                 newRelaxFactors = maxAllowedDeltaNi / deltaNi
                 relaxFactor = newRelaxFactors.min()
 
-                self.ni = (1. - relaxFactor) * self.ni + relaxFactor * newNi[0:len(self.species)]
+                self.ni = (1. - relaxFactor) * self.ni + relaxFactor * new_ni
 
                 minimiserIters += 1
                 if minimiserIters > maxIters:
