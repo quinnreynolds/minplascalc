@@ -215,14 +215,14 @@ class constants:
     eVtoInvCm = 8065.54446
 
 
-def species_from_file(dataFile, numberofparticles=0):
+def species_from_file(dataFile, numberofparticles=0, x0=0):
     """Create a species from a data file.
 
     Parameters
     ----------
     dataFile : string
         Path to a JSON data file describing the electronic and molecular properties of the species
-    numberOfParticles : float
+    numberofparticles : float
         Initial particle count (default 0)
     """
     # Construct a data object from JSON data file
@@ -230,14 +230,14 @@ def species_from_file(dataFile, numberofparticles=0):
         jsonData = json.load(df)
 
     if 'monatomicData' in jsonData:
-        return MonatomicSpecies(jsonData, numberofparticles)
+        return MonatomicSpecies(jsonData, numberofparticles, x0)
     else:
-        return DiatomicSpecies(jsonData, numberofparticles)
+        return DiatomicSpecies(jsonData, numberofparticles, x0)
 
 
 # Diatomic molecules, single atoms, and ions
 class Species:
-    def __init__(self, jsonData, numberOfParticles=0):
+    def __init__(self, jsonData, numberOfParticles=0, x0=0):
         """Base class for species. Either single monatomic or diatomic chemical
         species in the plasma, eg O2 or Si+
         
@@ -247,10 +247,13 @@ class Species:
             JSON data describing the electronic and molecular properties of the species
         numberOfParticles : float
             Initial particle count (default 0)
+        x0 : float
+
         """
 
         self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
+        self.x0 = x0
 
         # General species data
         self.name = jsonData["name"]
@@ -271,8 +274,8 @@ class Species:
 
 
 class MonatomicSpecies(Species):
-    def __init__(self, jsonData, numberOfParticles=0):
-        super().__init__(jsonData, numberOfParticles)
+    def __init__(self, jsonData, numberOfParticles=0, x0=0):
+        super().__init__(jsonData, numberOfParticles, x0)
 
         self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"][
             "ionisationEnergy"]
@@ -292,8 +295,8 @@ class MonatomicSpecies(Species):
 
 
 class DiatomicSpecies(Species):
-    def __init__(self, jsonData, numberOfParticles=0):
-        super().__init__(jsonData, numberOfParticles)
+    def __init__(self, jsonData, numberOfParticles=0, x0=0):
+        super().__init__(jsonData, numberOfParticles, x0)
 
         self.dissociationEnergy = constants.invCmToJ * jsonData["diatomicData"][
             "dissociationEnergy"]
@@ -330,6 +333,7 @@ class ElectronSpecies:
         self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
         self.E0 = 0
+        self.x0 = 0
 
     def translationalPartitionFunction(self, T):
         return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
@@ -388,14 +392,9 @@ class compositionGFE:
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs. Make sure this order is maintained
-        self.species = []
-        for spData in jsonData["speciesList"]:
-            sp = species_from_file(dataFile=spData["species"])
-            sp.x0 = spData["x0"]
-            self.species.append(sp)
-        electron = ElectronSpecies()
-        electron.x0 = 0
-        self.species.append(electron)
+        self.species = [species_from_file(spData["species"], x0=spData["x0"])
+                        for spData in jsonData["speciesList"]]
+        self.species.append(ElectronSpecies())
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs
