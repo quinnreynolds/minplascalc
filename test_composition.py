@@ -9,7 +9,7 @@ def composition():
         P=101325.)
 
 def test_solver(composition):
-    composition.initialiseNi([1e20 for i in range(len(composition.species))])
+    composition.initialiseNi([1e20]*len(composition.species))
     composition.T = 1000.
     composition.solveGfe()
 

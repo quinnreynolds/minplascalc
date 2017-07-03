@@ -10,9 +10,9 @@ import MinPlasCalc as mpc
 parser = argparse.ArgumentParser(description="Test driver for MinPlasCalc - simple oxygen plasma composition calculation.")
 parser.add_argument("-ts", help="Temperature to start calculating at, K",
                     type=float, default=1000.)
-parser.add_argument("-te", help = "Temperature to stop calculating at, K",
+parser.add_argument("-te", help="Temperature to stop calculating at, K",
                     type=float, default=25000.)
-parser.add_argument("-p", help = "Pressure to calculate at, Pa",
+parser.add_argument("-p", help="Pressure to calculate at, Pa",
                     type=float, default=101325.)
 parserArgs = parser.parse_args()
 
@@ -28,7 +28,7 @@ myComposition = mpc.compositionGFE(
 # Run the GFE minimiser calculation at a range of temperatures, and calculate 
 # the plasma density
 temperatures = np.linspace(parserArgs.ts, parserArgs.te, num=100)
-ndi = [ [] for j in range(len(myComposition.species)) ]
+ndi = [[] for j in range(len(myComposition.species))]
 plotText = []
 density = []
 for T in temperatures:
