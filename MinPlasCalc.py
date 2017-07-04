@@ -188,7 +188,6 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ("sources", sources),
     ])
 
-
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent=4)
 
@@ -221,9 +220,12 @@ def species_from_file(dataFile, numberofparticles=0, x0=0):
     Parameters
     ----------
     dataFile : string
-        Path to a JSON data file describing the electronic and molecular properties of the species
+        Path to a JSON data file describing the electronic and molecular
+        properties of the species
     numberofparticles : float
         Initial particle count (default 0)
+    x0 : float
+        initial x
     """
     # Construct a data object from JSON data file
     with open(dataFile) as df:
@@ -244,7 +246,8 @@ class Species:
         Parameters
         ----------
         jsonData : dict
-            JSON data describing the electronic and molecular properties of the species
+            JSON data describing the electronic and molecular
+            properties of the species
         numberOfParticles : float
             Initial particle count (default 0)
         x0 : float
@@ -277,20 +280,19 @@ class MonatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
         super().__init__(jsonData, numberOfParticles, x0)
 
-        self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"][
-            "ionisationEnergy"]
+        self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"]["ionisationEnergy"]
         self.deltaIonisationEnergy = 0.
         self.energyLevels = []
-        for energyLevelLine in jsonData["monatomicData"]["energyLevels"]:
-            self.energyLevels.append([2. * energyLevelLine["J"] + 1.,
-                                      constants.invCmToJ * energyLevelLine["Ei"]])
+        for energylevel in jsonData["monatomicData"]["energyLevels"]:
+            self.energyLevels.append([2. * energylevel["J"] + 1.,
+                                      constants.invCmToJ * energylevel["Ei"]])
         self.E0 = 0
 
     def internalPartitionFunction(self, T):
         partitionVal = 0.
-        for eLevel in self.energyLevels:
-            if eLevel[1] < (self.ionisationEnergy - self.deltaIonisationEnergy):
-                partitionVal += eLevel[0] * np.exp(-eLevel[1] / (constants.boltzmann * T))
+        for twoJplusone, Ei_J in self.energyLevels:
+            if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
+                partitionVal += twoJplusone * np.exp(-Ei_J / (constants.boltzmann * T))
         return partitionVal
 
 
@@ -339,6 +341,7 @@ class ElectronSpecies:
         return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
                 / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
+    # noinspection PyUnusedLocal
     def internalPartitionFunction(self, T):
         return 2.
 
@@ -493,7 +496,6 @@ class compositionGFE:
                              + sp.ionisedFrom.ionisationEnergy
                              - sp.ionisedFrom.deltaIonisationEnergy)
 
-
     def recalcGfeArrays(self):
         ni = self.ni
         T = self.T
@@ -559,6 +561,7 @@ class compositionGFE:
             # TODO need to raise a proper warning or even exception here
             print("Warning! Minimiser could not find a converged solution, results may be inaccurate.")
 
+        # noinspection PyUnboundLocalVariable
         print(governorIters, relaxFactor, relTol)
         print(self.ni)
 

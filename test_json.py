@@ -10,11 +10,12 @@ import collections
 sourcefields = ('title', 'author', 'publicationInfo', 'http', 'doi')
 DEFSOURCE = collections.OrderedDict([(field, 'test') for field in sourcefields])
 
+
 def test_buildMonatomicSpeciesJSON():
     # Demo of how to build a JSON data file for a monatomic species
     mpc.buildMonatomicSpeciesJSON(
         name="C+",
-        stoichiometry={ "C": 1 },
+        stoichiometry={"C": 1},
         molarMass=0.0120107,
         chargeNumber=1,
         ionisationEnergy=90820.45,
@@ -26,11 +27,12 @@ def test_buildMonatomicSpeciesJSON():
     assert len(result["monatomicData"]["energyLevels"]) == 85
     outputfile.unlink()
 
+
 def test_buildMonatomicSpeciesJSON_sourced():
     # Demo of how to build a JSON data file for a monatomic species
     mpc.buildMonatomicSpeciesJSON(
         name="C+",
-        stoichiometry={ "C": 1 },
+        stoichiometry={"C": 1},
         molarMass=0.0120107,
         chargeNumber=1,
         ionisationEnergy=90820.45,
@@ -42,6 +44,7 @@ def test_buildMonatomicSpeciesJSON_sourced():
     result = json.load(outputfile.open())
     assert len(result["monatomicData"]["energyLevels"]) == 85
     outputfile.unlink()
+
 
 def test_buildDiatomicSpeciesJSON():
     # Demo of how to build a JSON data file for a diatomic species
@@ -59,8 +62,9 @@ def test_buildDiatomicSpeciesJSON():
 
     outputfile = pathlib.Path('CO.json')
     assert outputfile.exists()
-    result = json.load(outputfile.open())
+    _ = json.load(outputfile.open())
     outputfile.unlink()
+
 
 def test_buildDiatomicSpeciesJSON_sourced():
     # Demo of how to build a JSON data file for a diatomic species
@@ -79,5 +83,5 @@ def test_buildDiatomicSpeciesJSON_sourced():
 
     outputfile = pathlib.Path('CO.json')
     assert outputfile.exists()
-    result = json.load(outputfile.open())
+    _ = json.load(outputfile.open())
     outputfile.unlink()
