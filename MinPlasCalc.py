@@ -465,22 +465,26 @@ class compositionGFE:
     def recalcE0i(self):
         # deltaIonisationEnergy recalculation, using limitation theory of 
         # Stewart & Pyatt 1966
-        V = self.ni.sum() * constants.boltzmann * self.T / self.P
+        ni = self.ni
+        T = self.T
+        P = self.P
+
+        V = ni.sum() * constants.boltzmann * T / P
         weightedChargeSumSqd = 0
         weightedChargeSum = 0
         for j, sp in enumerate(self.species):
             if sp.chargeNumber > 0:
-                weightedChargeSum += (self.ni[j] / V) * sp.chargeNumber
-                weightedChargeSumSqd += (self.ni[j] / V) * sp.chargeNumber ** 2
+                weightedChargeSum += (ni[j] / V) * sp.chargeNumber
+                weightedChargeSumSqd += (ni[j] / V) * sp.chargeNumber ** 2
         zStar = weightedChargeSumSqd / weightedChargeSum
-        debyeD = np.sqrt(constants.boltzmann * self.T
-                         / (4. * np.pi * (zStar + 1.) * (self.ni[-1] / V)
+        debyeD = np.sqrt(constants.boltzmann * T
+                         / (4. * np.pi * (zStar + 1.) * (ni[-1] / V)
                             * constants.fundamentalCharge ** 2))
         for j, sp in enumerate(self.species):
             if sp.name != "e":
                 ai = (3. * (sp.chargeNumber + 1.)
-                      / (4. * np.pi * (self.ni[-1] / V))) ** (1/3)
-                sp.deltaIonisationEnergy = constants.boltzmann * self.T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
+                      / (4. * np.pi * (ni[-1] / V))) ** (1 / 3)
+                sp.deltaIonisationEnergy = constants.boltzmann * T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
 
         for cn in range(1, self.maxChargeNumber + 1):
             for sp in self.species:
@@ -491,24 +495,28 @@ class compositionGFE:
 
 
     def recalcGfeArrays(self):
-        niSum = self.ni.sum()
-        V = niSum * constants.boltzmann * self.T / self.P
-        offDiagonal = -constants.boltzmann * self.T / niSum
+        ni = self.ni
+        T = self.T
+        P = self.P
+
+        niSum = ni.sum()
+        V = niSum * constants.boltzmann * T / P
+        offDiagonal = -constants.boltzmann * T / niSum
 
         for j, sp in enumerate(self.species):
-            onDiagonal = constants.boltzmann * self.T / self.ni[j]
+            onDiagonal = constants.boltzmann * T / ni[j]
 
             for j2, sp2 in enumerate(self.species):
                 self.gfeMatrix[j, j2] = offDiagonal
             self.gfeMatrix[j, j] += onDiagonal
 
-            totalPartitionFunction = (V * sp.translationalPartitionFunction(self.T)
-                                        * sp.internalPartitionFunction(self.T))
-            mu = -constants.boltzmann * self.T * np.log(totalPartitionFunction / self.ni[j]) + sp.E0
+            totalPartitionFunction = (V * sp.translationalPartitionFunction(T)
+                                      * sp.internalPartitionFunction(T))
+            mu = -constants.boltzmann * T * np.log(totalPartitionFunction / ni[j]) + sp.E0
 
-            self.gfeVector[j] = -mu + onDiagonal * self.ni[j]
+            self.gfeVector[j] = -mu + onDiagonal * ni[j]
             for j2, sp2 in enumerate(self.species):
-                self.gfeVector[j] += offDiagonal * self.ni[j2]
+                self.gfeVector[j] += offDiagonal * ni[j2]
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.readNi()
