@@ -526,7 +526,7 @@ class compositionGFE:
         governorFactors = np.linspace(0.9, 0.1, 9)
         successYN = False
         governorIters = 0
-        while not successYN:
+        while not successYN and governorIters < len(governorFactors):
             successYN = True
             governorFactor = governorFactors[governorIters]
             relTol = relativeTolerance * 10.
