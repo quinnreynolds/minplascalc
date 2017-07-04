@@ -1,2 +1,6 @@
 __pycache__/
 
+testDriverComposition.py~
+.cache
+.coverage
+.idea
