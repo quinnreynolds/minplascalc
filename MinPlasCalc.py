@@ -583,6 +583,13 @@ class compositionGFE:
 
         raise NotImplementedError
 
+    def calculate_enthalphy(self):
+        """Calculate the enthalpy of the plasma in J/kg based on current 
+        conditions and species composition.
+        """
+
+        raise NotImplementedError
+
     def calculateViscosity(self):
         """Calculate the viscosity of the plasma in Pa.s based on current 
         conditions and species composition.
