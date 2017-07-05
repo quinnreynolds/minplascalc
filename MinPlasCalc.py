@@ -422,17 +422,12 @@ class compositionGFE:
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs
-        elementset = set()
-        for sp in self.species:
-            elementset.update(sp.stoichiometry)
+        elementset = set(s for sp in self.species for s in sp.stoichiometry)
+        self.elements = tuple(Element(name=element) for element in elementset)
 
-        self.elements = [Element(name=element) for element in elementset]
-
+        self.maxChargeNumber = max(sp.chargeNumber for sp in self.species)
         # Set species which each +ve charged ion originates from
-        self.maxChargeNumber = 0
         for sp in self.species:
-            if sp.chargeNumber > self.maxChargeNumber:
-                self.maxChargeNumber = sp.chargeNumber
             if sp.chargeNumber > 0:
                 for sp2 in self.species:
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
@@ -525,21 +520,18 @@ class compositionGFE:
         niSum = ni.sum()
         V = niSum * constants.boltzmann * T / P
         offDiagonal = -constants.boltzmann * T / niSum
+        nspecies = len(self.species)
 
+        onDiagonal = constants.boltzmann * T / ni
+        self.gfeMatrix[:nspecies, :nspecies] = offDiagonal + np.diag(onDiagonal)
         for j, sp in enumerate(self.species):
-            onDiagonal = constants.boltzmann * T / ni[j]
-
-            for j2, sp2 in enumerate(self.species):
-                self.gfeMatrix[j, j2] = offDiagonal
-            self.gfeMatrix[j, j] += onDiagonal
-
             totalPartitionFunction = (V * sp.translationalPartitionFunction(T)
                                       * sp.internalPartitionFunction(T))
             mu = -constants.boltzmann * T * np.log(totalPartitionFunction / ni[j]) + sp.E0
 
-            self.gfeVector[j] = -mu + onDiagonal * ni[j]
-            for j2, sp2 in enumerate(self.species):
-                self.gfeVector[j] += offDiagonal * ni[j2]
+            self.gfeVector[j] = (-mu
+                                 + onDiagonal[j] * ni[j]
+                                 + nspecies * offDiagonal * niSum)
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.readNi()
