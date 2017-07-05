@@ -275,6 +275,9 @@ class Species:
     def internalPartitionFunction(self, T):
         raise NotImplementedError
 
+    def internal_energy(self, T):
+        raise NotImplementedError
+
 
 class MonatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
@@ -294,7 +297,15 @@ class MonatomicSpecies(Species):
             if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
                 partitionVal += twoJplusone * np.exp(-Ei_J / (constants.boltzmann * T))
         return partitionVal
-
+    
+    def internal_energy(self, T):
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        for twoJplusone, Ei_J in self.energyLevels:
+            if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
+                electronic_energy += twoJplusone * Ei_J * np.exp(-Ei_J / (constants.boltzmann * T))
+        electronic_energy /= self.internalPartitionFunction(T)
+        return translational_energy + electronic_energy
 
 class DiatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
@@ -317,6 +328,12 @@ class DiatomicSpecies(Species):
         rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)
         return electronicPartition * vibrationalPartition * rotationalPartition
 
+    def internal_energy(self, T):
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        rotational_energy = constants.boltzmann * T
+        vibrational_energy = self.we * np.exp(-self.we / (constants.boltzmann * T)) / (1. - np.exp(-self.we / (constants.boltzmann * T)))
+        return translational_energy + electronic_energy + rotational_energy + vibrational_energy
 
 class ElectronSpecies:
     def __init__(self, numberOfParticles=0):
@@ -345,6 +362,10 @@ class ElectronSpecies:
     def internalPartitionFunction(self, T):
         return 2.
 
+    def internal_energy(self, T):
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        return translational_energy + electronic_energy
 
 class Element:
     def __init__(self, name="", stoichiometricCoeffts=None, totalNumber=0.):
@@ -570,6 +591,13 @@ class compositionGFE:
 
     def calculateHeatCapacity(self):
         """Calculate the heat capacity of the plasma in J/kg.K based on current 
+        conditions and species composition.
+        """
+
+        raise NotImplementedError
+
+    def calculate_enthalphy(self):
+        """Calculate the enthalpy of the plasma in J/kg based on current 
         conditions and species composition.
         """
 
