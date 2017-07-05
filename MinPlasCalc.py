@@ -531,7 +531,7 @@ class compositionGFE:
 
             self.gfeVector[j] = (-mu
                                  + onDiagonal[j] * ni[j]
-                                 + nspecies * offDiagonal * niSum)
+                                 + offDiagonal * niSum)
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.readNi()
