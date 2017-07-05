@@ -362,6 +362,10 @@ class ElectronSpecies:
     def internalPartitionFunction(self, T):
         return 2.
 
+    def internal_energy(self, T):
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        return translational_energy + electronic_energy
 
 class Element:
     def __init__(self, name="", stoichiometricCoeffts=None, totalNumber=0.):
