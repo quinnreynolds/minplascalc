@@ -516,7 +516,7 @@ class compositionGFE:
                     sp.E0 = (sp.ionisedFrom.E0
                              + sp.ionisedFrom.ionisationEnergy
                              - sp.ionisedFrom.deltaIonisationEnergy)
-
+                    
     def recalcGfeArrays(self):
         ni = self.ni
         T = self.T
@@ -606,10 +606,18 @@ class compositionGFE:
 
     def calculate_enthalphy(self):
         """Calculate the enthalpy of the plasma in J/kg based on current 
-        conditions and species composition.
+        conditions and species composition. Note that the value returned is not 
+        absolute, it is relative to an arbitrary reference which may be 
+        negative or positive depending on the reference energies of the diatomic 
+        species present.
         """
-
-        raise NotImplementedError
+        
+        T = self.T
+        weighted_enthalpy = sum(constants.avogadro * sp.numberOfParticles * (sp.internal_energy(T) + sp.E0 + constants.boltzmann * T) 
+                             for sp in self.species)
+        weighted_molmass = sum(sp.numberOfParticles * sp.molarMass 
+                               for sp in self.species)
+        return weighted_enthalpy / weighted_molmass
 
     def calculateViscosity(self):
         """Calculate the viscosity of the plasma in Pa.s based on current 
