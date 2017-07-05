@@ -22,6 +22,11 @@ def test_internal_partition_function(sample_species):
     assert partition_function == pytest.approx(217.6606)
 
 
-def test_internal_energy(sample_species):
+def test_internal_energy_low(sample_species):
     internal_energy = sample_species.internal_energy(1000)
     assert internal_energy == pytest.approx(3.811852e-20)
+
+
+def test_internal_energy_high(sample_species):
+    internal_energy = sample_species.internal_energy(25000)
+    assert internal_energy == pytest.approx(1.192611e-18)
