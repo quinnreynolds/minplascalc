@@ -20,3 +20,8 @@ def test_translational_partition_function(sample_species):
 def test_internal_partition_function(sample_species):
     partition_function = sample_species.internalPartitionFunction(300)
     assert partition_function == pytest.approx(217.6606)
+
+
+def test_internal_energy(sample_species):
+    internal_energy = sample_species.internal_energy(1000)
+    assert internal_energy == pytest.approx(3.811852e-20)

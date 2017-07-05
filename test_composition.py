@@ -23,6 +23,14 @@ def test_calculateHeatCapacity(composition):
         composition.calculateHeatCapacity()
 
 
+def test_enthalpy(composition):
+    composition.initialiseNi([1e20]*len(composition.species))
+    composition.T = 1000.
+    composition.solveGfe()
+
+    assert composition.calculate_enthalpy() == pytest.approx(-1.455147e7)
+
+
 def test_calculateViscosity(composition):
     with pytest.raises(NotImplementedError):
         composition.calculateViscosity()

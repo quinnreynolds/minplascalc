@@ -604,7 +604,7 @@ class compositionGFE:
 
         raise NotImplementedError
 
-    def calculate_enthalphy(self):
+    def calculate_enthalpy(self):
         """Calculate the enthalpy of the plasma in J/kg based on current 
         conditions and species composition. Note that the value returned is not 
         absolute, it is relative to an arbitrary reference which may be 
