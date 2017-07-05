@@ -275,6 +275,9 @@ class Species:
     def internalPartitionFunction(self, T):
         raise NotImplementedError
 
+    def internal_energy(self, T):
+        raise NotImplementedError
+
 
 class MonatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
@@ -320,7 +323,11 @@ class DiatomicSpecies(Species):
         return electronicPartition * vibrationalPartition * rotationalPartition
 
     def internal_energy(self, T):
-        raise NotImplementedError
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        rotational_energy = constants.boltzmann * T
+        vibrational_energy = self.we * np.exp(-self.we / (constants.boltzmann * T)) / (1. - np.exp(-self.we / (constants.boltzmann * T)))
+        return translational_energy + electronic_energy + rotational_energy + vibrational_energy
 
 class ElectronSpecies:
     def __init__(self, numberOfParticles=0):
