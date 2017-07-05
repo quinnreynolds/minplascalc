@@ -299,7 +299,13 @@ class MonatomicSpecies(Species):
         return partitionVal
     
     def internal_energy(self, T):
-        raise NotImplementedError
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        for twoJplusone, Ei_J in self.energyLevels:
+            if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
+                electronic_energy += twoJplusone * Ei_J * np.exp(-Ei_J / (constants.boltzmann * T))
+        electronic_energy /= self.internalPartitionFunction(T)
+        return translational_energy + electronic_energy
 
 class DiatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
