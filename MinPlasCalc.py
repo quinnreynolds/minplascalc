@@ -587,12 +587,28 @@ class compositionGFE:
         return sum(sp.numberDensity * sp.molarMass / constants.avogadro
                    for sp in self.species)
 
-    def calculate_heat_capacity(self):
-        """Calculate the heat capacity of the plasma in J/kg.K based on current 
-        conditions and species composition.
+    def calculate_heat_capacity(self, init_ni=1e20, rel_delta_t=0.001):
+        """Calculate the heat capacity at constant pressure of the plasma in 
+        J/kg.K based on current conditions and species composition. Note that 
+        this is done by performing two full composition simulations when this 
+        function is called - can be time-consuming.
         """
+        
+        T = self.T
 
-        raise NotImplementedError
+        self.initialiseNi([init_ni for i in range(len(self.species))])
+        self.T = (1 - rel_delta_t) * T
+        self.solveGfe()
+        enthalpy_low = self.calculate_enthalpy()
+
+        self.initialiseNi([init_ni for i in range(len(self.species))])
+        self.T = (1 + rel_delta_t) * T
+        self.solveGfe()
+        enthalpy_high = self.calculate_enthalpy()
+        
+        self.T = T
+        
+        return (enthalpy_high - enthalpy_low) / (2. * rel_delta_t * T)
 
     def calculate_enthalpy(self):
         """Calculate the enthalpy of the plasma in J/kg based on current 
