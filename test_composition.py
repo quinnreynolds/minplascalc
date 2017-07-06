@@ -18,9 +18,9 @@ def test_solver(composition):
     assert composition.calculateDensity() == pytest.approx(0.3899566)
 
 
-def test_calculateHeatCapacity(composition):
+def test_calculate_heat_capacity(composition):
     with pytest.raises(NotImplementedError):
-        composition.calculateHeatCapacity()
+        composition.calculate_heat_capacity()
 
 
 def test_enthalpy_lowt_lowp(composition):

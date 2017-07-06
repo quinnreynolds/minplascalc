@@ -587,7 +587,7 @@ class compositionGFE:
         return sum(sp.numberDensity * sp.molarMass / constants.avogadro
                    for sp in self.species)
 
-    def calculateHeatCapacity(self):
+    def calculate_heat_capacity(self):
         """Calculate the heat capacity of the plasma in J/kg.K based on current 
         conditions and species composition.
         """
