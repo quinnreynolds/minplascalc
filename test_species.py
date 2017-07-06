@@ -29,19 +29,19 @@ def test_internal_partition_function(diatomic_sample_species):
 
 def test_monatomic_internal_energy_lowt(monatomic_sample_species):
     internal_energy = monatomic_sample_species.internal_energy(1000)
-    assert internal_energy == pytest.approx(2.070973e-20, abs = 1e-26)
+    assert internal_energy == pytest.approx(2.070973e-20, abs=1e-26)
     
 
 def test_monatomic_internal_energy_hight(monatomic_sample_species):
     internal_energy = monatomic_sample_species.internal_energy(25000)
-    assert internal_energy == pytest.approx(7.619840e-19, abs = 1e-25)
+    assert internal_energy == pytest.approx(7.619840e-19, abs=1e-25)
 
 
 def test_diatomic_internal_energy_lowt(diatomic_sample_species):
     internal_energy = diatomic_sample_species.internal_energy(1000)
-    assert internal_energy == pytest.approx(3.811852e-20, abs = 1e-26)
+    assert internal_energy == pytest.approx(3.811852e-20, abs=1e-26)
 
 
 def test_diatomic_internal_energy_hight(diatomic_sample_species):
     internal_energy = diatomic_sample_species.internal_energy(25000)
-    assert internal_energy == pytest.approx(1.192611e-18, abs = 1e-24)
+    assert internal_energy == pytest.approx(1.192611e-18, abs=1e-24)

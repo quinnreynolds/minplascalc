@@ -23,20 +23,40 @@ def test_calculateHeatCapacity(composition):
         composition.calculateHeatCapacity()
 
 
-def test_enthalpy_low(composition):
+def test_enthalpy_lowt_lowp(composition):
     composition.initialiseNi([1e20]*len(composition.species))
     composition.T = 1000.
+    composition.P = 10132.5
     composition.solveGfe()
 
-    assert composition.calculate_enthalpy() == pytest.approx(-1.455147e7)
+    assert composition.calculate_enthalpy() == pytest.approx(-1.455147e7, abs=1e1)
 
 
-def test_enthalpy_high(composition):
+def test_enthalpy_hight_lowp(composition):
     composition.initialiseNi([1e20]*len(composition.species))
     composition.T = 25000.
+    composition.P = 10132.5
     composition.solveGfe()
 
-    assert composition.calculate_enthalpy() == pytest.approx(1.593348e8)
+    assert composition.calculate_enthalpy() == pytest.approx(1.893154e8, abs=1e2)
+
+
+def test_enthalpy_lowt_highp(composition):
+    composition.initialiseNi([1e20]*len(composition.species))
+    composition.T = 1000.
+    composition.P = 1013250.
+    composition.solveGfe()
+
+    assert composition.calculate_enthalpy() == pytest.approx(-1.455147e7, abs=1e1)
+
+
+def test_enthalpy_hight_highp(composition):
+    composition.initialiseNi([1e20]*len(composition.species))
+    composition.T = 25000.
+    composition.P = 1013250.
+    composition.solveGfe()
+
+    assert composition.calculate_enthalpy() == pytest.approx(1.483881e8, abs=1e2)
 
 
 def test_calculateViscosity(composition):
