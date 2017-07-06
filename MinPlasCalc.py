@@ -529,9 +529,7 @@ class compositionGFE:
                                       * sp.internalPartitionFunction(T))
             mu = -constants.boltzmann * T * np.log(totalPartitionFunction / ni[j]) + sp.E0
 
-            self.gfeVector[j] = (-mu
-                                 + onDiagonal[j] * ni[j]
-                                 + offDiagonal * niSum)
+            self.gfeVector[j] = -mu
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.readNi()
