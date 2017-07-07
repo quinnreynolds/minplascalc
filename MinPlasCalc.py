@@ -238,8 +238,24 @@ def species_from_file(dataFile, numberofparticles=0, x0=0):
         return DiatomicSpecies(jsonData, numberofparticles, x0)
 
 
+class BaseSpecies:
+    def totalPartitionFunction(self, V, T):
+        return (V * self.translationalPartitionFunction(T)
+                * self.internalPartitionFunction(T))
+
+    def translationalPartitionFunction(self, T):
+        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
+                / (constants.avogadro * constants.planck ** 2)) ** 1.5
+
+    def internalPartitionFunction(self, T):
+        raise NotImplementedError
+
+    def internal_energy(self, T):
+        raise NotImplementedError
+
+
 # Diatomic molecules, single atoms, and ions
-class Species:
+class Species(BaseSpecies):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
         """Base class for species. Either single monatomic or diatomic chemical
         species in the plasma, eg O2 or Si+
@@ -267,16 +283,6 @@ class Species:
         if self.chargeNumber < 0:
             # TODO is this the right exception to raise?
             raise ValueError("Error! Negatively charged ions not implemented yet.")
-
-    def translationalPartitionFunction(self, T):
-        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
-                / (constants.avogadro * constants.planck ** 2)) ** 1.5
-
-    def internalPartitionFunction(self, T):
-        raise NotImplementedError
-
-    def internal_energy(self, T):
-        raise NotImplementedError
 
 
 class MonatomicSpecies(Species):
@@ -337,7 +343,7 @@ class DiatomicSpecies(Species):
         return translational_energy + electronic_energy + rotational_energy + vibrational_energy
 
 
-class ElectronSpecies:
+class ElectronSpecies(BaseSpecies):
     def __init__(self, numberOfParticles=0):
         """Class describing electrons as a species in the plasma.
 
@@ -355,10 +361,6 @@ class ElectronSpecies:
         self.numberDensity = 0.
         self.E0 = 0
         self.x0 = 0
-
-    def translationalPartitionFunction(self, T):
-        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
-                / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
     # noinspection PyUnusedLocal
     def internalPartitionFunction(self, T):
@@ -527,12 +529,11 @@ class compositionGFE:
 
         onDiagonal = constants.boltzmann * T / ni
         self.gfeMatrix[:nspecies, :nspecies] = offDiagonal + np.diag(onDiagonal)
-        for j, sp in enumerate(self.species):
-            totalPartitionFunction = (V * sp.translationalPartitionFunction(T)
-                                      * sp.internalPartitionFunction(T))
-            mu = -constants.boltzmann * T * np.log(totalPartitionFunction / ni[j]) + sp.E0
+        total = [sp.totalPartitionFunction(V, T) for sp in self.species]
+        E0 = [sp.E0 for sp in self.species]
+        mu = -constants.boltzmann * T * np.log(total / ni) + E0
+        self.gfeVector[:nspecies] = -mu
 
-            self.gfeVector[j] = -mu
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.readNi()
