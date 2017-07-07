@@ -14,30 +14,30 @@ parser.add_argument("-te", help="Temperature to stop calculating at, K",
                     type=float, default=25000.)
 parser.add_argument("-p", help="Pressure to calculate at, Pa",
                     type=float, default=101325.)
-parserArgs = parser.parse_args()
+args = parser.parse_args()
 
 
 # Instantiate a plasma composition object using data from a JSON file.
 # T, P are just initial placeholder values, can be changed at any time.
-myComposition = mpc.compositionGFE(
+composition = mpc.compositionGFE(
     compositionFile="Compositions/OxygenPlasma5sp.json",
-    T=parserArgs.ts,
-    P=parserArgs.p)
+    T=args.ts,
+    P=args.p)
 
 
 # Run the GFE minimiser calculation at a range of temperatures, and calculate 
 # the plasma density
-temperatures = np.linspace(parserArgs.ts, parserArgs.te, num=100)
-ndi = [[] for j in range(len(myComposition.species))]
+temperatures = np.linspace(args.ts, args.te, num=100)
+ndi = [[] for j in range(len(composition.species))]
 plotText = []
 density = []
 for T in temperatures:
-    myComposition.initialiseNi([1e20]*len(myComposition.species))
-    myComposition.T = T
-    myComposition.solveGfe()
+    composition.initialiseNi([1e20] * len(composition.species))
+    composition.T = T
+    composition.solveGfe()
 
-    density.append(myComposition.calculateDensity())
-    for j, sp in enumerate(myComposition.species):
+    density.append(composition.calculateDensity())
+    for j, sp in enumerate(composition.species):
         ndi[j].append(sp.numberDensity)
         plotText.append(sp.name)
 
