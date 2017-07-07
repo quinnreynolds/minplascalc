@@ -73,10 +73,11 @@ def read_energylevels(datafile):
 
 def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                               ionisationEnergy, nistDataFile, sources=None):
-    """Function to take text data retrieved from NIST websites or other sources 
+    """Function to take text data retrieved from NIST websites or other sources
+
     and build a JSON object file for a monatomic plasma species, with specified
     electron energy levels and degeneracies.
-    
+
     Parameters
     ----------
     name : string
@@ -92,10 +93,10 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
     ionisationEnergy : float
         Ionisation energy of the species in 1/cm
     nistDataFile : string
-        Path to text file containing raw energy level data (in NIST Atomic 
+        Path to text file containing raw energy level data (in NIST Atomic
         Spectra Database format)
     sources : list of dictionaries
-        Each dictionary represents a reference source from which the data was 
+        Each dictionary represents a reference source from which the data was
         obtained (defaults to NIST Atomic Spectra Database)
     """
 
@@ -129,10 +130,10 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
 def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                              ionisationEnergy, dissociationEnergy, sigmaS,
                              g0, we, Be, sources=None):
-    """Function to take text data retrieved from NIST websites or other sources 
+    """Function to take text data retrieved from NIST websites or other sources
     and build a JSON object file for a diatomic plasma species, with specified
     ground state degeneracy and rotational & vibrational parameters.
-    
+
     Parameters
     ----------
     name : string
@@ -158,7 +159,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
     Be : float
         Rotational energy level constant in 1/cm
     sources : list of dictionaries
-        Each dictionary represents a reference source from which the data was 
+        Each dictionary represents a reference source from which the data was
         obtained (defaults to NIST Chemistry Webbook)
     """
     if sources is None:
@@ -196,7 +197,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
 
 
 class constants:
-    """A collection of physical and unit-conversion constants useful in plasma 
+    """A collection of physical and unit-conversion constants useful in plasma
     calculations.
     """
 
@@ -242,7 +243,7 @@ class Species:
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
         """Base class for species. Either single monatomic or diatomic chemical
         species in the plasma, eg O2 or Si+
-        
+
         Parameters
         ----------
         jsonData : dict
@@ -251,7 +252,6 @@ class Species:
         numberOfParticles : float
             Initial particle count (default 0)
         x0 : float
-
         """
 
         self.numberOfParticles = numberOfParticles
@@ -307,6 +307,7 @@ class MonatomicSpecies(Species):
         electronic_energy /= self.internalPartitionFunction(T)
         return translational_energy + electronic_energy
 
+
 class DiatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
         super().__init__(jsonData, numberOfParticles, x0)
@@ -335,10 +336,11 @@ class DiatomicSpecies(Species):
         vibrational_energy = self.we * np.exp(-self.we / (constants.boltzmann * T)) / (1. - np.exp(-self.we / (constants.boltzmann * T)))
         return translational_energy + electronic_energy + rotational_energy + vibrational_energy
 
+
 class ElectronSpecies:
     def __init__(self, numberOfParticles=0):
         """Class describing electrons as a species in the plasma.
-        
+
         Parameters
         ----------
         numberOfParticles : float
@@ -367,11 +369,12 @@ class ElectronSpecies:
         electronic_energy = 0.
         return translational_energy + electronic_energy
 
+
 class Element:
     def __init__(self, name="", stoichiometricCoeffts=None, totalNumber=0.):
-        """Class acting as struct to hold some information about different 
+        """Class acting as struct to hold some information about different
         elements in the plasma.
-        
+
         Parameters
         ----------
         name : string
@@ -380,7 +383,7 @@ class Element:
             List of number of atoms of this element present in each species, in
             same order as compositionGFE.species (default empty list)
         totalNumber : float
-            Total number of atoms of this element present in the simulation 
+            Total number of atoms of this element present in the simulation
             (conserved), calculated from initial conditions during instantiation
             of compositionGFE (default 0)
         """
@@ -392,11 +395,11 @@ class Element:
 
 class compositionGFE:
     def __init__(self, compositionFile, T=10000., P=101325):
-        """Class representing a thermal plasma specification with multiple 
-        species, and methods for calculating equilibrium species concentrations 
-        at different temperatures and pressures using the principle of Gibbs 
+        """Class representing a thermal plasma specification with multiple
+        species, and methods for calculating equilibrium species concentrations
+        at different temperatures and pressures using the principle of Gibbs
         free energy minimisation.
-        
+
         Parameters
         ----------
         compositionFile : string
@@ -580,7 +583,7 @@ class compositionGFE:
         self.writeNumberDensity()
 
     def calculateDensity(self):
-        """Calculate the density of the plasma in kg/m3 based on current 
+        """Calculate the density of the plasma in kg/m3 based on current
         conditions and species composition.
         """
 
@@ -588,9 +591,9 @@ class compositionGFE:
                    for sp in self.species)
 
     def calculate_heat_capacity(self, init_ni=1e20, rel_delta_t=0.001):
-        """Calculate the heat capacity at constant pressure of the plasma in 
-        J/kg.K based on current conditions and species composition. Note that 
-        this is done by performing two full composition simulations when this 
+        """Calculate the heat capacity at constant pressure of the plasma in
+        J/kg.K based on current conditions and species composition. Note that
+        this is done by performing two full composition simulations when this
         function is called - can be time-consuming.
         """
 
@@ -611,46 +614,44 @@ class compositionGFE:
         return (enthalpy_high - enthalpy_low) / (2. * rel_delta_t * T)
 
     def calculate_enthalpy(self):
-        """Calculate the enthalpy of the plasma in J/kg based on current 
-        conditions and species composition. Note that the value returned is not 
-        absolute, it is relative to an arbitrary reference which may be 
-        negative or positive depending on the reference energies of the diatomic 
+        """Calculate the enthalpy of the plasma in J/kg based on current
+        conditions and species composition. Note that the value returned is not
+        absolute, it is relative to an arbitrary reference which may be
+        negative or positive depending on the reference energies of the diatomic
         species present.
         """
 
         T = self.T
         weighted_enthalpy = sum(constants.avogadro * sp.numberOfParticles * (sp.internal_energy(T) + sp.E0 + constants.boltzmann * T)
-                             for sp in self.species)
+                                for sp in self.species)
         weighted_molmass = sum(sp.numberOfParticles * sp.molarMass
                                for sp in self.species)
         return weighted_enthalpy / weighted_molmass
 
     def calculateViscosity(self):
-        """Calculate the viscosity of the plasma in Pa.s based on current 
+        """Calculate the viscosity of the plasma in Pa.s based on current
         conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateThermalConductivity(self):
-        """Calculate the thermal conductivity of the plasma in W/m.K based on 
+        """Calculate the thermal conductivity of the plasma in W/m.K based on
         current conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateElectricalConductivity(self):
-        """Calculate the electrical conductivity of the plasma in 1/ohm.m based 
+        """Calculate the electrical conductivity of the plasma in 1/ohm.m based
         on current conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateTotalEmissionCoefficient(self):
-        """Calculate the total radiation emission coefficient of the plasma in 
+        """Calculate the total radiation emission coefficient of the plasma in
         W/m3 based on current conditions and species composition.
         """
 
         raise NotImplementedError
-
-################################################################################
