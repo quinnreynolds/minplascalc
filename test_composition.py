@@ -4,82 +4,50 @@ import MinPlasCalc as mpc
 
 @pytest.fixture
 def composition():
-    return mpc.compositionGFE(
-        compositionFile="Compositions/OxygenPlasma5sp.json",
-        T=1000.,
-        P=101325.)
+    c = mpc.compositionGFE(compositionFile="Compositions/OxygenPlasma5sp.json",
+                           T=1000., P=101325.)
+    c.initialiseNi([1e20]*len(c.species))
+    return c
 
 
 def test_solver(composition):
-    composition.initialiseNi([1e20]*len(composition.species))
     composition.T = 1000.
     composition.solveGfe()
 
     assert composition.calculateDensity() == pytest.approx(0.3899566)
 
 
-def test_heat_capacity_lowt_lowp(composition):
-    composition.T = 1000.
-    composition.P = 10132.5
+LOW_T = 1000.
+HIGH_T = 25000.
+LOW_P = 10132.5
+HIGH_P = 1013250.
 
-    assert composition.calculate_heat_capacity() == pytest.approx(1081.252, abs=1e-3)
+@pytest.mark.parametrize("temperature, pressure, result, tol", [
+    (LOW_T, LOW_P, 1081.252, 1e-3),
+    (HIGH_T, LOW_P, 23194.70, 1e-2),
+    (LOW_T, HIGH_P, 1081.252, 1e-3),
+    (HIGH_T, HIGH_P, 5829.618, 1e-3),
+])
+def test_heat_capacity(composition, temperature, pressure, result, tol):
+    composition.T = temperature
+    composition.P = pressure
 
+    thisresult = composition.calculate_heat_capacity()
 
-def test_heat_capacity_hight_lowp(composition):
-    composition.T = 25000.
-    composition.P = 10132.5
+    assert thisresult == pytest.approx(result, abs=tol)
 
-    assert composition.calculate_heat_capacity() == pytest.approx(23194.70, abs=1e-2)
-
-
-def test_heat_capacity_lowt_highp(composition):
-    composition.T = 1000.
-    composition.P = 1013250.
-
-    assert composition.calculate_heat_capacity() == pytest.approx(1081.252, abs=1e-3)
-
-
-def test_heat_capacity_hight_highp(composition):
-    composition.T = 25000.
-    composition.P = 1013250.
-
-    assert composition.calculate_heat_capacity() == pytest.approx(5829.618, abs=1e-3)
-
-
-def test_enthalpy_lowt_lowp(composition):
-    composition.initialiseNi([1e20]*len(composition.species))
-    composition.T = 1000.
-    composition.P = 10132.5
+@pytest.mark.parametrize("temperature, pressure, result, tol", [
+    (LOW_T, LOW_P, -1.455147e7, 1e1),
+    (HIGH_T, LOW_P, 1.893154e8, 1e2),
+    (LOW_T, HIGH_P, -1.455147e7, 1e1),
+    (HIGH_T, HIGH_P, 1.483881e8, 1e2),
+])
+def test_enthalpy(composition, temperature, pressure, result, tol):
+    composition.T = temperature
+    composition.P = pressure
     composition.solveGfe()
 
-    assert composition.calculate_enthalpy() == pytest.approx(-1.455147e7, abs=1e1)
-
-
-def test_enthalpy_hight_lowp(composition):
-    composition.initialiseNi([1e20]*len(composition.species))
-    composition.T = 25000.
-    composition.P = 10132.5
-    composition.solveGfe()
-
-    assert composition.calculate_enthalpy() == pytest.approx(1.893154e8, abs=1e2)
-
-
-def test_enthalpy_lowt_highp(composition):
-    composition.initialiseNi([1e20]*len(composition.species))
-    composition.T = 1000.
-    composition.P = 1013250.
-    composition.solveGfe()
-
-    assert composition.calculate_enthalpy() == pytest.approx(-1.455147e7, abs=1e1)
-
-
-def test_enthalpy_hight_highp(composition):
-    composition.initialiseNi([1e20]*len(composition.species))
-    composition.T = 25000.
-    composition.P = 1013250.
-    composition.solveGfe()
-
-    assert composition.calculate_enthalpy() == pytest.approx(1.483881e8, abs=1e2)
+    assert composition.calculate_enthalpy() == pytest.approx(result, abs=tol)
 
 
 def test_calculateViscosity(composition):
