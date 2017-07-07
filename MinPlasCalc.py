@@ -297,7 +297,7 @@ class MonatomicSpecies(Species):
             if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
                 partitionVal += twoJplusone * np.exp(-Ei_J / (constants.boltzmann * T))
         return partitionVal
-    
+
     def internal_energy(self, T):
         translational_energy = 1.5 * constants.boltzmann * T
         electronic_energy = 0.
@@ -482,7 +482,7 @@ class compositionGFE:
             sp.numberDensity = self.ni[j] / V
 
     def recalcE0i(self):
-        # deltaIonisationEnergy recalculation, using limitation theory of 
+        # deltaIonisationEnergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
         ni = self.ni
         T = self.T
@@ -511,7 +511,7 @@ class compositionGFE:
                     sp.E0 = (sp.ionisedFrom.E0
                              + sp.ionisedFrom.ionisationEnergy
                              - sp.ionisedFrom.deltaIonisationEnergy)
-                    
+
     def recalcGfeArrays(self):
         ni = self.ni
         T = self.T
@@ -593,7 +593,7 @@ class compositionGFE:
         this is done by performing two full composition simulations when this 
         function is called - can be time-consuming.
         """
-        
+
         T = self.T
 
         self.initialiseNi([init_ni for i in range(len(self.species))])
@@ -605,9 +605,9 @@ class compositionGFE:
         self.T = (1 + rel_delta_t) * T
         self.solveGfe()
         enthalpy_high = self.calculate_enthalpy()
-        
+
         self.T = T
-        
+
         return (enthalpy_high - enthalpy_low) / (2. * rel_delta_t * T)
 
     def calculate_enthalpy(self):
@@ -617,11 +617,11 @@ class compositionGFE:
         negative or positive depending on the reference energies of the diatomic 
         species present.
         """
-        
+
         T = self.T
-        weighted_enthalpy = sum(constants.avogadro * sp.numberOfParticles * (sp.internal_energy(T) + sp.E0 + constants.boltzmann * T) 
+        weighted_enthalpy = sum(constants.avogadro * sp.numberOfParticles * (sp.internal_energy(T) + sp.E0 + constants.boltzmann * T)
                              for sp in self.species)
-        weighted_molmass = sum(sp.numberOfParticles * sp.molarMass 
+        weighted_molmass = sum(sp.numberOfParticles * sp.molarMass
                                for sp in self.species)
         return weighted_enthalpy / weighted_molmass
 
