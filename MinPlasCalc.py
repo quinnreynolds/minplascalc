@@ -427,7 +427,8 @@ class compositionGFE:
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs
-        elementset = set(s for sp in self.species for s in sp.stoichiometry)
+        elementset = sorted(set(s for sp in self.species
+                                for s in sp.stoichiometry))
         self.elements = tuple(Element(name=element) for element in elementset)
 
         self.maxChargeNumber = max(sp.chargeNumber for sp in self.species)
