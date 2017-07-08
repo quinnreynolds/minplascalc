@@ -7,7 +7,8 @@
 import json
 import numpy as np
 import collections
-
+import logging
+import warnings
 
 # utility functions ############################################################
 
@@ -65,8 +66,8 @@ def read_energylevels(datafile):
                 J, Ei = parse_values(line)
                 energylevels.append({"J": J, "Ei": Ei})
             except ValueError as exception:
-                print("Ignoring line", i, "in", datafile)
-                print(exception)
+                logging.debug("Ignoring line %i in %s", i, datafile)
+                logging.debug(exception)
 
     return energylevels
 
@@ -574,12 +575,11 @@ class compositionGFE:
             governorIters += 1
 
         if not successYN:
-            # TODO need to raise a proper warning or even exception here
-            print("Warning! Minimiser could not find a converged solution, results may be inaccurate.")
+            warnings.warn("Minimiser could not find a converged solution, results may be inaccurate.")
 
         # noinspection PyUnboundLocalVariable
-        print(governorIters, relaxFactor, relTol)
-        print(self.ni)
+        logging.debug(governorIters, relaxFactor, relTol)
+        logging.debug(self.ni)
 
         self.writeNi()
         self.writeNumberDensity()
