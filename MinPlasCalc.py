@@ -384,11 +384,11 @@ class Element:
             Name of element, eg "O" (default empty string)
         stoichiometricCoeffts : array_like
             List of number of atoms of this element present in each species, in
-            same order as compositionGFE.species (default empty list)
+            same order as Mixture.species (default empty list)
         totalNumber : float
             Total number of atoms of this element present in the simulation
             (conserved), calculated from initial conditions during instantiation
-            of compositionGFE (default 0)
+            of Mixture (default 0)
         """
 
         self.name = name
@@ -396,8 +396,8 @@ class Element:
         self.totalNumber = totalNumber
 
 
-class compositionGFE:
-    def __init__(self, compositionFile, T=10000., P=101325):
+class Mixture:
+    def __init__(self, mixture_file, T=10000., P=101325):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -405,7 +405,7 @@ class compositionGFE:
 
         Parameters
         ----------
-        compositionFile : string
+        mixture_file : string
             Path to a JSON data file containing species and initial mole
             fractions
         T : float
@@ -417,7 +417,7 @@ class compositionGFE:
         self.T = T
         self.P = P
 
-        with open(compositionFile) as sf:
+        with open(mixture_file) as sf:
             jsonData = json.load(sf)
 
         # Random order upsets the nonlinearities in the minimiser resulting in
