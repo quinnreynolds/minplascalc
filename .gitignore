@@ -4,3 +4,6 @@ testDriverComposition.py~
 .cache
 .coverage
 .idea
+build
+dist
+minplascalc.egg-info
