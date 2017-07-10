@@ -11,7 +11,7 @@ A simple set of tools for doing calculations of thermal plasma compositions rele
 
 ## How do I get set up? ##
 
-* Getting started: Clone the repo. You'll get the module (MinPlasCalc.py) and some test drivers.
+* Getting started: Clone the repo. You'll get the module (minplascalc.py) and some test drivers.
 * Configuration: You should be OK with `pip install -r requirements.txt`
 * Dependencies: You will need an implementation of Python 3 (duh), and relatively recent versions of numpy and scipy. You need pytest to run the tests. 
 * How to run tests: simply run `pytest` in the root directory.

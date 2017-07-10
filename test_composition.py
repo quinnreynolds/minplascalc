@@ -1,5 +1,5 @@
 import pytest
-import MinPlasCalc as mpc
+import minplascalc as mpc
 
 
 @pytest.fixture

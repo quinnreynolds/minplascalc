@@ -1,4 +1,4 @@
-import MinPlasCalc as mpc
+import minplascalc as mpc
 import pytest
 
 

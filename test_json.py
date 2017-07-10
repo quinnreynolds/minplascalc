@@ -2,7 +2,7 @@
 #
 # Q Reynolds 2017
 
-import MinPlasCalc as mpc
+import minplascalc as mpc
 import pathlib
 import json
 import collections
