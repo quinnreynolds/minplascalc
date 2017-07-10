@@ -5,39 +5,37 @@
 import argparse
 import numpy as np
 from matplotlib import pyplot
-import MinPlasCalc as mpc
+import minplascalc as mpc
 
-parser = argparse.ArgumentParser(description="Test driver for MinPlasCalc - simple oxygen plasma composition calculation.")
+parser = argparse.ArgumentParser(description="Test driver for minplascalc - simple oxygen plasma composition calculation.")
 parser.add_argument("-ts", help="Temperature to start calculating at, K",
                     type=float, default=1000.)
 parser.add_argument("-te", help="Temperature to stop calculating at, K",
                     type=float, default=25000.)
 parser.add_argument("-p", help="Pressure to calculate at, Pa",
                     type=float, default=101325.)
-parserArgs = parser.parse_args()
+args = parser.parse_args()
 
 
-# Instantiate a plasma composition object using data from a JSON file.
+# Instantiate a plasma mixture object using data from a JSON file.
 # T, P are just initial placeholder values, can be changed at any time.
-myComposition = mpc.compositionGFE(
-    compositionFile="Compositions/OxygenPlasma5sp.json",
-    T=parserArgs.ts,
-    P=parserArgs.p)
-
+mixture = mpc.Mixture(mixture_file="mixtures/OxygenPlasma5sp.json",
+                      T=args.ts,
+                      P=args.p)
 
 # Run the GFE minimiser calculation at a range of temperatures, and calculate 
 # the plasma density
-temperatures = np.linspace(parserArgs.ts, parserArgs.te, num=100)
-ndi = [[] for j in range(len(myComposition.species))]
+temperatures = np.linspace(args.ts, args.te, num=100)
+ndi = [[] for j in range(len(mixture.species))]
 plotText = []
 density = []
 for T in temperatures:
-    myComposition.initialiseNi([1e20]*len(myComposition.species))
-    myComposition.T = T
-    myComposition.solveGfe()
+    mixture.initialiseNi([1e20] * len(mixture.species))
+    mixture.T = T
+    mixture.solveGfe()
 
-    density.append(myComposition.calculateDensity())
-    for j, sp in enumerate(myComposition.species):
+    density.append(mixture.calculateDensity())
+    for j, sp in enumerate(mixture.species):
         ndi[j].append(sp.numberDensity)
         plotText.append(sp.name)
 

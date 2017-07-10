@@ -7,7 +7,8 @@
 import json
 import numpy as np
 import collections
-
+import logging
+import warnings
 
 # utility functions ############################################################
 
@@ -65,18 +66,19 @@ def read_energylevels(datafile):
                 J, Ei = parse_values(line)
                 energylevels.append({"J": J, "Ei": Ei})
             except ValueError as exception:
-                print("Ignoring line", i, "in", datafile)
-                print(exception)
+                logging.debug("Ignoring line %i in %s", i, datafile)
+                logging.debug(exception)
 
     return energylevels
 
 
 def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                               ionisationEnergy, nistDataFile, sources=None):
-    """Function to take text data retrieved from NIST websites or other sources 
+    """Function to take text data retrieved from NIST websites or other sources
+
     and build a JSON object file for a monatomic plasma species, with specified
     electron energy levels and degeneracies.
-    
+
     Parameters
     ----------
     name : string
@@ -92,10 +94,10 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
     ionisationEnergy : float
         Ionisation energy of the species in 1/cm
     nistDataFile : string
-        Path to text file containing raw energy level data (in NIST Atomic 
+        Path to text file containing raw energy level data (in NIST Atomic
         Spectra Database format)
     sources : list of dictionaries
-        Each dictionary represents a reference source from which the data was 
+        Each dictionary represents a reference source from which the data was
         obtained (defaults to NIST Atomic Spectra Database)
     """
 
@@ -129,10 +131,10 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
 def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                              ionisationEnergy, dissociationEnergy, sigmaS,
                              g0, we, Be, sources=None):
-    """Function to take text data retrieved from NIST websites or other sources 
+    """Function to take text data retrieved from NIST websites or other sources
     and build a JSON object file for a diatomic plasma species, with specified
     ground state degeneracy and rotational & vibrational parameters.
-    
+
     Parameters
     ----------
     name : string
@@ -158,7 +160,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
     Be : float
         Rotational energy level constant in 1/cm
     sources : list of dictionaries
-        Each dictionary represents a reference source from which the data was 
+        Each dictionary represents a reference source from which the data was
         obtained (defaults to NIST Chemistry Webbook)
     """
     if sources is None:
@@ -188,7 +190,6 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ("sources", sources),
     ])
 
-
     with open(speciesDict["name"] + ".json", "w") as jf:
         json.dump(speciesDict, jf, indent=4)
 
@@ -197,7 +198,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
 
 
 class constants:
-    """A collection of physical and unit-conversion constants useful in plasma 
+    """A collection of physical and unit-conversion constants useful in plasma
     calculations.
     """
 
@@ -221,9 +222,12 @@ def species_from_file(dataFile, numberofparticles=0, x0=0):
     Parameters
     ----------
     dataFile : string
-        Path to a JSON data file describing the electronic and molecular properties of the species
+        Path to a JSON data file describing the electronic and molecular
+        properties of the species
     numberofparticles : float
         Initial particle count (default 0)
+    x0 : float
+        initial x
     """
     # Construct a data object from JSON data file
     with open(dataFile) as df:
@@ -235,20 +239,36 @@ def species_from_file(dataFile, numberofparticles=0, x0=0):
         return DiatomicSpecies(jsonData, numberofparticles, x0)
 
 
+class BaseSpecies:
+    def totalPartitionFunction(self, V, T):
+        return (V * self.translationalPartitionFunction(T)
+                * self.internalPartitionFunction(T))
+
+    def translationalPartitionFunction(self, T):
+        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
+                / (constants.avogadro * constants.planck ** 2)) ** 1.5
+
+    def internalPartitionFunction(self, T):
+        raise NotImplementedError
+
+    def internal_energy(self, T):
+        raise NotImplementedError
+
+
 # Diatomic molecules, single atoms, and ions
-class Species:
+class Species(BaseSpecies):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
         """Base class for species. Either single monatomic or diatomic chemical
         species in the plasma, eg O2 or Si+
-        
+
         Parameters
         ----------
         jsonData : dict
-            JSON data describing the electronic and molecular properties of the species
+            JSON data describing the electronic and molecular
+            properties of the species
         numberOfParticles : float
             Initial particle count (default 0)
         x0 : float
-
         """
 
         self.numberOfParticles = numberOfParticles
@@ -265,33 +285,34 @@ class Species:
             # TODO is this the right exception to raise?
             raise ValueError("Error! Negatively charged ions not implemented yet.")
 
-    def translationalPartitionFunction(self, T):
-        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
-                / (constants.avogadro * constants.planck ** 2)) ** 1.5
-
-    def internalPartitionFunction(self, T):
-        raise NotImplementedError
-
 
 class MonatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
         super().__init__(jsonData, numberOfParticles, x0)
 
-        self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"][
-            "ionisationEnergy"]
+        self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"]["ionisationEnergy"]
         self.deltaIonisationEnergy = 0.
         self.energyLevels = []
-        for energyLevelLine in jsonData["monatomicData"]["energyLevels"]:
-            self.energyLevels.append([2. * energyLevelLine["J"] + 1.,
-                                      constants.invCmToJ * energyLevelLine["Ei"]])
+        for energylevel in jsonData["monatomicData"]["energyLevels"]:
+            self.energyLevels.append([2. * energylevel["J"] + 1.,
+                                      constants.invCmToJ * energylevel["Ei"]])
         self.E0 = 0
 
     def internalPartitionFunction(self, T):
         partitionVal = 0.
-        for eLevel in self.energyLevels:
-            if eLevel[1] < (self.ionisationEnergy - self.deltaIonisationEnergy):
-                partitionVal += eLevel[0] * np.exp(-eLevel[1] / (constants.boltzmann * T))
+        for twoJplusone, Ei_J in self.energyLevels:
+            if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
+                partitionVal += twoJplusone * np.exp(-Ei_J / (constants.boltzmann * T))
         return partitionVal
+
+    def internal_energy(self, T):
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        for twoJplusone, Ei_J in self.energyLevels:
+            if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
+                electronic_energy += twoJplusone * Ei_J * np.exp(-Ei_J / (constants.boltzmann * T))
+        electronic_energy /= self.internalPartitionFunction(T)
+        return translational_energy + electronic_energy
 
 
 class DiatomicSpecies(Species):
@@ -315,11 +336,18 @@ class DiatomicSpecies(Species):
         rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)
         return electronicPartition * vibrationalPartition * rotationalPartition
 
+    def internal_energy(self, T):
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        rotational_energy = constants.boltzmann * T
+        vibrational_energy = self.we * np.exp(-self.we / (constants.boltzmann * T)) / (1. - np.exp(-self.we / (constants.boltzmann * T)))
+        return translational_energy + electronic_energy + rotational_energy + vibrational_energy
 
-class ElectronSpecies:
+
+class ElectronSpecies(BaseSpecies):
     def __init__(self, numberOfParticles=0):
         """Class describing electrons as a species in the plasma.
-        
+
         Parameters
         ----------
         numberOfParticles : float
@@ -335,30 +363,32 @@ class ElectronSpecies:
         self.E0 = 0
         self.x0 = 0
 
-    def translationalPartitionFunction(self, T):
-        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
-                / (constants.avogadro * constants.planck ** 2)) ** 1.5
-
+    # noinspection PyUnusedLocal
     def internalPartitionFunction(self, T):
         return 2.
+
+    def internal_energy(self, T):
+        translational_energy = 1.5 * constants.boltzmann * T
+        electronic_energy = 0.
+        return translational_energy + electronic_energy
 
 
 class Element:
     def __init__(self, name="", stoichiometricCoeffts=None, totalNumber=0.):
-        """Class acting as struct to hold some information about different 
+        """Class acting as struct to hold some information about different
         elements in the plasma.
-        
+
         Parameters
         ----------
         name : string
             Name of element, eg "O" (default empty string)
         stoichiometricCoeffts : array_like
             List of number of atoms of this element present in each species, in
-            same order as compositionGFE.species (default empty list)
+            same order as Mixture.species (default empty list)
         totalNumber : float
-            Total number of atoms of this element present in the simulation 
+            Total number of atoms of this element present in the simulation
             (conserved), calculated from initial conditions during instantiation
-            of compositionGFE (default 0)
+            of Mixture (default 0)
         """
 
         self.name = name
@@ -366,16 +396,16 @@ class Element:
         self.totalNumber = totalNumber
 
 
-class compositionGFE:
-    def __init__(self, compositionFile, T=10000., P=101325):
-        """Class representing a thermal plasma specification with multiple 
-        species, and methods for calculating equilibrium species concentrations 
-        at different temperatures and pressures using the principle of Gibbs 
+class Mixture:
+    def __init__(self, mixture_file, T=10000., P=101325):
+        """Class representing a thermal plasma specification with multiple
+        species, and methods for calculating equilibrium species concentrations
+        at different temperatures and pressures using the principle of Gibbs
         free energy minimisation.
-        
+
         Parameters
         ----------
-        compositionFile : string
+        mixture_file : string
             Path to a JSON data file containing species and initial mole
             fractions
         T : float
@@ -387,7 +417,7 @@ class compositionGFE:
         self.T = T
         self.P = P
 
-        with open(compositionFile) as sf:
+        with open(mixture_file) as sf:
             jsonData = json.load(sf)
 
         # Random order upsets the nonlinearities in the minimiser resulting in
@@ -398,17 +428,13 @@ class compositionGFE:
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs
-        elementset = set()
-        for sp in self.species:
-            elementset.update(sp.stoichiometry)
+        elementset = sorted(set(s for sp in self.species
+                                for s in sp.stoichiometry))
+        self.elements = tuple(Element(name=element) for element in elementset)
 
-        self.elements = [Element(name=element) for element in elementset]
-
+        self.maxChargeNumber = max(sp.chargeNumber for sp in self.species)
         # Set species which each +ve charged ion originates from
-        self.maxChargeNumber = 0
         for sp in self.species:
-            if sp.chargeNumber > self.maxChargeNumber:
-                self.maxChargeNumber = sp.chargeNumber
             if sp.chargeNumber > 0:
                 for sp2 in self.species:
                     if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
@@ -463,23 +489,28 @@ class compositionGFE:
             sp.numberDensity = self.ni[j] / V
 
     def recalcE0i(self):
-        # deltaIonisationEnergy recalculation, using limitation theory of 
+        # deltaIonisationEnergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
+        ni = self.ni
+        T = self.T
+        P = self.P
+
+        V = ni.sum() * constants.boltzmann * T / P
         weightedChargeSumSqd = 0
         weightedChargeSum = 0
         for j, sp in enumerate(self.species):
             if sp.chargeNumber > 0:
-                weightedChargeSum += self.ni[j] * sp.chargeNumber
-                weightedChargeSumSqd += self.ni[j] * sp.chargeNumber ** 2
+                weightedChargeSum += (ni[j] / V) * sp.chargeNumber
+                weightedChargeSumSqd += (ni[j] / V) * sp.chargeNumber ** 2
         zStar = weightedChargeSumSqd / weightedChargeSum
-        debyeD = np.sqrt(constants.boltzmann * self.T
-                         / (4. * np.pi * (zStar + 1.) * self.ni[-1]
+        debyeD = np.sqrt(constants.boltzmann * T
+                         / (4. * np.pi * (zStar + 1.) * (ni[-1] / V)
                             * constants.fundamentalCharge ** 2))
         for j, sp in enumerate(self.species):
             if sp.name != "e":
                 ai = (3. * (sp.chargeNumber + 1.)
-                      / (4. * np.pi * self.ni[-1])) ** (1/3)
-                sp.deltaIonisationEnergy = constants.boltzmann * self.T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
+                      / (4. * np.pi * (ni[-1] / V))) ** (1 / 3)
+                sp.deltaIonisationEnergy = constants.boltzmann * T * (((ai / debyeD) ** (2 / 3) + 1) - 1) / (2. * (zStar + 1))
 
         for cn in range(1, self.maxChargeNumber + 1):
             for sp in self.species:
@@ -488,26 +519,23 @@ class compositionGFE:
                              + sp.ionisedFrom.ionisationEnergy
                              - sp.ionisedFrom.deltaIonisationEnergy)
 
-
     def recalcGfeArrays(self):
-        niSum = self.ni.sum()
-        V = niSum * constants.boltzmann * self.T / self.P
-        offDiagonal = -constants.boltzmann * self.T / niSum
+        ni = self.ni
+        T = self.T
+        P = self.P
 
-        for j, sp in enumerate(self.species):
-            onDiagonal = constants.boltzmann * self.T / self.ni[j]
+        niSum = ni.sum()
+        V = niSum * constants.boltzmann * T / P
+        offDiagonal = -constants.boltzmann * T / niSum
+        nspecies = len(self.species)
 
-            for j2, sp2 in enumerate(self.species):
-                self.gfeMatrix[j, j2] = offDiagonal
-            self.gfeMatrix[j, j] += onDiagonal
+        onDiagonal = constants.boltzmann * T / ni
+        self.gfeMatrix[:nspecies, :nspecies] = offDiagonal + np.diag(onDiagonal)
+        total = [sp.totalPartitionFunction(V, T) for sp in self.species]
+        E0 = [sp.E0 for sp in self.species]
+        mu = -constants.boltzmann * T * np.log(total / ni) + E0
+        self.gfeVector[:nspecies] = -mu
 
-            totalPartitionFunction = (V * sp.translationalPartitionFunction(self.T)
-                                        * sp.internalPartitionFunction(self.T))
-            mu = -constants.boltzmann * self.T * np.log(totalPartitionFunction / self.ni[j]) + sp.E0
-
-            self.gfeVector[j] = -mu + onDiagonal * self.ni[j]
-            for j2, sp2 in enumerate(self.species):
-                self.gfeVector[j] += offDiagonal * self.ni[j2]
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.readNi()
@@ -515,7 +543,7 @@ class compositionGFE:
         governorFactors = np.linspace(0.9, 0.1, 9)
         successYN = False
         governorIters = 0
-        while not successYN:
+        while not successYN and governorIters < len(governorFactors):
             successYN = True
             governorFactor = governorFactors[governorIters]
             relTol = relativeTolerance * 10.
@@ -524,20 +552,20 @@ class compositionGFE:
                 self.recalcE0i()
                 self.recalcGfeArrays()
 
-                newNi = np.linalg.solve(self.gfeMatrix, self.gfeVector)
+                solution = np.linalg.solve(self.gfeMatrix, self.gfeVector)
 
-                deltaNi = abs(newNi[0:len(self.species)] - self.ni)
+                new_ni = solution[0:len(self.species)]
+                deltaNi = abs(new_ni - self.ni)
                 maxAllowedDeltaNi = governorFactor * self.ni
 
-                maxNiIndex = newNi.argmax()
-                relTol = deltaNi[maxNiIndex] / newNi[maxNiIndex]
+                maxNiIndex = new_ni.argmax()
+                relTol = deltaNi[maxNiIndex] / solution[maxNiIndex]
 
-                lowDeltaNiYN = deltaNi < maxAllowedDeltaNi
-                deltaNi[lowDeltaNiYN] = maxAllowedDeltaNi[lowDeltaNiYN]
+                deltaNi = deltaNi.clip(min=maxAllowedDeltaNi)
                 newRelaxFactors = maxAllowedDeltaNi / deltaNi
                 relaxFactor = newRelaxFactors.min()
 
-                self.ni = (1. - relaxFactor) * self.ni + relaxFactor * newNi[0:len(self.species)]
+                self.ni = (1. - relaxFactor) * self.ni + relaxFactor * new_ni
 
                 minimiserIters += 1
                 if minimiserIters > maxIters:
@@ -547,56 +575,85 @@ class compositionGFE:
             governorIters += 1
 
         if not successYN:
-            # TODO need to raise a proper warning or even exception here
-            print("Warning! Minimiser could not find a converged solution, results may be inaccurate.")
+            warnings.warn("Minimiser could not find a converged solution, results may be inaccurate.")
 
-        print(governorIters, relaxFactor, relTol)
-        print(self.ni)
+        # noinspection PyUnboundLocalVariable
+        logging.debug(governorIters, relaxFactor, relTol)
+        logging.debug(self.ni)
 
         self.writeNi()
         self.writeNumberDensity()
 
     def calculateDensity(self):
-        """Calculate the density of the plasma in kg/m3 based on current 
+        """Calculate the density of the plasma in kg/m3 based on current
         conditions and species composition.
         """
 
         return sum(sp.numberDensity * sp.molarMass / constants.avogadro
                    for sp in self.species)
 
-    def calculateHeatCapacity(self):
-        """Calculate the heat capacity of the plasma in J/kg.K based on current 
-        conditions and species composition.
+    def calculate_heat_capacity(self, init_ni=1e20, rel_delta_t=0.001):
+        """Calculate the heat capacity at constant pressure of the plasma in
+        J/kg.K based on current conditions and species composition. Note that
+        this is done by performing two full composition simulations when this
+        function is called - can be time-consuming.
         """
 
-        raise NotImplementedError
+        T = self.T
+
+        self.initialiseNi([init_ni for i in range(len(self.species))])
+        self.T = (1 - rel_delta_t) * T
+        self.solveGfe()
+        enthalpy_low = self.calculate_enthalpy()
+
+        self.initialiseNi([init_ni for i in range(len(self.species))])
+        self.T = (1 + rel_delta_t) * T
+        self.solveGfe()
+        enthalpy_high = self.calculate_enthalpy()
+
+        self.T = T
+
+        return (enthalpy_high - enthalpy_low) / (2. * rel_delta_t * T)
+
+    def calculate_enthalpy(self):
+        """Calculate the enthalpy of the plasma in J/kg based on current
+        conditions and species composition. Note that the value returned is not
+        absolute, it is relative to an arbitrary reference which may be
+        negative or positive depending on the reference energies of the diatomic
+        species present.
+        """
+
+        T = self.T
+        weighted_enthalpy = sum(constants.avogadro * sp.numberOfParticles * (sp.internal_energy(T) + sp.E0 + constants.boltzmann * T)
+                                for sp in self.species)
+        weighted_molmass = sum(sp.numberOfParticles * sp.molarMass
+                               for sp in self.species)
+        return weighted_enthalpy / weighted_molmass
 
     def calculateViscosity(self):
-        """Calculate the viscosity of the plasma in Pa.s based on current 
+        """Calculate the viscosity of the plasma in Pa.s based on current
         conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateThermalConductivity(self):
-        """Calculate the thermal conductivity of the plasma in W/m.K based on 
+        """Calculate the thermal conductivity of the plasma in W/m.K based on
         current conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateElectricalConductivity(self):
-        """Calculate the electrical conductivity of the plasma in 1/ohm.m based 
+        """Calculate the electrical conductivity of the plasma in 1/ohm.m based
         on current conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculateTotalEmissionCoefficient(self):
-        """Calculate the total radiation emission coefficient of the plasma in 
+        """Calculate the total radiation emission coefficient of the plasma in
         W/m3 based on current conditions and species composition.
         """
 
         raise NotImplementedError
-
-################################################################################
