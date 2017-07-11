@@ -9,12 +9,12 @@ def test_molarmass():
 
 @pytest.fixture
 def diatomic_sample_species():
-    return mpc.species_from_file(dataFile="NistData/O2.json")
+    return mpc.species_from_name("O2")
 
 
 @pytest.fixture
 def monatomic_sample_species():
-    return mpc.species_from_file(dataFile="NistData/O+.json")
+    return mpc.species_from_name("O+")
 
 
 def test_translational_partition_function(diatomic_sample_species):

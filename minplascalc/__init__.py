@@ -9,9 +9,13 @@ import numpy as np
 import collections
 import logging
 import warnings
+import pathlib
+
+DATAPATH = pathlib.Path(__file__).parent / 'data'
+SPECIESPATH =  DATAPATH / 'species'
+MIXTUREPATH = DATAPATH / 'mixtures'
 
 # utility functions ############################################################
-
 
 def molar_mass_calculator(protons, neutrons, electrons):
     """Estimate the molar mass in kg/mol of a species based on its nuclear and
@@ -239,6 +243,23 @@ def species_from_file(dataFile, numberofparticles=0, x0=0):
         return DiatomicSpecies(jsonData, numberofparticles, x0)
 
 
+def species_from_name(name, numberofparticles=0, x0=0):
+    """ Create a species from the species database
+
+    Parameters
+    ----------
+    name : str
+        Name of the species
+    numberofparticles : float
+        Initial particle count (default 0)
+    x0 : float
+        initial x
+    """
+
+    filename = SPECIESPATH / (name + '.json')
+    return species_from_file(filename, numberofparticles, x0)
+
+
 class BaseSpecies:
     def totalPartitionFunction(self, V, T):
         return (V * self.translationalPartitionFunction(T)
@@ -422,7 +443,7 @@ class Mixture:
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs. Make sure this order is maintained
-        self.species = [species_from_file(spData["species"], x0=spData["x0"])
+        self.species = [species_from_name(spData["species"], x0=spData["x0"])
                         for spData in jsonData["speciesList"]]
         self.species.append(ElectronSpecies())
 

@@ -19,7 +19,7 @@ def test_buildMonatomicSpeciesJSON():
         molarMass=0.0120107,
         chargeNumber=1,
         ionisationEnergy=90820.45,
-        nistDataFile="NistData/RawLevelData/nist_C+")
+        nistDataFile=mpc.DATAPATH.joinpath("species_raw", "nist_C+"))
 
     outputfile = pathlib.Path('C+.json')
     assert outputfile.exists()
@@ -36,7 +36,7 @@ def test_buildMonatomicSpeciesJSON_sourced():
         molarMass=0.0120107,
         chargeNumber=1,
         ionisationEnergy=90820.45,
-        nistDataFile="NistData/RawLevelData/nist_C+",
+        nistDataFile=mpc.DATAPATH.joinpath("species_raw", "nist_C+"),
         sources=[DEFSOURCE])
 
     outputfile = pathlib.Path('C+.json')

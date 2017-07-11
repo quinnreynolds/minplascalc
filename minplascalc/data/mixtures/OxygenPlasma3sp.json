@@ -1,0 +1,10 @@
+{
+    "name": "Oxygen Plasma Test, no diatomics",
+    "speciesList": 
+    [
+        { "species": "O", "x0": 1 },
+        { "species": "O+", "x0": 0 },
+        { "species": "O++", "x0": 0 }
+    ]
+}
+
