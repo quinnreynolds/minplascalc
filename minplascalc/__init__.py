@@ -11,7 +11,9 @@ import logging
 import warnings
 import pathlib
 
-SPECIESPATH = pathlib.Path('data/species')
+DATAPATH = pathlib.Path(__file__).parent / 'data'
+SPECIESPATH =  DATAPATH / 'species'
+MIXTUREPATH = DATAPATH / 'mixtures'
 
 # utility functions ############################################################
 
