@@ -18,10 +18,7 @@ args = parser.parse_args()
 
 
 # Load up some species
-species = [mpc.species_from_file(f) for f in ["NistData/O2.json",
-                                              "NistData/O.json",
-                                              "NistData/O+.json",
-                                              "NistData/O++.json"]]
+species = [mpc.species_from_name(n) for n in ["O2", "O", "O+", "O++"]]
 
 # Calculate their internal partition functions
 temperatures = np.linspace(args.ts, args.te, 1000)

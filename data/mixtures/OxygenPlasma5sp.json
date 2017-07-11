@@ -1,0 +1,12 @@
+{
+    "name": "Oxygen Plasma Test - with uncharged and charged diatomic species",
+    "speciesList": 
+    [
+        { "species": "O2", "x0": 1 },
+        { "species": "O2+", "x0": 0 },
+        { "species": "O", "x0": 0 },
+        { "species": "O+", "x0": 0 },
+        { "species": "O++", "x0": 0 }
+    ]
+}
+
