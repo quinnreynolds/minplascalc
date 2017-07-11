@@ -53,7 +53,7 @@ References
 -  The Mathematical Theory of Non-Uniform Gases 3\ :sup:`ed`\. Chapman, S. and 
    Cowling, T.G., *Cambridge University Press*, Cambridge, United Kingdom, 1970
 -  Lowering of Ionization Potentials in Plasmas. Stewart J.C. and 
-   Pyatt jr, K.D., *The Astrophysical Journal*, 144, 1966, p 1203
+   Pyatt Jr, K.D., *The Astrophysical Journal*, 144, 1966, p 1203
 -  Calculation of Electrical and Thermal Conductivities of Metallurgical 
    Plasmas. Dunn, G.J. and Eagar, T.W., *Welding Research Council*, Bulletin 
    357, 1990
@@ -63,6 +63,6 @@ References
    Yu., Reader, J., and NIST ASD Team, *National Institute of Standards and* 
    *Technology*, Gaithersburg MD, http://physics.nist.gov/asd
 -  NIST Chemistry WebBook, NIST Standard Reference Database Number 69. 
-   Linstrom P.J. and Mallard W.G. (ed), *National Institute of Standards* 
+   Linstrom, P.J. and Mallard, W.G. (ed), *National Institute of Standards* 
    *and Technology*, Gaithersburg MD, http://webbook.nist.gov/chemistry/
 
