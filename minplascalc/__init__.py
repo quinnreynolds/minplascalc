@@ -257,7 +257,7 @@ def species_from_name(name, numberofparticles=0, x0=0):
     """
 
     filename = SPECIESPATH / (name + '.json')
-    return species_from_file(filename, numberofparticles, x0)
+    return species_from_file(str(filename), numberofparticles, x0)
 
 
 class BaseSpecies:

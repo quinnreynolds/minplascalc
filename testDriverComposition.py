@@ -19,7 +19,7 @@ args = parser.parse_args()
 
 # Instantiate a plasma mixture object using data from a JSON file.
 # T, P are just initial placeholder values, can be changed at any time.
-mixture = mpc.Mixture(mixture_file=mpc.MIXTUREPATH / "OxygenPlasma5sp.json",
+mixture = mpc.Mixture(mixture_file=str(mpc.MIXTUREPATH / "OxygenPlasma5sp.json"),
                       T=args.ts,
                       P=args.p)
 

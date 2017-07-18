@@ -4,7 +4,7 @@ import minplascalc as mpc
 
 @pytest.fixture
 def mixture():
-    c = mpc.Mixture(mpc.MIXTUREPATH / "OxygenPlasma5sp.json",
+    c = mpc.Mixture(str(mpc.MIXTUREPATH / "OxygenPlasma5sp.json"),
                     T=1000., P=101325.)
     c.initialiseNi([1e20]*len(c.species))
     return c
