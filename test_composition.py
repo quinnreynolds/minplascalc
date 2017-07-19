@@ -24,9 +24,9 @@ HIGH_P = 1013250.
 
 @pytest.mark.parametrize("temperature, pressure, result, tol", [
     (LOW_T, LOW_P, 1081.252, 1e-3),
-    (HIGH_T, LOW_P, 23193.93, 1e-2),
+    (HIGH_T, LOW_P, 23193.92, 1e-2),
     (LOW_T, HIGH_P, 1081.252, 1e-3),
-    (HIGH_T, HIGH_P, 5829.864, 1e-3),
+    (HIGH_T, HIGH_P, 5829.868, 1e-3),
 ])
 def test_heat_capacity(mixture, temperature, pressure, result, tol):
     mixture.T = temperature
