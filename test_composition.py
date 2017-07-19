@@ -24,9 +24,9 @@ HIGH_P = 1013250.
 
 @pytest.mark.parametrize("temperature, pressure, result, tol", [
     (LOW_T, LOW_P, 1081.252, 1e-3),
-    (HIGH_T, LOW_P, 23194.70, 1e-2),
+    (HIGH_T, LOW_P, 23193.93, 1e-2),
     (LOW_T, HIGH_P, 1081.252, 1e-3),
-    (HIGH_T, HIGH_P, 5829.618, 1e-3),
+    (HIGH_T, HIGH_P, 5829.864, 1e-3),
 ])
 def test_heat_capacity(mixture, temperature, pressure, result, tol):
     mixture.T = temperature
@@ -38,9 +38,9 @@ def test_heat_capacity(mixture, temperature, pressure, result, tol):
 
 @pytest.mark.parametrize("temperature, pressure, result, tol", [
     (LOW_T, LOW_P, -1.455147e7, 1e1),
-    (HIGH_T, LOW_P, 1.893154e8, 1e2),
+    (HIGH_T, LOW_P, 1.893144e8, 1e2),
     (LOW_T, HIGH_P, -1.455147e7, 1e1),
-    (HIGH_T, HIGH_P, 1.483881e8, 1e2),
+    (HIGH_T, HIGH_P, 1.483885e8, 1e2),
 ])
 def test_enthalpy(mixture, temperature, pressure, result, tol):
     mixture.T = temperature
