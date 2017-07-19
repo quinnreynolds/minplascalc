@@ -532,8 +532,8 @@ class Mixture:
                 ai = (3. * (sp.chargeNumber + 1.)
                       / (4. * np.pi * (ni[-1] / V))) ** (1 / 3)
                 sp.deltaIonisationEnergy = (constants.boltzmann * T * 
-                                            (((ai / debyeD) + 1) ** (2 / 3) - 1)
-                                            / (2. * (zStar + 1)))
+                                            (((ai / debyeD) ** 3 + 1) ** (2 / 3)
+                                             - 1) / (2. * (zStar + 1)))
 
         for cn in range(1, self.maxChargeNumber + 1):
             for sp in self.species:
