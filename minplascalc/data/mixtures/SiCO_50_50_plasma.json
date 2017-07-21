@@ -1,5 +1,5 @@
 {
-    "name": "CO-SiO plasma",
+    "name": "SiO-CO plasma, 50-50% mixture",
     "speciesList": 
     [
         { "species": "O2", "x0": 0 },
