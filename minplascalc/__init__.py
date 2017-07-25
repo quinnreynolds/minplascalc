@@ -48,13 +48,13 @@ def parse_values(nist_line):
     return values
 
 
-def read_energylevels(datafile):
+def read_energylevels(data):
     """ Read a NIST energy level file
 
     Parameters
     ----------
-    datafile : str
-        Filename of a NIST energy level file
+    data : file-like
+        NIST energy level file data
 
 
     Return
@@ -64,14 +64,18 @@ def read_energylevels(datafile):
     """
     energylevels = []
 
-    with open(datafile) as data:
-        for i, line in enumerate(data):
-            try:
-                J, Ei = parse_values(line)
-                energylevels.append({"J": J, "Ei": Ei})
-            except ValueError as exception:
-                logging.debug("Ignoring line %i in %s", i, datafile)
-                logging.debug(exception)
+    try:
+        name = data.name
+    except AttributeError:
+        name = 'input'
+
+    for i, line in enumerate(data):
+        try:
+            J, Ei = parse_values(line)
+            energylevels.append({"J": J, "Ei": Ei})
+        except ValueError as exception:
+            logging.debug("Ignoring line %i in %s", i, name)
+            logging.debug(exception)
 
     return energylevels
 
@@ -121,7 +125,7 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ("chargeNumber", chargeNumber),
         ("monatomicData", collections.OrderedDict([
             ("ionisationEnergy", ionisationEnergy),
-            ("energyLevels", read_energylevels(nistDataFile)),
+            ("energyLevels", read_energylevels(open(nistDataFile))),
         ])),
         ("energyUnit", "1/cm"),
         ("molarMassUnit", "kg/mol"),
