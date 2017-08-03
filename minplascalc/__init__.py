@@ -104,19 +104,16 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
     nistDataFile : string
         Path to text file containing raw energy level data (in NIST Atomic
         Spectra Database format)
-    sources : list of dictionaries
-        Each dictionary represents a reference source from which the data was
+    sources : list of strings
+        Each entry represents a reference source from which the data was
         obtained (defaults to NIST Atomic Spectra Database)
     """
 
     if sources is None:
-        sources = [collections.OrderedDict([
-            ("title", "NIST Atomic Spectra Database (ver. 5.3), [Online]."),
-            ("author", "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team"),
-            ("publicationInfo", "National Institute of Standards and Technology, Gaithersburg, MD."),
-            ("http", "http://physics.nist.gov/asd"),
-            ("doi", "NA"),
-        ])]
+        sources = ["""NIST Atomic Spectra Database (ver. 5.3), [Online]. 
+                   A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team, 
+                   National Institute of Standards and Technology, Gaithersburg 
+                   MD., http://physics.nist.gov/asd"""]
 
     speciesDict = collections.OrderedDict([
         ("name", name),
@@ -172,13 +169,10 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         obtained (defaults to NIST Chemistry Webbook)
     """
     if sources is None:
-        sources = [collections.OrderedDict([
-            ("title", "NIST Chemistry WebBook, NIST Standard Reference Database Number 69"),
-            ("author", "PJ Linstrom and WG Mallard (Editors)"),
-            ("publicationInfo", "National Institute of Standards and Technology, Gaithersburg MD., 20899"),
-            ("http", "http://webbook.nist.gov/chemistry/"),
-            ("doi", "10.18434/T4D303"),
-        ])]
+        sources = ["""NIST Chemistry WebBook, NIST Standard Reference Database 
+                   Number 69. PJ Linstrom and WG Mallard (Editors), National 
+                   Institute of Standards and Technology, Gaithersburg MD., 
+                   http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"""]
 
     speciesDict = collections.OrderedDict([
         ("name", name),

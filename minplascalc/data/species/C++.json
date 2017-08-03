@@ -545,12 +545,6 @@
     "energyUnit": "1/cm",
     "molarMassUnit": "kg/mol",
     "sources": [
-        {
-            "title": "NIST Atomic Spectra Database (ver. 5.3), [Online].",
-            "author": "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team",
-            "publicationInfo": "National Institute of Standards and Technology, Gaithersburg, MD.",
-            "http": "http://physics.nist.gov/asd",
-            "doi": "NA"
-        }
+        "NIST Atomic Spectra Database (ver. 5.3), [Online]. A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team, National Institute of Standards and Technology, Gaithersburg MD., http://physics.nist.gov/asd"
     ]
 }
