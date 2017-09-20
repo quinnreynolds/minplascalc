@@ -12,7 +12,7 @@ import warnings
 import pathlib
 
 DATAPATH = pathlib.Path(__file__).parent / 'data'
-SPECIESPATH =  DATAPATH / 'species'
+SPECIESPATH = DATAPATH / 'species'
 MIXTUREPATH = DATAPATH / 'mixtures'
 
 # utility functions ############################################################
@@ -81,7 +81,7 @@ def read_energylevels(data):
 
 
 def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
-                              ionisationEnergy, nistDataFile, sources=None):
+                              ionisationEnergy, energylevels, sources=None):
     """Function to take text data retrieved from NIST websites or other sources
 
     and build a JSON object file for a monatomic plasma species, with specified
@@ -101,7 +101,7 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         Charge on the species (in integer units of the fundamental charge)
     ionisationEnergy : float
         Ionisation energy of the species in 1/cm
-    nistDataFile : string
+    energylevels : list of dict
         Path to text file containing raw energy level data (in NIST Atomic
         Spectra Database format)
     sources : list of strings
@@ -122,15 +122,14 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ("chargeNumber", chargeNumber),
         ("monatomicData", collections.OrderedDict([
             ("ionisationEnergy", ionisationEnergy),
-            ("energyLevels", read_energylevels(open(nistDataFile))),
+            ("energyLevels", energylevels),
         ])),
         ("energyUnit", "1/cm"),
         ("molarMassUnit", "kg/mol"),
         ("sources", sources),
     ])
 
-    with open(speciesDict["name"] + ".json", "w") as jf:
-        json.dump(speciesDict, jf, indent=4)
+    return speciesDict
 
 
 def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
@@ -145,6 +144,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
     name : string
         A unique identifier for the species (also the name of the JSON output
         file)
+
     stoichiometry : dictionary
         Dictionary describing the elemental stoichiometry of the species (e.g.
         {"Si": 1, "O": 1} for SiO or SiO+)

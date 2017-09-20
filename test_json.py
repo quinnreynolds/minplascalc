@@ -13,37 +13,35 @@ DEFSOURCE = collections.OrderedDict([(field, 'test') for field in sourcefields])
 
 def test_buildMonatomicSpeciesJSON():
     # Demo of how to build a JSON data file for a monatomic species
-    mpc.buildMonatomicSpeciesJSON(
+    speciesfile = mpc.DATAPATH / "species_raw" / "nist_C+"
+    energylevels = mpc.read_energylevels(speciesfile.open())
+    result = mpc.buildMonatomicSpeciesJSON(
         name="C+",
         stoichiometry={"C": 1},
         molarMass=0.0120107,
         chargeNumber=1,
         ionisationEnergy=90820.45,
-        nistDataFile=str(mpc.DATAPATH / "species_raw" / "nist_C+"))
+        energylevels=energylevels)
 
-    outputfile = pathlib.Path('C+.json')
-    assert outputfile.exists()
-    result = json.load(outputfile.open())
     assert len(result["monatomicData"]["energyLevels"]) == 85
-    outputfile.unlink()
 
 
 def test_buildMonatomicSpeciesJSON_sourced():
     # Demo of how to build a JSON data file for a monatomic species
-    mpc.buildMonatomicSpeciesJSON(
+    speciesfile = mpc.DATAPATH / "species_raw" / "nist_C+"
+    energylevels = mpc.read_energylevels(speciesfile.open())
+
+    result = mpc.buildMonatomicSpeciesJSON(
         name="C+",
         stoichiometry={"C": 1},
         molarMass=0.0120107,
         chargeNumber=1,
         ionisationEnergy=90820.45,
-        nistDataFile=str(mpc.DATAPATH / "species_raw" / "nist_C+"),
+        energylevels=energylevels,
         sources=[DEFSOURCE])
 
-    outputfile = pathlib.Path('C+.json')
-    assert outputfile.exists()
-    result = json.load(outputfile.open())
     assert len(result["monatomicData"]["energyLevels"]) == 85
-    outputfile.unlink()
+    assert result["sources"] is not None
 
 
 def test_buildDiatomicSpeciesJSON():
