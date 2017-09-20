@@ -84,7 +84,7 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                               ionisationEnergy, energylevels, sources=None):
     """Function to take text data retrieved from NIST websites or other sources
 
-    and build a JSON object file for a monatomic plasma species, with specified
+    and build a data dictionary for a monatomic plasma species, with specified
     electron energy levels and degeneracies.
 
     Parameters
@@ -136,7 +136,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                              ionisationEnergy, dissociationEnergy, sigmaS,
                              g0, we, Be, sources=None):
     """Function to take text data retrieved from NIST websites or other sources
-    and build a JSON object file for a diatomic plasma species, with specified
+    and build a data dictionary file for a diatomic plasma species, with specified
     ground state degeneracy and rotational & vibrational parameters.
 
     Parameters
@@ -192,9 +192,7 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ("sources", sources),
     ])
 
-    with open(speciesDict["name"] + ".json", "w") as jf:
-        json.dump(speciesDict, jf, indent=4)
-
+    return speciesDict
 
 # classes ######################################################################
 
