@@ -46,7 +46,7 @@ def test_buildMonatomicSpeciesJSON_sourced():
 
 def test_buildDiatomicSpeciesJSON():
     # Demo of how to build a JSON data file for a diatomic species
-    mpc.buildDiatomicSpeciesJSON(
+    result = mpc.buildDiatomicSpeciesJSON(
         name="CO",
         stoichiometry={"C": 1, "O": 1},
         molarMass=0.0280101,
@@ -58,15 +58,10 @@ def test_buildDiatomicSpeciesJSON():
         we=2169.81358,
         Be=1.93128087)
 
-    outputfile = pathlib.Path('CO.json')
-    assert outputfile.exists()
-    _ = json.load(outputfile.open())
-    outputfile.unlink()
-
 
 def test_buildDiatomicSpeciesJSON_sourced():
     # Demo of how to build a JSON data file for a diatomic species
-    mpc.buildDiatomicSpeciesJSON(
+    result = mpc.buildDiatomicSpeciesJSON(
         name="CO",
         stoichiometry={"C": 1, "O": 1},
         molarMass=0.0280101,
@@ -78,8 +73,3 @@ def test_buildDiatomicSpeciesJSON_sourced():
         we=2169.81358,
         Be=1.93128087,
         sources=[DEFSOURCE])
-
-    outputfile = pathlib.Path('CO.json')
-    assert outputfile.exists()
-    _ = json.load(outputfile.open())
-    outputfile.unlink()
