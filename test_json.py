@@ -11,11 +11,11 @@ sourcefields = ('title', 'author', 'publicationInfo', 'http', 'doi')
 DEFSOURCE = collections.OrderedDict([(field, 'test') for field in sourcefields])
 
 
-def test_buildMonatomicSpeciesJSON():
+def test_build_monatomic_species_json():
     # Demo of how to build a JSON data file for a monatomic species
     speciesfile = mpc.DATAPATH / "species_raw" / "nist_C+"
     energylevels = mpc.read_energylevels(speciesfile.open())
-    result = mpc.buildMonatomicSpeciesJSON(
+    result = mpc.build_monatomic_species_json(
         name="C+",
         stoichiometry={"C": 1},
         molarmass=0.0120107,
@@ -26,12 +26,12 @@ def test_buildMonatomicSpeciesJSON():
     assert len(result["monatomicData"]["energyLevels"]) == 85
 
 
-def test_buildMonatomicSpeciesJSON_sourced():
+def test_build_monatomic_species_json_sourced():
     # Demo of how to build a JSON data file for a monatomic species
     speciesfile = mpc.DATAPATH / "species_raw" / "nist_C+"
     energylevels = mpc.read_energylevels(speciesfile.open())
 
-    result = mpc.buildMonatomicSpeciesJSON(
+    result = mpc.build_monatomic_species_json(
         name="C+",
         stoichiometry={"C": 1},
         molarmass=0.0120107,
