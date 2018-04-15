@@ -49,14 +49,14 @@ def test_buildDiatomicSpeciesJSON():
     result = mpc.buildDiatomicSpeciesJSON(
         name="CO",
         stoichiometry={"C": 1, "O": 1},
-        molarMass=0.0280101,
-        chargeNumber=0,
-        ionisationEnergy=113030.54,
-        dissociationEnergy=89862.00,
-        sigmaS=1,
+        molarmass=0.0280101,
+        chargenumber=0,
+        ionisationenergy=113030.54,
+        dissociationenergy=89862.00,
+        sigma_s=1,
         g0=1,
-        we=2169.81358,
-        Be=1.93128087)
+        w_e=2169.81358,
+        b_e=1.93128087)
 
 
 def test_buildDiatomicSpeciesJSON_sourced():
@@ -64,12 +64,12 @@ def test_buildDiatomicSpeciesJSON_sourced():
     result = mpc.buildDiatomicSpeciesJSON(
         name="CO",
         stoichiometry={"C": 1, "O": 1},
-        molarMass=0.0280101,
-        chargeNumber=0,
-        ionisationEnergy=113030.54,
-        dissociationEnergy=89862.00,
-        sigmaS=1,
+        molarmass=0.0280101,
+        chargenumber=0,
+        ionisationenergy=113030.54,
+        dissociationenergy=89862.00,
+        sigma_s=1,
         g0=1,
-        we=2169.81358,
-        Be=1.93128087,
+        w_e=2169.81358,
+        b_e=1.93128087,
         sources=[DEFSOURCE])
