@@ -22,10 +22,10 @@ def molar_mass_calculator(protons, neutrons, electrons):
     electronic structure, if you can't get it anywhere else for some reason.
     """
 
-    return constants.avogadro * (protons * constants.protonMass
-                                 + electrons * constants.electronMass
-                                 + neutrons * (constants.protonMass
-                                               + constants.electronMass))
+    return constants.avogadro * (protons * constants.protonmass
+                                 + electrons * constants.electronmass
+                                 + neutrons * (constants.protonmass
+                                               + constants.electronmass))
 
 
 def parse_values(nist_line):
@@ -202,18 +202,18 @@ class constants:
     calculations.
     """
 
-    protonMass = 1.6726219e-27
-    electronMass = 9.10938356e-31
-    fundamentalCharge = 1.60217662e-19
+    protonmass = 1.6726219e-27
+    electronmass = 9.10938356e-31
+    fundamentalcharge = 1.60217662e-19
     avogadro = 6.0221409e23
     boltzmann = 1.38064852e-23
     planck = 6.62607004e-34
     c = 2.99792458e8
-    eVtoK = 11604.505
-    eVtoJ = 1.60217653e-19
-    invCmToJ = 1.9864456e-23
-    JperMolToInvCm = 0.0835934811
-    eVtoInvCm = 8065.54446
+    electronvolt_to_kelvin = 11604.505
+    electronvolt_to_joule = 1.60217653e-19
+    invcm_to_joule = 1.9864456e-23
+    joulepermol_to_invcm = 0.0835934811
+    electronvolt_to_invcm = 8065.54446
 
 
 def species_from_file(dataFile, numberofparticles=0, x0=0):
@@ -307,12 +307,12 @@ class MonatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
         super().__init__(jsonData, numberOfParticles, x0)
 
-        self.ionisationEnergy = constants.invCmToJ * jsonData["monatomicData"]["ionisationEnergy"]
+        self.ionisationEnergy = constants.invcm_to_joule * jsonData["monatomicData"]["ionisationEnergy"]
         self.deltaIonisationEnergy = 0.
         self.energyLevels = []
         for energylevel in jsonData["monatomicData"]["energyLevels"]:
             self.energyLevels.append([2. * energylevel["J"] + 1.,
-                                      constants.invCmToJ * energylevel["Ei"]])
+                                      constants.invcm_to_joule * energylevel["Ei"]])
         self.E0 = 0
 
     def internalPartitionFunction(self, T):
@@ -336,15 +336,15 @@ class DiatomicSpecies(Species):
     def __init__(self, jsonData, numberOfParticles=0, x0=0):
         super().__init__(jsonData, numberOfParticles, x0)
 
-        self.dissociationEnergy = constants.invCmToJ * jsonData["diatomicData"][
+        self.dissociationEnergy = constants.invcm_to_joule * jsonData["diatomicData"][
             "dissociationEnergy"]
-        self.ionisationEnergy = constants.invCmToJ * jsonData["diatomicData"][
+        self.ionisationEnergy = constants.invcm_to_joule * jsonData["diatomicData"][
             "ionisationEnergy"]
         self.deltaIonisationEnergy = 0.
         self.sigmaS = jsonData["diatomicData"]["sigmaS"]
         self.g0 = jsonData["diatomicData"]["g0"]
-        self.we = constants.invCmToJ * jsonData["diatomicData"]["we"]
-        self.Be = constants.invCmToJ * jsonData["diatomicData"]["Be"]
+        self.we = constants.invcm_to_joule * jsonData["diatomicData"]["we"]
+        self.Be = constants.invcm_to_joule * jsonData["diatomicData"]["Be"]
         self.E0 = -self.dissociationEnergy
 
     def internalPartitionFunction(self, T):
@@ -373,7 +373,7 @@ class ElectronSpecies(BaseSpecies):
 
         self.name = "e"
         self.stoichiometry = {}
-        self.molarMass = constants.electronMass * constants.avogadro
+        self.molarMass = constants.electronmass * constants.avogadro
         self.chargeNumber = -1
         self.numberOfParticles = numberOfParticles
         self.numberDensity = 0.
@@ -522,7 +522,7 @@ class Mixture:
         zStar = weightedChargeSumSqd / weightedChargeSum
         debyeD = np.sqrt(constants.boltzmann * T
                          / (4. * np.pi * (zStar + 1.) * (ni[-1] / V)
-                            * constants.fundamentalCharge ** 2))
+                            * constants.fundamentalcharge ** 2))
         for j, sp in enumerate(self.species):
             if sp.name != "e":
                 ai = (3. * (sp.chargeNumber + 1.)
