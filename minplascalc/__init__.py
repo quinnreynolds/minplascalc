@@ -60,7 +60,8 @@ def read_energylevels(data):
     Return
     ------
     energylevels : list of dict
-         Energy levels. Each dict contains fields J and Ei.
+         Energy levels. Each dict contains the energy of the level Ei and the 
+         associated quantum number J.
     """
     energylevels = []
 
@@ -71,8 +72,8 @@ def read_energylevels(data):
 
     for i, line in enumerate(data):
         try:
-            J, Ei = parse_values(line)
-            energylevels.append({"J": J, "Ei": Ei})
+            j, ei = parse_values(line)
+            energylevels.append({"J": j, "Ei": ei})
         except ValueError as exception:
             logging.debug("Ignoring line %i in %s", i, name)
             logging.debug(exception)
@@ -232,6 +233,7 @@ def species_from_file(datafile, numberofparticles=0, x0=0):
     # Construct a data object from JSON data file
     with open(datafile) as df:
         jsondata = json.load(df)
+
     if 'monatomicData' in jsondata:
         return MonatomicSpecies(jsondata, numberofparticles, x0)
     else:
