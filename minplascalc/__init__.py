@@ -216,12 +216,12 @@ class constants:
     electronvolt_to_invcm = 8065.54446
 
 
-def species_from_file(dataFile, numberofparticles=0, x0=0):
+def species_from_file(datafile, numberofparticles=0, x0=0):
     """Create a species from a data file.
 
     Parameters
     ----------
-    dataFile : string
+    datafile : string
         Path to a JSON data file describing the electronic and molecular
         properties of the species
     numberofparticles : float
@@ -230,13 +230,12 @@ def species_from_file(dataFile, numberofparticles=0, x0=0):
         initial x
     """
     # Construct a data object from JSON data file
-    with open(dataFile) as df:
-        jsonData = json.load(df)
-
-    if 'monatomicData' in jsonData:
-        return MonatomicSpecies(jsonData, numberofparticles, x0)
+    with open(datafile) as df:
+        jsondata = json.load(df)
+    if 'monatomicData' in jsondata:
+        return MonatomicSpecies(jsondata, numberofparticles, x0)
     else:
-        return DiatomicSpecies(jsonData, numberofparticles, x0)
+        return DiatomicSpecies(jsondata, numberofparticles, x0)
 
 
 def species_from_name(name, numberofparticles=0, x0=0):
