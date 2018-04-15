@@ -44,9 +44,9 @@ def test_build_monatomic_species_json_sourced():
     assert result["sources"] is not None
 
 
-def test_buildDiatomicSpeciesJSON():
+def test_build_diatomic_species_json():
     # Demo of how to build a JSON data file for a diatomic species
-    result = mpc.buildDiatomicSpeciesJSON(
+    result = mpc.build_diatomic_species_json(
         name="CO",
         stoichiometry={"C": 1, "O": 1},
         molarmass=0.0280101,
@@ -59,9 +59,9 @@ def test_buildDiatomicSpeciesJSON():
         b_e=1.93128087)
 
 
-def test_buildDiatomicSpeciesJSON_sourced():
+def test_build_diatomic_species_json_sourced():
     # Demo of how to build a JSON data file for a diatomic species
-    result = mpc.buildDiatomicSpeciesJSON(
+    result = mpc.build_diatomic_species_json(
         name="CO",
         stoichiometry={"C": 1, "O": 1},
         molarmass=0.0280101,
