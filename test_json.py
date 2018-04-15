@@ -18,9 +18,9 @@ def test_buildMonatomicSpeciesJSON():
     result = mpc.buildMonatomicSpeciesJSON(
         name="C+",
         stoichiometry={"C": 1},
-        molarMass=0.0120107,
-        chargeNumber=1,
-        ionisationEnergy=90820.45,
+        molarmass=0.0120107,
+        chargenumber=1,
+        ionisationenergy=90820.45,
         energylevels=energylevels)
 
     assert len(result["monatomicData"]["energyLevels"]) == 85
@@ -34,9 +34,9 @@ def test_buildMonatomicSpeciesJSON_sourced():
     result = mpc.buildMonatomicSpeciesJSON(
         name="C+",
         stoichiometry={"C": 1},
-        molarMass=0.0120107,
-        chargeNumber=1,
-        ionisationEnergy=90820.45,
+        molarmass=0.0120107,
+        chargenumber=1,
+        ionisationenergy=90820.45,
         energylevels=energylevels,
         sources=[DEFSOURCE])
 
