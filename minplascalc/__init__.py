@@ -81,8 +81,8 @@ def read_energylevels(data):
     return energylevels
 
 
-def buildMonatomicSpeciesJSON(name, stoichiometry, molarmass, chargenumber,
-                              ionisationenergy, energylevels, sources=None):
+def build_monatomic_species_json(name, stoichiometry, molarmass, chargenumber,
+                                 ionisationenergy, energylevels, sources=None):
     """Function to take text data retrieved from NIST websites or other sources
 
     and build a data dictionary for a monatomic plasma species, with specified
