@@ -80,8 +80,8 @@ def read_energylevels(data):
     return energylevels
 
 
-def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
-                              ionisationEnergy, energylevels, sources=None):
+def buildMonatomicSpeciesJSON(name, stoichiometry, molarmass, chargenumber,
+                              ionisationenergy, energylevels, sources=None):
     """Function to take text data retrieved from NIST websites or other sources
 
     and build a data dictionary for a monatomic plasma species, with specified
@@ -95,11 +95,11 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
     stoichiometry : dictionary
         Dictionary describing the elemental stoichiometry of the species (e.g.
         {"O": 1} for O or O+)
-    molarMass : float
+    molarmass : float
         Molar mass of the species in kg/mol
-    chargeNumber : int
+    chargenumber : int
         Charge on the species (in integer units of the fundamental charge)
-    ionisationEnergy : float
+    ionisationenergy : float
         Ionisation energy of the species in 1/cm
     energylevels : list of dict
         Path to text file containing raw energy level data (in NIST Atomic
@@ -115,13 +115,13 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                    National Institute of Standards and Technology, Gaithersburg 
                    MD., http://physics.nist.gov/asd"""]
 
-    speciesDict = collections.OrderedDict([
+    speciesdict = collections.OrderedDict([
         ("name", name),
         ("stoichiometry", stoichiometry),
-        ("molarMass", molarMass),
-        ("chargeNumber", chargeNumber),
+        ("molarMass", molarmass),
+        ("chargeNumber", chargenumber),
         ("monatomicData", collections.OrderedDict([
-            ("ionisationEnergy", ionisationEnergy),
+            ("ionisationEnergy", ionisationenergy),
             ("energyLevels", energylevels),
         ])),
         ("energyUnit", "1/cm"),
@@ -129,7 +129,7 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
         ("sources", sources),
     ])
 
-    return speciesDict
+    return speciesdict
 
 
 def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
