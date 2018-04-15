@@ -132,9 +132,9 @@ def buildMonatomicSpeciesJSON(name, stoichiometry, molarmass, chargenumber,
     return speciesdict
 
 
-def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
-                             ionisationEnergy, dissociationEnergy, sigmaS,
-                             g0, we, Be, sources=None):
+def buildDiatomicSpeciesJSON(name, stoichiometry, molarmass, chargenumber,
+                             ionisationenergy, dissociationenergy, sigma_s,
+                             g0, w_e, b_e, sources=None):
     """Function to take text data retrieved from NIST websites or other sources
     and build a data dictionary file for a diatomic plasma species, with specified
     ground state degeneracy and rotational & vibrational parameters.
@@ -148,21 +148,21 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
     stoichiometry : dictionary
         Dictionary describing the elemental stoichiometry of the species (e.g.
         {"Si": 1, "O": 1} for SiO or SiO+)
-    molarMass : float
+    molarmass : float
         Molar mass of the species in kg/mol
-    chargeNumber : int
+    chargenumber : int
         Charge on the species (in integer units of the fundamental charge)
-    ionisationEnergy : float
+    ionisationenergy : float
         Ionisation energy of the species in 1/cm
-    dissociationEnergy : float
+    dissociationenergy : float
         Dissociation energy of the species in 1/cm
-    sigmaS : int
+    sigma_s : int
         Symmetry constant (=2 for homonuclear molecules, =1 for heteronuclear)
     g0 : float
         Ground state electronic energy level degeneracy
-    we : float
+    w_e : float
         Vibrational energy level constant in 1/cm
-    Be : float
+    b_e : float
         Rotational energy level constant in 1/cm
     sources : list of dictionaries
         Each dictionary represents a reference source from which the data was
@@ -174,25 +174,25 @@ def buildDiatomicSpeciesJSON(name, stoichiometry, molarMass, chargeNumber,
                    Institute of Standards and Technology, Gaithersburg MD., 
                    http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"""]
 
-    speciesDict = collections.OrderedDict([
+    speciesdict = collections.OrderedDict([
         ("name", name),
         ("stoichiometry", stoichiometry),
-        ("molarMass", molarMass),
-        ("chargeNumber", chargeNumber),
+        ("molarMass", molarmass),
+        ("chargeNumber", chargenumber),
         ("diatomicData", collections.OrderedDict([
-            ("ionisationEnergy", ionisationEnergy),
-            ("dissociationEnergy", dissociationEnergy),
-            ("sigmaS", sigmaS),
+            ("ionisationEnergy", ionisationenergy),
+            ("dissociationEnergy", dissociationenergy),
+            ("sigmaS", sigma_s),
             ("g0", g0),
-            ("we", we),
-            ("Be", Be),
+            ("we", w_e),
+            ("Be", b_e),
         ])),
-        ("energyUnit", "1/cm"),
-        ("molarMassUnit", "kg/mol"),
+        ("energyunit", "1/cm"),
+        ("molarmassunit", "kg/mol"),
         ("sources", sources),
     ])
 
-    return speciesDict
+    return speciesdict
 
 # classes ######################################################################
 
