@@ -502,9 +502,9 @@ class Mixture:
             sp.numberofparticles = self.ni[j]
 
     def write_numberdensity(self):
-        V = self.ni.sum() * constants.boltzmann * self.temperature / self.pressure
+        volume = self.ni.sum() * constants.boltzmann * self.temperature / self.pressure
         for j, sp in enumerate(self.species):
-            sp.numberdensity = self.ni[j] / V
+            sp.numberdensity = self.ni[j] / volume
 
     def recalcE0i(self):
         # deltaionisationenergy recalculation, using limitation theory of
