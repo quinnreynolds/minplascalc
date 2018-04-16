@@ -308,8 +308,8 @@ class MonatomicSpecies(Species):
     def __init__(self, jsondata, numberofparticles=0, x0=0):
         super().__init__(jsondata, numberofparticles, x0)
 
-        self.ionisationEnergy = constants.invcm_to_joule * jsondata["monatomicData"]["ionisationEnergy"]
-        self.deltaIonisationEnergy = 0.
+        self.ionisationenergy = constants.invcm_to_joule * jsondata["monatomicData"]["ionisationEnergy"]
+        self.deltaionisationenergy = 0.
         self.energyLevels = []
         for energylevel in jsondata["monatomicData"]["energyLevels"]:
             self.energyLevels.append([2. * energylevel["J"] + 1.,
@@ -319,7 +319,7 @@ class MonatomicSpecies(Species):
     def partitionfunction_internal(self, T):
         partitionVal = 0.
         for twoJplusone, Ei_J in self.energyLevels:
-            if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
+            if Ei_J < (self.ionisationenergy - self.deltaionisationenergy):
                 partitionVal += twoJplusone * np.exp(-Ei_J / (constants.boltzmann * T))
         return partitionVal
 
@@ -327,7 +327,7 @@ class MonatomicSpecies(Species):
         translational_energy = 1.5 * constants.boltzmann * T
         electronic_energy = 0.
         for twoJplusone, Ei_J in self.energyLevels:
-            if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
+            if Ei_J < (self.ionisationenergy - self.deltaionisationenergy):
                 electronic_energy += twoJplusone * Ei_J * np.exp(-Ei_J / (constants.boltzmann * T))
         electronic_energy /= self.partitionfunction_internal(T)
         return translational_energy + electronic_energy
@@ -339,9 +339,9 @@ class DiatomicSpecies(Species):
 
         self.dissociationEnergy = constants.invcm_to_joule * jsondata["diatomicData"][
             "dissociationEnergy"]
-        self.ionisationEnergy = constants.invcm_to_joule * jsondata["diatomicData"][
+        self.ionisationenergy = constants.invcm_to_joule * jsondata["diatomicData"][
             "ionisationEnergy"]
-        self.deltaIonisationEnergy = 0.
+        self.deltaionisationenergy = 0.
         self.sigmaS = jsondata["diatomicData"]["sigmaS"]
         self.g0 = jsondata["diatomicData"]["g0"]
         self.we = constants.invcm_to_joule * jsondata["diatomicData"]["we"]
@@ -507,7 +507,7 @@ class Mixture:
             sp.numberdensity = self.ni[j] / V
 
     def recalcE0i(self):
-        # deltaIonisationEnergy recalculation, using limitation theory of
+        # deltaionisationenergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
         ni = self.ni
         T = self.T
@@ -528,7 +528,7 @@ class Mixture:
             if sp.name != "e":
                 ai = (3. * (sp.chargenumber + 1.)
                       / (4. * np.pi * (ni[-1] / V))) ** (1 / 3)
-                sp.deltaIonisationEnergy = (constants.boltzmann * T * 
+                sp.deltaionisationenergy = (constants.boltzmann * T * 
                                             (((ai / debyeD) ** 3 + 1) ** (2 / 3)
                                              - 1) / (2. * (zStar + 1)))
 
@@ -536,8 +536,8 @@ class Mixture:
             for sp in self.species:
                 if sp.chargenumber == cn:
                     sp.E0 = (sp.ionisedFrom.E0
-                             + sp.ionisedFrom.ionisationEnergy
-                             - sp.ionisedFrom.deltaIonisationEnergy)
+                             + sp.ionisedFrom.ionisationenergy
+                             - sp.ionisedFrom.deltaionisationenergy)
 
     def recalcGfeArrays(self):
         ni = self.ni
