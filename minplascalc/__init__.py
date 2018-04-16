@@ -305,13 +305,13 @@ class Species(BaseSpecies):
 
 
 class MonatomicSpecies(Species):
-    def __init__(self, jsonData, numberofparticles=0, x0=0):
-        super().__init__(jsonData, numberofparticles, x0)
+    def __init__(self, jsondata, numberofparticles=0, x0=0):
+        super().__init__(jsondata, numberofparticles, x0)
 
-        self.ionisationEnergy = constants.invcm_to_joule * jsonData["monatomicData"]["ionisationEnergy"]
+        self.ionisationEnergy = constants.invcm_to_joule * jsondata["monatomicData"]["ionisationEnergy"]
         self.deltaIonisationEnergy = 0.
         self.energyLevels = []
-        for energylevel in jsonData["monatomicData"]["energyLevels"]:
+        for energylevel in jsondata["monatomicData"]["energyLevels"]:
             self.energyLevels.append([2. * energylevel["J"] + 1.,
                                       constants.invcm_to_joule * energylevel["Ei"]])
         self.E0 = 0
@@ -334,18 +334,18 @@ class MonatomicSpecies(Species):
 
 
 class DiatomicSpecies(Species):
-    def __init__(self, jsonData, numberofparticles=0, x0=0):
-        super().__init__(jsonData, numberofparticles, x0)
+    def __init__(self, jsondata, numberofparticles=0, x0=0):
+        super().__init__(jsondata, numberofparticles, x0)
 
-        self.dissociationEnergy = constants.invcm_to_joule * jsonData["diatomicData"][
+        self.dissociationEnergy = constants.invcm_to_joule * jsondata["diatomicData"][
             "dissociationEnergy"]
-        self.ionisationEnergy = constants.invcm_to_joule * jsonData["diatomicData"][
+        self.ionisationEnergy = constants.invcm_to_joule * jsondata["diatomicData"][
             "ionisationEnergy"]
         self.deltaIonisationEnergy = 0.
-        self.sigmaS = jsonData["diatomicData"]["sigmaS"]
-        self.g0 = jsonData["diatomicData"]["g0"]
-        self.we = constants.invcm_to_joule * jsonData["diatomicData"]["we"]
-        self.Be = constants.invcm_to_joule * jsonData["diatomicData"]["Be"]
+        self.sigmaS = jsondata["diatomicData"]["sigmaS"]
+        self.g0 = jsondata["diatomicData"]["g0"]
+        self.we = constants.invcm_to_joule * jsondata["diatomicData"]["we"]
+        self.Be = constants.invcm_to_joule * jsondata["diatomicData"]["Be"]
         self.E0 = -self.dissociationEnergy
 
     def partitionfunction_internal(self, T):
