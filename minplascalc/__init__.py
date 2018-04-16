@@ -415,7 +415,7 @@ class Element:
 
 
 class Mixture:
-    def __init__(self, mixture_file, T=10000., P=101325):
+    def __init__(self, mixture_file, temperature=10000., pressure=101325):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -426,22 +426,22 @@ class Mixture:
         mixture_file : string
             Path to a JSON data file containing species and initial mole
             fractions
-        T : float
+        temperature : float
             Temperature value in K, for initialisation (default 10000)
-        P : float
+        pressure : float
             Pressure value in Pa, for initialisation (default 101325)
         """
 
-        self.T = T
-        self.P = P
+        self.temperature = temperature
+        self.pressure = pressure
 
         with open(mixture_file) as sf:
-            jsonData = json.load(sf)
+            jsondata = json.load(sf)
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs. Make sure this order is maintained
-        self.species = [species_from_name(spData["species"], x0=spData["x0"])
-                        for spData in jsonData["speciesList"]]
+        self.species = [species_from_name(spdata["species"], x0=spdata["x0"])
+                        for spdata in jsondata["speciesList"]]
         self.species.append(ElectronSpecies())
 
         # Random order upsets the nonlinearities in the minimiser resulting in
@@ -450,7 +450,7 @@ class Mixture:
                                 for s in sp.stoichiometry))
         self.elements = tuple(Element(name=element) for element in elementset)
 
-        self.maxChargeNumber = max(sp.chargenumber for sp in self.species)
+        self.maxchargenumber = max(sp.chargenumber for sp in self.species)
         # Set species which each +ve charged ion originates from
         for sp in self.species:
             if sp.chargenumber > 0:
@@ -467,7 +467,7 @@ class Mixture:
         self.chargeCoeffts = [sp.chargenumber for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
-        nT0 = self.P / (constants.boltzmann * self.T)
+        nT0 = self.pressure / (constants.boltzmann * self.temperature)
         for elm in self.elements:
             elm.totalnumber = sum(nT0 * c * sp.x0
                                   for c, sp in zip(elm.stoichiometriccoeffts,
@@ -502,7 +502,7 @@ class Mixture:
             sp.numberofparticles = self.ni[j]
 
     def writeNumberDensity(self):
-        V = self.ni.sum() * constants.boltzmann * self.T / self.P
+        V = self.ni.sum() * constants.boltzmann * self.temperature / self.pressure
         for j, sp in enumerate(self.species):
             sp.numberdensity = self.ni[j] / V
 
@@ -510,8 +510,8 @@ class Mixture:
         # deltaionisationenergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
         ni = self.ni
-        T = self.T
-        P = self.P
+        T = self.temperature
+        P = self.pressure
 
         V = ni.sum() * constants.boltzmann * T / P
         weightedChargeSumSqd = 0
@@ -532,7 +532,7 @@ class Mixture:
                                             (((ai / debyeD) ** 3 + 1) ** (2 / 3)
                                              - 1) / (2. * (zStar + 1)))
 
-        for cn in range(1, self.maxChargeNumber + 1):
+        for cn in range(1, self.maxchargenumber + 1):
             for sp in self.species:
                 if sp.chargenumber == cn:
                     sp.e0 = (sp.ionisedFrom.e0
@@ -541,8 +541,8 @@ class Mixture:
 
     def recalcGfeArrays(self):
         ni = self.ni
-        T = self.T
-        P = self.P
+        T = self.temperature
+        P = self.pressure
 
         niSum = ni.sum()
         V = niSum * constants.boltzmann * T / P
@@ -619,19 +619,19 @@ class Mixture:
         function is called - can be time-consuming.
         """
 
-        T = self.T
+        T = self.temperature
 
         self.initialiseNi([init_ni for i in range(len(self.species))])
-        self.T = (1 - rel_delta_t) * T
+        self.temperature = (1 - rel_delta_t) * T
         self.solveGfe()
         enthalpy_low = self.calculate_enthalpy()
 
         self.initialiseNi([init_ni for i in range(len(self.species))])
-        self.T = (1 + rel_delta_t) * T
+        self.temperature = (1 + rel_delta_t) * T
         self.solveGfe()
         enthalpy_high = self.calculate_enthalpy()
 
-        self.T = T
+        self.temperature = T
 
         return (enthalpy_high - enthalpy_low) / (2. * rel_delta_t * T)
 
@@ -643,7 +643,7 @@ class Mixture:
         species present.
         """
 
-        T = self.T
+        T = self.temperature
         weighted_enthalpy = sum(constants.avogadro * sp.numberofparticles * (sp.internal_energy(T) + sp.e0 + constants.boltzmann * T)
                                 for sp in self.species)
         weighted_molmass = sum(sp.numberofparticles * sp.molarmass
