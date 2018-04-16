@@ -258,15 +258,15 @@ def species_from_name(name, numberofparticles=0, x0=0):
 
 
 class BaseSpecies:
-    def totalPartitionFunction(self, V, T):
-        return (V * self.translationalPartitionFunction(T)
-                * self.internalPartitionFunction(T))
+    def partitionfunction_total(self, V, T):
+        return (V * self.partitionfunction_translational(T)
+                * self.partitionfunction_internal(T))
 
-    def translationalPartitionFunction(self, T):
+    def partitionfunction_translational(self, T):
         return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
                 / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
-    def internalPartitionFunction(self, T):
+    def partitionfunction_internal(self, T):
         raise NotImplementedError
 
     def internal_energy(self, T):
@@ -316,7 +316,7 @@ class MonatomicSpecies(Species):
                                       constants.invcm_to_joule * energylevel["Ei"]])
         self.E0 = 0
 
-    def internalPartitionFunction(self, T):
+    def partitionfunction_internal(self, T):
         partitionVal = 0.
         for twoJplusone, Ei_J in self.energyLevels:
             if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
@@ -329,7 +329,7 @@ class MonatomicSpecies(Species):
         for twoJplusone, Ei_J in self.energyLevels:
             if Ei_J < (self.ionisationEnergy - self.deltaIonisationEnergy):
                 electronic_energy += twoJplusone * Ei_J * np.exp(-Ei_J / (constants.boltzmann * T))
-        electronic_energy /= self.internalPartitionFunction(T)
+        electronic_energy /= self.partitionfunction_internal(T)
         return translational_energy + electronic_energy
 
 
@@ -348,7 +348,7 @@ class DiatomicSpecies(Species):
         self.Be = constants.invcm_to_joule * jsonData["diatomicData"]["Be"]
         self.E0 = -self.dissociationEnergy
 
-    def internalPartitionFunction(self, T):
+    def partitionfunction_internal(self, T):
         electronicPartition = self.g0
         vibrationalPartition = 1. / (1. - np.exp(-self.we / (constants.boltzmann * T)))
         rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)
@@ -382,7 +382,7 @@ class ElectronSpecies(BaseSpecies):
         self.x0 = 0
 
     # noinspection PyUnusedLocal
-    def internalPartitionFunction(self, T):
+    def partitionfunction_internal(self, T):
         return 2.
 
     def internal_energy(self, T):
@@ -551,7 +551,7 @@ class Mixture:
 
         onDiagonal = constants.boltzmann * T / ni
         self.gfeMatrix[:nspecies, :nspecies] = offDiagonal + np.diag(onDiagonal)
-        total = [sp.totalPartitionFunction(V, T) for sp in self.species]
+        total = [sp.partitionfunction_total(V, T) for sp in self.species]
         E0 = [sp.E0 for sp in self.species]
         mu = -constants.boltzmann * T * np.log(total / ni) + E0
         self.gfeVector[:nspecies] = -mu
