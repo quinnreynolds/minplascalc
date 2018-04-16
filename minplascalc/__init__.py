@@ -316,20 +316,20 @@ class MonatomicSpecies(Species):
                                       constants.invcm_to_joule * energylevel["Ei"]])
         self.e0 = 0
 
-    def partitionfunction_internal(self, T):
-        partitionVal = 0.
-        for twoJplusone, Ei_J in self.energylevels:
-            if Ei_J < (self.ionisationenergy - self.deltaionisationenergy):
-                partitionVal += twoJplusone * np.exp(-Ei_J / (constants.boltzmann * T))
-        return partitionVal
+    def partitionfunction_internal(self, temperature):
+        partitionval = 0.
+        for twojplusone, eij in self.energylevels:
+            if eij < (self.ionisationenergy - self.deltaionisationenergy):
+                partitionval += twojplusone * np.exp(-eij / (constants.boltzmann * temperature))
+        return partitionval
 
-    def internal_energy(self, T):
-        translational_energy = 1.5 * constants.boltzmann * T
+    def internal_energy(self, temperature):
+        translational_energy = 1.5 * constants.boltzmann * temperature
         electronic_energy = 0.
-        for twoJplusone, Ei_J in self.energylevels:
-            if Ei_J < (self.ionisationenergy - self.deltaionisationenergy):
-                electronic_energy += twoJplusone * Ei_J * np.exp(-Ei_J / (constants.boltzmann * T))
-        electronic_energy /= self.partitionfunction_internal(T)
+        for twojplusone, eij in self.energylevels:
+            if eij < (self.ionisationenergy - self.deltaionisationenergy):
+                electronic_energy += twojplusone * eij * np.exp(-eij / (constants.boltzmann * temperature))
+        electronic_energy /= self.partitionfunction_internal(temperature)
         return translational_energy + electronic_energy
 
 
