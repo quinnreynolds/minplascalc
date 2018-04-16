@@ -310,15 +310,15 @@ class MonatomicSpecies(Species):
 
         self.ionisationenergy = constants.invcm_to_joule * jsondata["monatomicData"]["ionisationEnergy"]
         self.deltaionisationenergy = 0.
-        self.energyLevels = []
+        self.energylevels = []
         for energylevel in jsondata["monatomicData"]["energyLevels"]:
-            self.energyLevels.append([2. * energylevel["J"] + 1.,
+            self.energylevels.append([2. * energylevel["J"] + 1.,
                                       constants.invcm_to_joule * energylevel["Ei"]])
-        self.E0 = 0
+        self.e0 = 0
 
     def partitionfunction_internal(self, T):
         partitionVal = 0.
-        for twoJplusone, Ei_J in self.energyLevels:
+        for twoJplusone, Ei_J in self.energylevels:
             if Ei_J < (self.ionisationenergy - self.deltaionisationenergy):
                 partitionVal += twoJplusone * np.exp(-Ei_J / (constants.boltzmann * T))
         return partitionVal
@@ -326,7 +326,7 @@ class MonatomicSpecies(Species):
     def internal_energy(self, T):
         translational_energy = 1.5 * constants.boltzmann * T
         electronic_energy = 0.
-        for twoJplusone, Ei_J in self.energyLevels:
+        for twoJplusone, Ei_J in self.energylevels:
             if Ei_J < (self.ionisationenergy - self.deltaionisationenergy):
                 electronic_energy += twoJplusone * Ei_J * np.exp(-Ei_J / (constants.boltzmann * T))
         electronic_energy /= self.partitionfunction_internal(T)
@@ -346,7 +346,7 @@ class DiatomicSpecies(Species):
         self.g0 = jsondata["diatomicData"]["g0"]
         self.we = constants.invcm_to_joule * jsondata["diatomicData"]["we"]
         self.Be = constants.invcm_to_joule * jsondata["diatomicData"]["Be"]
-        self.E0 = -self.dissociationEnergy
+        self.e0 = -self.dissociationEnergy
 
     def partitionfunction_internal(self, T):
         electronicPartition = self.g0
@@ -378,7 +378,7 @@ class ElectronSpecies(BaseSpecies):
         self.chargenumber = -1
         self.numberofparticles = numberofparticles
         self.numberdensity = 0.
-        self.E0 = 0
+        self.e0 = 0
         self.x0 = 0
 
     # noinspection PyUnusedLocal
@@ -535,7 +535,7 @@ class Mixture:
         for cn in range(1, self.maxChargeNumber + 1):
             for sp in self.species:
                 if sp.chargenumber == cn:
-                    sp.E0 = (sp.ionisedFrom.E0
+                    sp.e0 = (sp.ionisedFrom.e0
                              + sp.ionisedFrom.ionisationenergy
                              - sp.ionisedFrom.deltaionisationenergy)
 
@@ -552,7 +552,7 @@ class Mixture:
         onDiagonal = constants.boltzmann * T / ni
         self.gfeMatrix[:nspecies, :nspecies] = offDiagonal + np.diag(onDiagonal)
         total = [sp.partitionfunction_total(V, T) for sp in self.species]
-        E0 = [sp.E0 for sp in self.species]
+        E0 = [sp.e0 for sp in self.species]
         mu = -constants.boltzmann * T * np.log(total / ni) + E0
         self.gfeVector[:nspecies] = -mu
 
@@ -644,7 +644,7 @@ class Mixture:
         """
 
         T = self.T
-        weighted_enthalpy = sum(constants.avogadro * sp.numberofparticles * (sp.internal_energy(T) + sp.E0 + constants.boltzmann * T)
+        weighted_enthalpy = sum(constants.avogadro * sp.numberofparticles * (sp.internal_energy(T) + sp.e0 + constants.boltzmann * T)
                                 for sp in self.species)
         weighted_molmass = sum(sp.numberofparticles * sp.molarmass
                                for sp in self.species)
