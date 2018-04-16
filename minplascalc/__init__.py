@@ -337,7 +337,7 @@ class DiatomicSpecies(Species):
     def __init__(self, jsondata, numberofparticles=0, x0=0):
         super().__init__(jsondata, numberofparticles, x0)
 
-        self.dissociationEnergy = constants.invcm_to_joule * jsondata["diatomicData"][
+        self.dissociationenergy = constants.invcm_to_joule * jsondata["diatomicData"][
             "dissociationEnergy"]
         self.ionisationenergy = constants.invcm_to_joule * jsondata["diatomicData"][
             "ionisationEnergy"]
@@ -346,7 +346,7 @@ class DiatomicSpecies(Species):
         self.g0 = jsondata["diatomicData"]["g0"]
         self.we = constants.invcm_to_joule * jsondata["diatomicData"]["we"]
         self.Be = constants.invcm_to_joule * jsondata["diatomicData"]["Be"]
-        self.e0 = -self.dissociationEnergy
+        self.e0 = -self.dissociationenergy
 
     def partitionfunction_internal(self, T):
         electronicPartition = self.g0
