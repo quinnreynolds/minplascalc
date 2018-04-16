@@ -263,7 +263,7 @@ class BaseSpecies:
                 * self.partitionfunction_internal(T))
 
     def partitionfunction_translational(self, T):
-        return ((2 * np.pi * self.molarMass * constants.boltzmann * T)
+        return ((2 * np.pi * self.molarmass * constants.boltzmann * T)
                 / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
     def partitionfunction_internal(self, T):
@@ -275,38 +275,38 @@ class BaseSpecies:
 
 # Diatomic molecules, single atoms, and ions
 class Species(BaseSpecies):
-    def __init__(self, jsonData, numberOfParticles=0, x0=0):
+    def __init__(self, jsondata, numberofparticles=0, x0=0):
         """Base class for species. Either single monatomic or diatomic chemical
         species in the plasma, eg O2 or Si+
 
         Parameters
         ----------
-        jsonData : dict
+        jsondata : dict
             JSON data describing the electronic and molecular
             properties of the species
-        numberOfParticles : float
+        numberofparticles : float
             Initial particle count (default 0)
         x0 : float
         """
 
-        self.numberOfParticles = numberOfParticles
-        self.numberDensity = 0.
+        self.numberofparticles = numberofparticles
+        self.numberdensity = 0.
         self.x0 = x0
 
         # General species data
-        self.name = jsonData["name"]
-        self.stoichiometry = jsonData["stoichiometry"]
-        self.molarMass = jsonData["molarMass"]
-        self.chargeNumber = jsonData["chargeNumber"]
+        self.name = jsondata["name"]
+        self.stoichiometry = jsondata["stoichiometry"]
+        self.molarmass = jsondata["molarMass"]
+        self.chargenumber = jsondata["chargeNumber"]
 
-        if self.chargeNumber < 0:
+        if self.chargenumber < 0:
             # TODO is this the right exception to raise?
             raise ValueError("Error! Negatively charged ions not implemented yet.")
 
 
 class MonatomicSpecies(Species):
-    def __init__(self, jsonData, numberOfParticles=0, x0=0):
-        super().__init__(jsonData, numberOfParticles, x0)
+    def __init__(self, jsonData, numberofparticles=0, x0=0):
+        super().__init__(jsonData, numberofparticles, x0)
 
         self.ionisationEnergy = constants.invcm_to_joule * jsonData["monatomicData"]["ionisationEnergy"]
         self.deltaIonisationEnergy = 0.
@@ -334,8 +334,8 @@ class MonatomicSpecies(Species):
 
 
 class DiatomicSpecies(Species):
-    def __init__(self, jsonData, numberOfParticles=0, x0=0):
-        super().__init__(jsonData, numberOfParticles, x0)
+    def __init__(self, jsonData, numberofparticles=0, x0=0):
+        super().__init__(jsonData, numberofparticles, x0)
 
         self.dissociationEnergy = constants.invcm_to_joule * jsonData["diatomicData"][
             "dissociationEnergy"]
@@ -363,21 +363,21 @@ class DiatomicSpecies(Species):
 
 
 class ElectronSpecies(BaseSpecies):
-    def __init__(self, numberOfParticles=0):
+    def __init__(self, numberofparticles=0):
         """Class describing electrons as a species in the plasma.
 
         Parameters
         ----------
-        numberOfParticles : float
+        numberofparticles : float
             Initial particle count (default 0)
         """
 
         self.name = "e"
         self.stoichiometry = {}
-        self.molarMass = constants.electronmass * constants.avogadro
-        self.chargeNumber = -1
-        self.numberOfParticles = numberOfParticles
-        self.numberDensity = 0.
+        self.molarmass = constants.electronmass * constants.avogadro
+        self.chargenumber = -1
+        self.numberofparticles = numberofparticles
+        self.numberdensity = 0.
         self.E0 = 0
         self.x0 = 0
 
@@ -450,12 +450,12 @@ class Mixture:
                                 for s in sp.stoichiometry))
         self.elements = tuple(Element(name=element) for element in elementset)
 
-        self.maxChargeNumber = max(sp.chargeNumber for sp in self.species)
+        self.maxChargeNumber = max(sp.chargenumber for sp in self.species)
         # Set species which each +ve charged ion originates from
         for sp in self.species:
-            if sp.chargeNumber > 0:
+            if sp.chargenumber > 0:
                 for sp2 in self.species:
-                    if sp2.stoichiometry == sp.stoichiometry and sp2.chargeNumber == sp.chargeNumber - 1:
+                    if sp2.stoichiometry == sp.stoichiometry and sp2.chargenumber == sp.chargenumber - 1:
                         sp.ionisedFrom = sp2
 
         # Set stoichiometry and charge coefficient arrays for mass action and
@@ -464,7 +464,7 @@ class Mixture:
             elm.stoichiometricCoeffts = [sp.stoichiometry.get(elm.name, 0.)
                                          for sp in self.species]
 
-        self.chargeCoeffts = [sp.chargeNumber for sp in self.species]
+        self.chargeCoeffts = [sp.chargenumber for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
         nT0 = self.P / (constants.boltzmann * self.T)
@@ -491,20 +491,20 @@ class Mixture:
     def initialiseNi(self, ni):
         for j, sp in enumerate(self.species):
             self.ni[j] = ni[j]
-            sp.numberOfParticles = ni[j]
+            sp.numberofparticles = ni[j]
 
     def readNi(self):
         for j, sp in enumerate(self.species):
-            self.ni[j] = sp.numberOfParticles
+            self.ni[j] = sp.numberofparticles
 
     def writeNi(self):
         for j, sp in enumerate(self.species):
-            sp.numberOfParticles = self.ni[j]
+            sp.numberofparticles = self.ni[j]
 
     def writeNumberDensity(self):
         V = self.ni.sum() * constants.boltzmann * self.T / self.P
         for j, sp in enumerate(self.species):
-            sp.numberDensity = self.ni[j] / V
+            sp.numberdensity = self.ni[j] / V
 
     def recalcE0i(self):
         # deltaIonisationEnergy recalculation, using limitation theory of
@@ -517,16 +517,16 @@ class Mixture:
         weightedChargeSumSqd = 0
         weightedChargeSum = 0
         for j, sp in enumerate(self.species):
-            if sp.chargeNumber > 0:
-                weightedChargeSum += (ni[j] / V) * sp.chargeNumber
-                weightedChargeSumSqd += (ni[j] / V) * sp.chargeNumber ** 2
+            if sp.chargenumber > 0:
+                weightedChargeSum += (ni[j] / V) * sp.chargenumber
+                weightedChargeSumSqd += (ni[j] / V) * sp.chargenumber ** 2
         zStar = weightedChargeSumSqd / weightedChargeSum
         debyeD = np.sqrt(constants.boltzmann * T
                          / (4. * np.pi * (zStar + 1.) * (ni[-1] / V)
                             * constants.fundamentalcharge ** 2))
         for j, sp in enumerate(self.species):
             if sp.name != "e":
-                ai = (3. * (sp.chargeNumber + 1.)
+                ai = (3. * (sp.chargenumber + 1.)
                       / (4. * np.pi * (ni[-1] / V))) ** (1 / 3)
                 sp.deltaIonisationEnergy = (constants.boltzmann * T * 
                                             (((ai / debyeD) ** 3 + 1) ** (2 / 3)
@@ -534,7 +534,7 @@ class Mixture:
 
         for cn in range(1, self.maxChargeNumber + 1):
             for sp in self.species:
-                if sp.chargeNumber == cn:
+                if sp.chargenumber == cn:
                     sp.E0 = (sp.ionisedFrom.E0
                              + sp.ionisedFrom.ionisationEnergy
                              - sp.ionisedFrom.deltaIonisationEnergy)
@@ -609,7 +609,7 @@ class Mixture:
         conditions and species composition.
         """
 
-        return sum(sp.numberDensity * sp.molarMass / constants.avogadro
+        return sum(sp.numberdensity * sp.molarmass / constants.avogadro
                    for sp in self.species)
 
     def calculate_heat_capacity(self, init_ni=1e20, rel_delta_t=0.001):
@@ -644,9 +644,9 @@ class Mixture:
         """
 
         T = self.T
-        weighted_enthalpy = sum(constants.avogadro * sp.numberOfParticles * (sp.internal_energy(T) + sp.E0 + constants.boltzmann * T)
+        weighted_enthalpy = sum(constants.avogadro * sp.numberofparticles * (sp.internal_energy(T) + sp.E0 + constants.boltzmann * T)
                                 for sp in self.species)
-        weighted_molmass = sum(sp.numberOfParticles * sp.molarMass
+        weighted_molmass = sum(sp.numberofparticles * sp.molarmass
                                for sp in self.species)
         return weighted_enthalpy / weighted_molmass
 
