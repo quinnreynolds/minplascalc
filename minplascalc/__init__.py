@@ -488,20 +488,20 @@ class Mixture:
             self.gfematrix[-1, j] = qc
             self.gfematrix[j, -1] = qc
 
-    def initialiseNi(self, ni):
+    def initialise_ni(self, ni):
         for j, sp in enumerate(self.species):
             self.ni[j] = ni[j]
             sp.numberofparticles = ni[j]
 
-    def readNi(self):
+    def read_ni(self):
         for j, sp in enumerate(self.species):
             self.ni[j] = sp.numberofparticles
 
-    def writeNi(self):
+    def write_ni(self):
         for j, sp in enumerate(self.species):
             sp.numberofparticles = self.ni[j]
 
-    def writeNumberDensity(self):
+    def write_numberdensity(self):
         V = self.ni.sum() * constants.boltzmann * self.temperature / self.pressure
         for j, sp in enumerate(self.species):
             sp.numberdensity = self.ni[j] / V
@@ -558,7 +558,7 @@ class Mixture:
 
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
-        self.readNi()
+        self.read_ni()
 
         governorFactors = np.linspace(0.9, 0.1, 9)
         successYN = False
@@ -601,8 +601,8 @@ class Mixture:
         logging.debug(governorIters, relaxFactor, relTol)
         logging.debug(self.ni)
 
-        self.writeNi()
-        self.writeNumberDensity()
+        self.write_ni()
+        self.write_numberdensity()
 
     def calculateDensity(self):
         """Calculate the density of the plasma in kg/m3 based on current
@@ -621,12 +621,12 @@ class Mixture:
 
         T = self.temperature
 
-        self.initialiseNi([init_ni for i in range(len(self.species))])
+        self.initialise_ni([init_ni for i in range(len(self.species))])
         self.temperature = (1 - rel_delta_t) * T
         self.solveGfe()
         enthalpy_low = self.calculate_enthalpy()
 
-        self.initialiseNi([init_ni for i in range(len(self.species))])
+        self.initialise_ni([init_ni for i in range(len(self.species))])
         self.temperature = (1 + rel_delta_t) * T
         self.solveGfe()
         enthalpy_high = self.calculate_enthalpy()

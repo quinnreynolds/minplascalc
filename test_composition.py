@@ -6,7 +6,7 @@ import minplascalc as mpc
 def mixture():
     c = mpc.Mixture(str(mpc.MIXTUREPATH / "OxygenPlasma5sp.json"),
                     temperature=1000., pressure=101325.)
-    c.initialiseNi([1e20]*len(c.species))
+    c.initialise_ni([1e20]*len(c.species))
     return c
 
 
