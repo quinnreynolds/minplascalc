@@ -464,29 +464,29 @@ class Mixture:
             elm.stoichiometriccoeffts = [sp.stoichiometry.get(elm.name, 0.)
                                          for sp in self.species]
 
-        self.chargeCoeffts = [sp.chargenumber for sp in self.species]
+        self.chargecoeffts = [sp.chargenumber for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
-        nT0 = self.pressure / (constants.boltzmann * self.temperature)
+        nt0 = self.pressure / (constants.boltzmann * self.temperature)
         for elm in self.elements:
-            elm.totalnumber = sum(nT0 * c * sp.x0
+            elm.totalnumber = sum(nt0 * c * sp.x0
                                   for c, sp in zip(elm.stoichiometriccoeffts,
                                                    self.species))
 
         # Set up A matrix, b and ni vectors for GFE minimiser
-        minimiserDOF = len(self.species) + len(self.elements) + 1
-        self.gfeMatrix = np.zeros((minimiserDOF, minimiserDOF))
-        self.gfeVector = np.zeros(minimiserDOF)
+        minimiser_dof = len(self.species) + len(self.elements) + 1
+        self.gfematrix = np.zeros((minimiser_dof, minimiser_dof))
+        self.gfevector = np.zeros(minimiser_dof)
         self.ni = np.zeros(len(self.species))
 
         for i, elm in enumerate(self.elements):
-            self.gfeVector[len(self.species) + i] = elm.totalnumber
+            self.gfevector[len(self.species) + i] = elm.totalnumber
             for j, sC in enumerate(elm.stoichiometriccoeffts):
-                self.gfeMatrix[len(self.species) + i, j] = sC
-                self.gfeMatrix[j, len(self.species) + i] = sC
-        for j, qC in enumerate(self.chargeCoeffts):
-            self.gfeMatrix[-1, j] = qC
-            self.gfeMatrix[j, -1] = qC
+                self.gfematrix[len(self.species) + i, j] = sC
+                self.gfematrix[j, len(self.species) + i] = sC
+        for j, qC in enumerate(self.chargecoeffts):
+            self.gfematrix[-1, j] = qC
+            self.gfematrix[j, -1] = qC
 
     def initialiseNi(self, ni):
         for j, sp in enumerate(self.species):
@@ -550,11 +550,11 @@ class Mixture:
         nspecies = len(self.species)
 
         onDiagonal = constants.boltzmann * T / ni
-        self.gfeMatrix[:nspecies, :nspecies] = offDiagonal + np.diag(onDiagonal)
+        self.gfematrix[:nspecies, :nspecies] = offDiagonal + np.diag(onDiagonal)
         total = [sp.partitionfunction_total(V, T) for sp in self.species]
         E0 = [sp.e0 for sp in self.species]
         mu = -constants.boltzmann * T * np.log(total / ni) + E0
-        self.gfeVector[:nspecies] = -mu
+        self.gfevector[:nspecies] = -mu
 
 
     def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
@@ -572,7 +572,7 @@ class Mixture:
                 self.recalcE0i()
                 self.recalcGfeArrays()
 
-                solution = np.linalg.solve(self.gfeMatrix, self.gfeVector)
+                solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
                 new_ni = solution[0:len(self.species)]
                 deltaNi = abs(new_ni - self.ni)
