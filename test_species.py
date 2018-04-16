@@ -17,13 +17,13 @@ def monatomic_sample_species():
     return mpc.species_from_name("O+")
 
 
-def test_translational_partition_function(diatomic_sample_species):
-    partition_function = diatomic_sample_species.translationalPartitionFunction(0.)
+def test_partitionfunction_translational(diatomic_sample_species):
+    partition_function = diatomic_sample_species.partitionfunction_translational(0.)
     assert partition_function == 0.
 
 
-def test_internal_partition_function(diatomic_sample_species):
-    partition_function = diatomic_sample_species.internalPartitionFunction(300)
+def test_partitionfunction_internal(diatomic_sample_species):
+    partition_function = diatomic_sample_species.partitionfunction_internal(300)
     assert partition_function == pytest.approx(217.6606)
 
 @pytest.mark.parametrize("temperature, energy, tol", [
