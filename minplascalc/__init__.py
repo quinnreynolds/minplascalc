@@ -342,23 +342,23 @@ class DiatomicSpecies(Species):
         self.ionisationenergy = constants.invcm_to_joule * jsondata["diatomicData"][
             "ionisationEnergy"]
         self.deltaionisationenergy = 0.
-        self.sigmaS = jsondata["diatomicData"]["sigmaS"]
+        self.sigma_s = jsondata["diatomicData"]["sigmaS"]
         self.g0 = jsondata["diatomicData"]["g0"]
-        self.we = constants.invcm_to_joule * jsondata["diatomicData"]["we"]
-        self.Be = constants.invcm_to_joule * jsondata["diatomicData"]["Be"]
+        self.w_e = constants.invcm_to_joule * jsondata["diatomicData"]["we"]
+        self.b_e = constants.invcm_to_joule * jsondata["diatomicData"]["Be"]
         self.e0 = -self.dissociationenergy
 
     def partitionfunction_internal(self, T):
         electronicPartition = self.g0
-        vibrationalPartition = 1. / (1. - np.exp(-self.we / (constants.boltzmann * T)))
-        rotationalPartition = constants.boltzmann * T / (self.sigmaS * self.Be)
+        vibrationalPartition = 1. / (1. - np.exp(-self.w_e / (constants.boltzmann * T)))
+        rotationalPartition = constants.boltzmann * T / (self.sigma_s * self.b_e)
         return electronicPartition * vibrationalPartition * rotationalPartition
 
     def internal_energy(self, T):
         translational_energy = 1.5 * constants.boltzmann * T
         electronic_energy = 0.
         rotational_energy = constants.boltzmann * T
-        vibrational_energy = self.we * np.exp(-self.we / (constants.boltzmann * T)) / (1. - np.exp(-self.we / (constants.boltzmann * T)))
+        vibrational_energy = self.w_e * np.exp(-self.w_e / (constants.boltzmann * T)) / (1. - np.exp(-self.w_e / (constants.boltzmann * T)))
         return translational_energy + electronic_energy + rotational_energy + vibrational_energy
 
 
