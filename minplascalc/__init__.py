@@ -382,17 +382,17 @@ class ElectronSpecies(BaseSpecies):
         self.x0 = 0
 
     # noinspection PyUnusedLocal
-    def partitionfunction_internal(self, T):
+    def partitionfunction_internal(self, temperature):
         return 2.
 
-    def internal_energy(self, T):
-        translational_energy = 1.5 * constants.boltzmann * T
+    def internal_energy(self, temperature):
+        translational_energy = 1.5 * constants.boltzmann * temperature
         electronic_energy = 0.
         return translational_energy + electronic_energy
 
 
 class Element:
-    def __init__(self, name="", stoichiometricCoeffts=None, totalNumber=0.):
+    def __init__(self, name="", stoichiometriccoeffts=None, totalnumber=0.):
         """Class acting as struct to hold some information about different
         elements in the plasma.
 
@@ -400,18 +400,18 @@ class Element:
         ----------
         name : string
             Name of element, eg "O" (default empty string)
-        stoichiometricCoeffts : array_like
+        stoichiometriccoeffts : array_like
             List of number of atoms of this element present in each species, in
             same order as Mixture.species (default empty list)
-        totalNumber : float
+        totalnumber : float
             Total number of atoms of this element present in the simulation
             (conserved), calculated from initial conditions during instantiation
             of Mixture (default 0)
         """
 
         self.name = name
-        self.stoichiometricCoeffts = [] if stoichiometricCoeffts is None else stoichiometricCoeffts
-        self.totalNumber = totalNumber
+        self.stoichiometriccoeffts = [] if stoichiometriccoeffts is None else stoichiometriccoeffts
+        self.totalnumber = totalnumber
 
 
 class Mixture:
@@ -461,7 +461,7 @@ class Mixture:
         # Set stoichiometry and charge coefficient arrays for mass action and
         # electroneutrality constraints
         for elm in self.elements:
-            elm.stoichiometricCoeffts = [sp.stoichiometry.get(elm.name, 0.)
+            elm.stoichiometriccoeffts = [sp.stoichiometry.get(elm.name, 0.)
                                          for sp in self.species]
 
         self.chargeCoeffts = [sp.chargenumber for sp in self.species]
@@ -469,8 +469,8 @@ class Mixture:
         # Set element totals for constraints from provided initial conditions
         nT0 = self.P / (constants.boltzmann * self.T)
         for elm in self.elements:
-            elm.totalNumber = sum(nT0 * c * sp.x0
-                                  for c, sp in zip(elm.stoichiometricCoeffts,
+            elm.totalnumber = sum(nT0 * c * sp.x0
+                                  for c, sp in zip(elm.stoichiometriccoeffts,
                                                    self.species))
 
         # Set up A matrix, b and ni vectors for GFE minimiser
@@ -480,8 +480,8 @@ class Mixture:
         self.ni = np.zeros(len(self.species))
 
         for i, elm in enumerate(self.elements):
-            self.gfeVector[len(self.species) + i] = elm.totalNumber
-            for j, sC in enumerate(elm.stoichiometricCoeffts):
+            self.gfeVector[len(self.species) + i] = elm.totalnumber
+            for j, sC in enumerate(elm.stoichiometriccoeffts):
                 self.gfeMatrix[len(self.species) + i, j] = sC
                 self.gfeMatrix[j, len(self.species) + i] = sC
         for j, qC in enumerate(self.chargeCoeffts):
