@@ -481,12 +481,12 @@ class Mixture:
 
         for i, elm in enumerate(self.elements):
             self.gfevector[len(self.species) + i] = elm.totalnumber
-            for j, sC in enumerate(elm.stoichiometriccoeffts):
-                self.gfematrix[len(self.species) + i, j] = sC
-                self.gfematrix[j, len(self.species) + i] = sC
-        for j, qC in enumerate(self.chargecoeffts):
-            self.gfematrix[-1, j] = qC
-            self.gfematrix[j, -1] = qC
+            for j, sc in enumerate(elm.stoichiometriccoeffts):
+                self.gfematrix[len(self.species) + i, j] = sc
+                self.gfematrix[j, len(self.species) + i] = sc
+        for j, qc in enumerate(self.chargecoeffts):
+            self.gfematrix[-1, j] = qc
+            self.gfematrix[j, -1] = qc
 
     def initialiseNi(self, ni):
         for j, sp in enumerate(self.species):
