@@ -541,19 +541,19 @@ class Mixture:
 
     def recalc_gfearrays(self):
         ni = self.ni
-        T = self.temperature
-        P = self.pressure
+        t = self.temperature
+        p = self.pressure
 
-        niSum = ni.sum()
-        V = niSum * constants.boltzmann * T / P
-        offDiagonal = -constants.boltzmann * T / niSum
+        nisum = ni.sum()
+        v = nisum * constants.boltzmann * t / p
+        offdiagonal = -constants.boltzmann * t / nisum
         nspecies = len(self.species)
 
-        onDiagonal = constants.boltzmann * T / ni
-        self.gfematrix[:nspecies, :nspecies] = offDiagonal + np.diag(onDiagonal)
-        total = [sp.partitionfunction_total(V, T) for sp in self.species]
-        E0 = [sp.e0 for sp in self.species]
-        mu = -constants.boltzmann * T * np.log(total / ni) + E0
+        ondiagonal = constants.boltzmann * t / ni
+        self.gfematrix[:nspecies, :nspecies] = offdiagonal + np.diag(ondiagonal)
+        total = [sp.partitionfunction_total(v, t) for sp in self.species]
+        e0 = [sp.e0 for sp in self.species]
+        mu = -constants.boltzmann * t * np.log(total / ni) + e0
         self.gfevector[:nspecies] = -mu
 
 
