@@ -12,7 +12,7 @@ def mixture():
 
 def test_solver(mixture):
     mixture.temperature = 1000.
-    mixture.solveGfe()
+    mixture.solve_gfe()
 
     assert mixture.calculateDensity() == pytest.approx(0.3899566)
 
@@ -45,7 +45,7 @@ def test_heat_capacity(mixture, temperature, pressure, result, tol):
 def test_enthalpy(mixture, temperature, pressure, result, tol):
     mixture.temperature = temperature
     mixture.pressure = pressure
-    mixture.solveGfe()
+    mixture.solve_gfe()
 
     assert mixture.calculate_enthalpy() == pytest.approx(result, abs=tol)
 

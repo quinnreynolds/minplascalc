@@ -557,7 +557,7 @@ class Mixture:
         self.gfevector[:nspecies] = -mu
 
 
-    def solveGfe(self, relativeTolerance=1e-10, maxIters=1000):
+    def solve_gfe(self, relativeTolerance=1e-10, maxIters=1000):
         self.read_ni()
 
         governorFactors = np.linspace(0.9, 0.1, 9)
@@ -623,12 +623,12 @@ class Mixture:
 
         self.initialise_ni([init_ni for i in range(len(self.species))])
         self.temperature = (1 - rel_delta_t) * T
-        self.solveGfe()
+        self.solve_gfe()
         enthalpy_low = self.calculate_enthalpy()
 
         self.initialise_ni([init_ni for i in range(len(self.species))])
         self.temperature = (1 + rel_delta_t) * T
-        self.solveGfe()
+        self.solve_gfe()
         enthalpy_high = self.calculate_enthalpy()
 
         self.temperature = T
