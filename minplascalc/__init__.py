@@ -506,31 +506,31 @@ class Mixture:
         for j, sp in enumerate(self.species):
             sp.numberdensity = self.ni[j] / volume
 
-    def recalcE0i(self):
+    def recalc_e0i(self):
         # deltaionisationenergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
         ni = self.ni
-        T = self.temperature
-        P = self.pressure
+        t = self.temperature
+        p = self.pressure
 
-        V = ni.sum() * constants.boltzmann * T / P
-        weightedChargeSumSqd = 0
-        weightedChargeSum = 0
+        v = ni.sum() * constants.boltzmann * t / p
+        weightedchargesumsqd = 0
+        weightedchargesum = 0
         for j, sp in enumerate(self.species):
             if sp.chargenumber > 0:
-                weightedChargeSum += (ni[j] / V) * sp.chargenumber
-                weightedChargeSumSqd += (ni[j] / V) * sp.chargenumber ** 2
-        zStar = weightedChargeSumSqd / weightedChargeSum
-        debyeD = np.sqrt(constants.boltzmann * T
-                         / (4. * np.pi * (zStar + 1.) * (ni[-1] / V)
+                weightedchargesum += (ni[j] / v) * sp.chargenumber
+                weightedchargesumsqd += (ni[j] / v) * sp.chargenumber ** 2
+        z_star = weightedchargesumsqd / weightedchargesum
+        debye_d = np.sqrt(constants.boltzmann * t
+                         / (4. * np.pi * (z_star + 1.) * (ni[-1] / v)
                             * constants.fundamentalcharge ** 2))
         for j, sp in enumerate(self.species):
             if sp.name != "e":
                 ai = (3. * (sp.chargenumber + 1.)
-                      / (4. * np.pi * (ni[-1] / V))) ** (1 / 3)
-                sp.deltaionisationenergy = (constants.boltzmann * T * 
-                                            (((ai / debyeD) ** 3 + 1) ** (2 / 3)
-                                             - 1) / (2. * (zStar + 1)))
+                      / (4. * np.pi * (ni[-1] / v))) ** (1 / 3)
+                sp.deltaionisationenergy = (constants.boltzmann * t * 
+                                            (((ai / debye_d) ** 3 + 1) ** (2 / 3)
+                                             - 1) / (2. * (z_star + 1)))
 
         for cn in range(1, self.maxchargenumber + 1):
             for sp in self.species:
@@ -569,7 +569,7 @@ class Mixture:
             relTol = relativeTolerance * 10.
             minimiserIters = 0
             while relTol > relativeTolerance:
-                self.recalcE0i()
+                self.recalc_e0i()
                 self.recalcGfeArrays()
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
