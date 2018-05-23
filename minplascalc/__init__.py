@@ -557,48 +557,48 @@ class Mixture:
         self.gfevector[:nspecies] = -mu
 
 
-    def solve_gfe(self, relativeTolerance=1e-10, maxIters=1000):
+    def solve_gfe(self, relativetolerance=1e-10, maxiters=1000):
         self.read_ni()
 
-        governorFactors = np.linspace(0.9, 0.1, 9)
-        successYN = False
-        governorIters = 0
-        while not successYN and governorIters < len(governorFactors):
+        governorfactors = np.linspace(0.9, 0.1, 9)
+        success_yn = False
+        governoriters = 0
+        while not success_yn and governoriters < len(governorfactors):
             successYN = True
-            governorFactor = governorFactors[governorIters]
-            relTol = relativeTolerance * 10.
-            minimiserIters = 0
-            while relTol > relativeTolerance:
+            governorfactor = governorfactors[governoriters]
+            reltol = relativetolerance * 10.
+            minimiseriters = 0
+            while reltol > relativetolerance:
                 self.recalc_e0i()
                 self.recalc_gfearrays()
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
                 new_ni = solution[0:len(self.species)]
-                deltaNi = abs(new_ni - self.ni)
-                maxAllowedDeltaNi = governorFactor * self.ni
+                delta_ni = abs(newni - self.ni)
+                max_allowed_delta_ni = governorfactor * self.ni
 
-                maxNiIndex = new_ni.argmax()
-                relTol = deltaNi[maxNiIndex] / solution[maxNiIndex]
+                max_ni_index = new_ni.argmax()
+                reltol = delta_ni[max_ni_index] / solution[max_ni_index]
 
-                deltaNi = deltaNi.clip(min=maxAllowedDeltaNi)
-                newRelaxFactors = maxAllowedDeltaNi / deltaNi
-                relaxFactor = newRelaxFactors.min()
+                delta_ni = deltani.clip(min=max_allowed_delta_ni)
+                new_relax_factors = max_allowed_delta_ni / delta_ni
+                relax_factor = new_relax_factors.min()
 
-                self.ni = (1. - relaxFactor) * self.ni + relaxFactor * new_ni
+                self.ni = (1. - relax_factor) * self.ni + relax_factor * new_ni
 
-                minimiserIters += 1
-                if minimiserIters > maxIters:
-                    successYN = False
+                minimiseriters += 1
+                if minimiseriters > maxiters:
+                    success_yn = False
                     break
 
-            governorIters += 1
+            governoriters += 1
 
-        if not successYN:
+        if not success_yn:
             warnings.warn("Minimiser could not find a converged solution, results may be inaccurate.")
 
         # noinspection PyUnboundLocalVariable
-        logging.debug(governorIters, relaxFactor, relTol)
+        logging.debug(governoriters, relax_factor, reltol)
         logging.debug(self.ni)
 
         self.write_ni()
