@@ -539,7 +539,7 @@ class Mixture:
                              + sp.ionisedFrom.ionisationenergy
                              - sp.ionisedFrom.deltaionisationenergy)
 
-    def recalcGfeArrays(self):
+    def recalc_gfearrays(self):
         ni = self.ni
         T = self.temperature
         P = self.pressure
@@ -570,7 +570,7 @@ class Mixture:
             minimiserIters = 0
             while relTol > relativeTolerance:
                 self.recalc_e0i()
-                self.recalcGfeArrays()
+                self.recalc_gfearrays()
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
