@@ -514,9 +514,9 @@ class Mixture:
             sp.numberofparticles = self.ni[j]
 
     def write_numberdensity(self):
-        volume = self.ni.sum() * constants.boltzmann * self.T / self.P
+        V  = self.ni.sum() * constants.boltzmann * self.T / self.P
         for j, sp in enumerate(self.species):
-            sp.numberdensity = self.ni[j] / volume
+            sp.numberdensity = self.ni[j] / V 
 
     def recalc_e0i(self):
         # deltaionisationenergy recalculation, using limitation theory of
@@ -550,13 +550,13 @@ class Mixture:
         P = self.P
 
         nisum = ni.sum()
-        v = nisum * constants.boltzmann * T / P
+        V = nisum * constants.boltzmann * T / P
         offdiagonal = -constants.boltzmann * T / nisum
         nspecies = len(self.species)
 
         ondiagonal = constants.boltzmann * T / ni
         self.gfematrix[:nspecies, :nspecies] = offdiagonal + np.diag(ondiagonal)
-        total = [sp.partitionfunction_total(v, T) for sp in self.species]
+        total = [sp.partitionfunction_total(V, T) for sp in self.species]
         e0 = [sp.e0 for sp in self.species]
         mu = -constants.boltzmann * T * np.log(total / ni) + e0
         self.gfevector[:nspecies] = -mu
