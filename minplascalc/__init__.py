@@ -426,7 +426,7 @@ class Element:
 
 
 class Mixture:
-    def __init__(self, mixture_file, T=10000., pressure=101325):
+    def __init__(self, mixture_file, T=10000., P=101325):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -439,12 +439,12 @@ class Mixture:
             fractions
         T : float
             Temperature value in K, for initialisation (default 10000)
-        pressure : float
+        P : float
             Pressure value in Pa, for initialisation (default 101325)
         """
 
         self.T = T
-        self.pressure = pressure
+        self.P = P
 
         with open(mixture_file) as sf:
             jsondata = json.load(sf)
@@ -479,7 +479,7 @@ class Mixture:
         self.chargecoeffts = [sp.chargenumber for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
-        nt0 = self.pressure / (constants.boltzmann * self.T)
+        nt0 = self.P / (constants.boltzmann * self.T)
         for elm in self.elements:
             elm.totalnumber = sum(nt0 * c * sp.x0
                                   for c, sp in zip(elm.stoichiometriccoeffts,
@@ -514,8 +514,7 @@ class Mixture:
             sp.numberofparticles = self.ni[j]
 
     def write_numberdensity(self):
-        volume = (self.ni.sum() * constants.boltzmann * self.T 
-                  / self.pressure)
+        volume = self.ni.sum() * constants.boltzmann * self.T / self.P
         for j, sp in enumerate(self.species):
             sp.numberdensity = self.ni[j] / volume
 
@@ -523,7 +522,7 @@ class Mixture:
         # deltaionisationenergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
         kbt = constants.boltzmann * self.T
-        ndi = self.ni / (self.ni.sum() * kbt / self.pressure)
+        ndi = self.ni / (self.ni.sum() * kbt / self.P)
         weightedchargesumsqd = 0
         weightedchargesum = 0
         for j, sp in enumerate(self.species):
@@ -548,10 +547,10 @@ class Mixture:
     def recalc_gfearrays(self):
         ni = self.ni
         T = self.T
-        p = self.pressure
+        P = self.P
 
         nisum = ni.sum()
-        v = nisum * constants.boltzmann * T / p
+        v = nisum * constants.boltzmann * T / P
         offdiagonal = -constants.boltzmann * T / nisum
         nspecies = len(self.species)
 
