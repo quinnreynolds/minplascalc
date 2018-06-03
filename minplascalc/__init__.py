@@ -561,10 +561,10 @@ class Mixture:
         self.read_ni()
 
         governorfactors = np.linspace(0.9, 0.1, 9)
-        success_yn = False
+        successyn = False
         governoriters = 0
-        while not success_yn and governoriters < len(governorfactors):
-            success_yn = True
+        while not successyn and governoriters < len(governorfactors):
+            successyn = True
             governorfactor = governorfactors[governoriters]
             reltol = relativetolerance * 10.
             minimiseriters = 0
@@ -574,31 +574,31 @@ class Mixture:
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
-                new_ni = solution[0:len(self.species)]
-                delta_ni = abs(new_ni - self.ni)
-                max_allowed_delta_ni = governorfactor * self.ni
+                newni = solution[0:len(self.species)]
+                deltani = abs(newni - self.ni)
+                maxalloweddeltani = governorfactor * self.ni
 
-                max_ni_index = new_ni.argmax()
-                reltol = delta_ni[max_ni_index] / solution[max_ni_index]
+                maxniindex = newni.argmax()
+                reltol = deltani[maxniindex] / solution[maxniindex]
 
-                delta_ni = delta_ni.clip(min=max_allowed_delta_ni)
-                new_relax_factors = max_allowed_delta_ni / delta_ni
-                relax_factor = new_relax_factors.min()
+                deltani = deltani.clip(min=maxalloweddeltani)
+                newrelaxfactors = maxalloweddeltani / deltani
+                relaxfactor = newrelaxfactors.min()
 
-                self.ni = (1. - relax_factor) * self.ni + relax_factor * new_ni
+                self.ni = (1. - relaxfactor) * self.ni + relaxfactor * newni
 
                 minimiseriters += 1
                 if minimiseriters > maxiters:
-                    success_yn = False
+                    successyn = False
                     break
 
             governoriters += 1
 
-        if not success_yn:
+        if not successyn:
             warnings.warn("Minimiser could not find a converged solution, results may be inaccurate.")
 
         # noinspection PyUnboundLocalVariable
-        logging.debug(governoriters, relax_factor, reltol)
+        logging.debug(governoriters, relaxfactor, reltol)
         logging.debug(self.ni)
 
         self.write_ni()
