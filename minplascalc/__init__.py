@@ -18,9 +18,9 @@ MIXTUREPATH = DATAPATH / 'mixtures'
 # utility functions ############################################################
 
 def molar_mass_calculator(protons, neutrons, electrons):
-    '''Estimate the molar mass in kg/mol of a species based on its nuclear and
+    """Estimate the molar mass in kg/mol of a species based on its nuclear and
     electronic structure, if you can't get it anywhere else for some reason.
-    '''
+    """
 
     return constants.avogadro * (protons * constants.protonmass
                                  + electrons * constants.electronmass
@@ -29,9 +29,9 @@ def molar_mass_calculator(protons, neutrons, electrons):
 
 
 def parse_values(nist_line):
-    '''Helper function to tidy up a string of data copied from NIST online
+    """Helper function to tidy up a string of data copied from NIST online
     databases.
-    '''
+    """
 
     table = str.maketrans('', '', '+x?[]')
     line = ''.join(nist_line.split()).translate(table)
@@ -49,7 +49,7 @@ def parse_values(nist_line):
 
 
 def read_energylevels(data):
-    ''' Read a NIST energy level file
+    """ Read a NIST energy level file
 
     Parameters
     ----------
@@ -62,7 +62,7 @@ def read_energylevels(data):
     energylevels : list of dict
          Energy levels. Each dict contains the energy of the level Ei and the 
          associated quantum number J.
-    '''
+    """
     energylevels = []
 
     try:
@@ -83,7 +83,7 @@ def read_energylevels(data):
 
 def build_monatomic_species_json(name, stoichiometry, molarmass, chargenumber,
                                  ionisationenergy, energylevels, sources=None):
-    '''Function to take text data retrieved from NIST websites or other sources
+    """Function to take text data retrieved from NIST websites or other sources
 
     and build a data dictionary for a monatomic plasma species, with specified
     electron energy levels and degeneracies.
@@ -108,13 +108,13 @@ def build_monatomic_species_json(name, stoichiometry, molarmass, chargenumber,
     sources : list of strings
         Each entry represents a reference source from which the data was
         obtained (defaults to NIST Atomic Spectra Database)
-    '''
+    """
 
     if sources is None:
-        sources = ['''NIST Atomic Spectra Database (ver. 5.3), [Online]. 
+        sources = ["""NIST Atomic Spectra Database (ver. 5.3), [Online]. 
                    A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team, 
                    National Institute of Standards and Technology, Gaithersburg 
-                   MD., http://physics.nist.gov/asd''']
+                   MD., http://physics.nist.gov/asd"""]
 
     speciesdict = collections.OrderedDict([
         ('name', name),
@@ -136,7 +136,7 @@ def build_monatomic_species_json(name, stoichiometry, molarmass, chargenumber,
 def build_diatomic_species_json(name, stoichiometry, molarmass, chargenumber,
                                 ionisationenergy, dissociationenergy, sigma_s,
                                 g0, w_e, b_e, sources=None):
-    '''Function to take text data retrieved from NIST websites or other sources
+    """Function to take text data retrieved from NIST websites or other sources
     and build a data dictionary file for a diatomic plasma species, with 
     specified ground state degeneracy and rotational & vibrational parameters.
 
@@ -168,12 +168,12 @@ def build_diatomic_species_json(name, stoichiometry, molarmass, chargenumber,
     sources : list of dictionaries
         Each dictionary represents a reference source from which the data was
         obtained (defaults to NIST Chemistry Webbook)
-    '''
+    """
     if sources is None:
-        sources = ['''NIST Chemistry WebBook, NIST Standard Reference Database 
+        sources = ["""NIST Chemistry WebBook, NIST Standard Reference Database 
                    Number 69. PJ Linstrom and WG Mallard (Editors), National 
                    Institute of Standards and Technology, Gaithersburg MD., 
-                   http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303''']
+                   http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"""]
 
     speciesdict = collections.OrderedDict([
         ('name', name),
@@ -199,9 +199,9 @@ def build_diatomic_species_json(name, stoichiometry, molarmass, chargenumber,
 
 
 class constants:
-    '''A collection of physical and unit-conversion constants useful in plasma
+    """A collection of physical and unit-conversion constants useful in plasma
     calculations.
-    '''
+    """
 
     protonmass = 1.6726219e-27
     electronmass = 9.10938356e-31
@@ -218,7 +218,7 @@ class constants:
 
 
 def species_from_file(datafile, numberofparticles=0, x0=0):
-    '''Create a species from a data file.
+    """Create a species from a data file.
 
     Parameters
     ----------
@@ -229,7 +229,7 @@ def species_from_file(datafile, numberofparticles=0, x0=0):
         Initial particle count (default 0)
     x0 : float
         initial x
-    '''
+    """
     # Construct a data object from JSON data file
     with open(datafile) as df:
         jsondata = json.load(df)
@@ -241,7 +241,7 @@ def species_from_file(datafile, numberofparticles=0, x0=0):
 
 
 def species_from_name(name, numberofparticles=0, x0=0):
-    ''' Create a species from the species database
+    """ Create a species from the species database
 
     Parameters
     ----------
@@ -251,7 +251,7 @@ def species_from_name(name, numberofparticles=0, x0=0):
         Initial particle count (default 0)
     x0 : float
         initial x
-    '''
+    """
 
     filename = SPECIESPATH / (name + '.json')
     return species_from_file(str(filename), numberofparticles, x0)
@@ -276,7 +276,7 @@ class BaseSpecies:
 # Diatomic molecules, single atoms, and ions
 class Species(BaseSpecies):
     def __init__(self, jsondata, numberofparticles=0, x0=0):
-        '''Base class for species. Either single monatomic or diatomic chemical
+        """Base class for species. Either single monatomic or diatomic chemical
         species in the plasma, eg O2 or Si+
 
         Parameters
@@ -287,7 +287,7 @@ class Species(BaseSpecies):
         numberofparticles : float
             Initial particle count (default 0)
         x0 : float
-        '''
+        """
 
         self.numberofparticles = numberofparticles
         self.numberdensity = 0.
@@ -374,13 +374,13 @@ class DiatomicSpecies(Species):
 
 class ElectronSpecies(BaseSpecies):
     def __init__(self, numberofparticles=0):
-        '''Class describing electrons as a species in the plasma.
+        """Class describing electrons as a species in the plasma.
 
         Parameters
         ----------
         numberofparticles : float
             Initial particle count (default 0)
-        '''
+        """
 
         self.name = 'e'
         self.stoichiometry = {}
@@ -403,7 +403,7 @@ class ElectronSpecies(BaseSpecies):
 
 class Element:
     def __init__(self, name='', stoichiometriccoeffts=None, totalnumber=0.):
-        '''Class acting as struct to hold some information about different
+        """Class acting as struct to hold some information about different
         elements in the plasma.
 
         Parameters
@@ -417,7 +417,7 @@ class Element:
             Total number of atoms of this element present in the simulation
             (conserved), calculated from initial conditions during instantiation
             of Mixture (default 0)
-        '''
+        """
 
         self.name = name
         self.stoichiometriccoeffts = ([] if stoichiometriccoeffts is None 
@@ -427,7 +427,7 @@ class Element:
 
 class Mixture:
     def __init__(self, mixture_file, temperature=10000., pressure=101325):
-        '''Class representing a thermal plasma specification with multiple
+        """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
         free energy minimisation.
@@ -441,7 +441,7 @@ class Mixture:
             Temperature value in K, for initialisation (default 10000)
         pressure : float
             Pressure value in Pa, for initialisation (default 101325)
-        '''
+        """
 
         self.temperature = temperature
         self.pressure = pressure
@@ -612,19 +612,19 @@ class Mixture:
         self.write_numberdensity()
 
     def calculate_density(self):
-        '''Calculate the density of the plasma in kg/m3 based on current
+        """Calculate the density of the plasma in kg/m3 based on current
         conditions and species composition.
-        '''
+        """
 
         return sum(sp.numberdensity * sp.molarmass / constants.avogadro
                    for sp in self.species)
 
     def calculate_heat_capacity(self, init_ni=1e20, rel_delta_t=0.001):
-        '''Calculate the heat capacity at constant pressure of the plasma in
+        """Calculate the heat capacity at constant pressure of the plasma in
         J/kg.K based on current conditions and species composition. Note that
         this is done by performing two full composition simulations when this
         function is called - can be time-consuming.
-        '''
+        """
 
         t = self.temperature
 
@@ -643,12 +643,12 @@ class Mixture:
         return (enthalpyhigh - enthalpylow) / (2. * rel_delta_t * t)
 
     def calculate_enthalpy(self):
-        '''Calculate the enthalpy of the plasma in J/kg based on current
+        """Calculate the enthalpy of the plasma in J/kg based on current
         conditions and species composition. Note that the value returned is not
         absolute, it is relative to an arbitrary reference which may be
         negative or positive depending on the reference energies of the diatomic
         species present.
-        '''
+        """
 
         t = self.temperature
         weightedenthalpy = sum(constants.avogadro * sp.numberofparticles 
@@ -660,29 +660,29 @@ class Mixture:
         return weightedenthalpy / weightedmolmass
 
     def calculate_viscosity(self):
-        '''Calculate the viscosity of the plasma in Pa.s based on current
+        """Calculate the viscosity of the plasma in Pa.s based on current
         conditions and species composition.
-        '''
+        """
 
         raise NotImplementedError
 
     def calculate_thermal_conductivity(self):
-        '''Calculate the thermal conductivity of the plasma in W/m.K based on
+        """Calculate the thermal conductivity of the plasma in W/m.K based on
         current conditions and species composition.
-        '''
+        """
 
         raise NotImplementedError
 
     def calculate_electrical_conductivity(self):
-        '''Calculate the electrical conductivity of the plasma in 1/ohm.m based
+        """Calculate the electrical conductivity of the plasma in 1/ohm.m based
         on current conditions and species composition.
-        '''
+        """
 
         raise NotImplementedError
 
     def calculate_total_emission_coefficient(self):
-        '''Calculate the total radiation emission coefficient of the plasma in
+        """Calculate the total radiation emission coefficient of the plasma in
         W/m3 based on current conditions and species composition.
-        '''
+        """
 
         raise NotImplementedError
