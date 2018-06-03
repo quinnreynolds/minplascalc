@@ -631,16 +631,16 @@ class Mixture:
         self.initialise_ni([init_ni for i in range(len(self.species))])
         self.temperature = (1 - rel_delta_t) * t
         self.solve_gfe()
-        enthalpy_low = self.calculate_enthalpy()
+        enthalpylow = self.calculate_enthalpy()
 
         self.initialise_ni([init_ni for i in range(len(self.species))])
         self.temperature = (1 + rel_delta_t) * t
         self.solve_gfe()
-        enthalpy_high = self.calculate_enthalpy()
+        enthalpyhigh = self.calculate_enthalpy()
 
         self.temperature = t
 
-        return (enthalpy_high - enthalpy_low) / (2. * rel_delta_t * t)
+        return (enthalpyhigh - enthalpylow) / (2. * rel_delta_t * t)
 
     def calculate_enthalpy(self):
         '''Calculate the enthalpy of the plasma in J/kg based on current
@@ -651,7 +651,9 @@ class Mixture:
         '''
 
         t = self.temperature
-        weightedenthalpy = sum(constants.avogadro * sp.numberofparticles * (sp.internal_energy(t) + sp.e0 + constants.boltzmann * t)
+        weightedenthalpy = sum(constants.avogadro * sp.numberofparticles 
+                               * (sp.internal_energy(t) + sp.e0 
+                                  + constants.boltzmann * t) 
                                for sp in self.species)
         weightedmolmass = sum(sp.numberofparticles * sp.molarmass
                               for sp in self.species)
