@@ -604,7 +604,7 @@ class Mixture:
         self.write_ni()
         self.write_numberdensity()
 
-    def calculateDensity(self):
+    def calculate_density(self):
         """Calculate the density of the plasma in kg/m3 based on current
         conditions and species composition.
         """

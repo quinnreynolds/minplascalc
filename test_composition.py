@@ -14,7 +14,7 @@ def test_solver(mixture):
     mixture.temperature = 1000.
     mixture.solve_gfe()
 
-    assert mixture.calculateDensity() == pytest.approx(0.3899566)
+    assert mixture.calculate_density() == pytest.approx(0.3899566)
 
 
 LOW_T = 1000.
