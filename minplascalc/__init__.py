@@ -258,18 +258,18 @@ def species_from_name(name, numberofparticles=0, x0=0):
 
 
 class BaseSpecies:
-    def partitionfunction_total(self, volume, temperature):
-        return (volume * self.partitionfunction_translational(temperature)
-                * self.partitionfunction_internal(temperature))
+    def partitionfunction_total(self, V, T):
+        return (V * self.partitionfunction_translational(T)
+                * self.partitionfunction_internal(T))
 
-    def partitionfunction_translational(self, temperature):
-        return ((2 * np.pi * self.molarmass * constants.boltzmann * temperature)
+    def partitionfunction_translational(self, T):
+        return ((2 * np.pi * self.molarmass * constants.boltzmann * T)
                 / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
-    def partitionfunction_internal(self, temperature):
+    def partitionfunction_internal(self, T):
         raise NotImplementedError
 
-    def internal_energy(self, temperature):
+    def internal_energy(self, T):
         raise NotImplementedError
 
 
@@ -319,22 +319,22 @@ class MonatomicSpecies(Species):
                                       * energylevel['Ei']])
         self.e0 = 0
 
-    def partitionfunction_internal(self, temperature):
-        kbt = constants.boltzmann * temperature
+    def partitionfunction_internal(self, T):
+        kbt = constants.boltzmann * T
         partitionval = 0.        
         for twojplusone, eij in self.energylevels:
             if eij < (self.ionisationenergy - self.deltaionisationenergy):
                 partitionval += twojplusone * np.exp(-eij / kbt)
         return partitionval
 
-    def internal_energy(self, temperature):
-        kbt = constants.boltzmann * temperature
+    def internal_energy(self, T):
+        kbt = constants.boltzmann * T
         translationalenergy = 1.5 * kbt
         electronicenergy = 0.
         for twojplusone, eij in self.energylevels:
             if eij < (self.ionisationenergy - self.deltaionisationenergy):
                 electronicenergy += twojplusone * eij * np.exp(-eij / kbt)
-        electronicenergy /= self.partitionfunction_internal(temperature)
+        electronicenergy /= self.partitionfunction_internal(T)
         return translationalenergy + electronicenergy
 
 
@@ -354,15 +354,15 @@ class DiatomicSpecies(Species):
         self.b_e = constants.invcm_to_joule * jdd['Be']
         self.e0 = -self.dissociationenergy
 
-    def partitionfunction_internal(self, temperature):
-        kbt = constants.boltzmann * temperature
+    def partitionfunction_internal(self, T):
+        kbt = constants.boltzmann * T
         electronicpartition = self.g0
         vibrationalpartition = 1. / (1. - np.exp(-self.w_e / kbt))
         rotationalpartition = kbt / (self.sigma_s * self.b_e)
         return electronicpartition * vibrationalpartition * rotationalpartition
 
-    def internal_energy(self, temperature):
-        kbt = constants.boltzmann * temperature
+    def internal_energy(self, T):
+        kbt = constants.boltzmann * T
         translationalenergy = 1.5 * kbt
         electronicenergy = 0.
         rotationalenergy = kbt
@@ -392,11 +392,11 @@ class ElectronSpecies(BaseSpecies):
         self.x0 = 0
 
     # noinspection PyUnusedLocal
-    def partitionfunction_internal(self, temperature):
+    def partitionfunction_internal(self, T):
         return 2.
 
-    def internal_energy(self, temperature):
-        translationalenergy = 1.5 * constants.boltzmann * temperature
+    def internal_energy(self, T):
+        translationalenergy = 1.5 * constants.boltzmann * T
         electronicenergy = 0.
         return translationalenergy + electronicenergy
 
@@ -426,7 +426,7 @@ class Element:
 
 
 class Mixture:
-    def __init__(self, mixture_file, temperature=10000., pressure=101325):
+    def __init__(self, mixture_file, T=10000., pressure=101325):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -437,13 +437,13 @@ class Mixture:
         mixture_file : string
             Path to a JSON data file containing species and initial mole
             fractions
-        temperature : float
+        T : float
             Temperature value in K, for initialisation (default 10000)
         pressure : float
             Pressure value in Pa, for initialisation (default 101325)
         """
 
-        self.temperature = temperature
+        self.T = T
         self.pressure = pressure
 
         with open(mixture_file) as sf:
@@ -479,7 +479,7 @@ class Mixture:
         self.chargecoeffts = [sp.chargenumber for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
-        nt0 = self.pressure / (constants.boltzmann * self.temperature)
+        nt0 = self.pressure / (constants.boltzmann * self.T)
         for elm in self.elements:
             elm.totalnumber = sum(nt0 * c * sp.x0
                                   for c, sp in zip(elm.stoichiometriccoeffts,
@@ -514,7 +514,7 @@ class Mixture:
             sp.numberofparticles = self.ni[j]
 
     def write_numberdensity(self):
-        volume = (self.ni.sum() * constants.boltzmann * self.temperature 
+        volume = (self.ni.sum() * constants.boltzmann * self.T 
                   / self.pressure)
         for j, sp in enumerate(self.species):
             sp.numberdensity = self.ni[j] / volume
@@ -522,7 +522,7 @@ class Mixture:
     def recalc_e0i(self):
         # deltaionisationenergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
-        kbt = constants.boltzmann * self.temperature
+        kbt = constants.boltzmann * self.T
         ndi = self.ni / (self.ni.sum() * kbt / self.pressure)
         weightedchargesumsqd = 0
         weightedchargesum = 0
@@ -547,19 +547,19 @@ class Mixture:
 
     def recalc_gfearrays(self):
         ni = self.ni
-        t = self.temperature
+        T = self.T
         p = self.pressure
 
         nisum = ni.sum()
-        v = nisum * constants.boltzmann * t / p
-        offdiagonal = -constants.boltzmann * t / nisum
+        v = nisum * constants.boltzmann * T / p
+        offdiagonal = -constants.boltzmann * T / nisum
         nspecies = len(self.species)
 
-        ondiagonal = constants.boltzmann * t / ni
+        ondiagonal = constants.boltzmann * T / ni
         self.gfematrix[:nspecies, :nspecies] = offdiagonal + np.diag(ondiagonal)
-        total = [sp.partitionfunction_total(v, t) for sp in self.species]
+        total = [sp.partitionfunction_total(v, T) for sp in self.species]
         e0 = [sp.e0 for sp in self.species]
-        mu = -constants.boltzmann * t * np.log(total / ni) + e0
+        mu = -constants.boltzmann * T * np.log(total / ni) + e0
         self.gfevector[:nspecies] = -mu
 
 
@@ -619,28 +619,28 @@ class Mixture:
         return sum(sp.numberdensity * sp.molarmass / constants.avogadro
                    for sp in self.species)
 
-    def calculate_heat_capacity(self, init_ni=1e20, rel_delta_t=0.001):
+    def calculate_heat_capacity(self, init_ni=1e20, rel_delta_T=0.001):
         """Calculate the heat capacity at constant pressure of the plasma in
         J/kg.K based on current conditions and species composition. Note that
         this is done by performing two full composition simulations when this
         function is called - can be time-consuming.
         """
 
-        t = self.temperature
+        T = self.T
 
         self.initialise_ni([init_ni for i in range(len(self.species))])
-        self.temperature = (1 - rel_delta_t) * t
+        self.T = (1 - rel_delta_T) * T
         self.solve_gfe()
         enthalpylow = self.calculate_enthalpy()
 
         self.initialise_ni([init_ni for i in range(len(self.species))])
-        self.temperature = (1 + rel_delta_t) * t
+        self.T = (1 + rel_delta_T) * T
         self.solve_gfe()
         enthalpyhigh = self.calculate_enthalpy()
 
-        self.temperature = t
+        self.T = T
 
-        return (enthalpyhigh - enthalpylow) / (2. * rel_delta_t * t)
+        return (enthalpyhigh - enthalpylow) / (2. * rel_delta_T * T)
 
     def calculate_enthalpy(self):
         """Calculate the enthalpy of the plasma in J/kg based on current
@@ -650,10 +650,10 @@ class Mixture:
         species present.
         """
 
-        t = self.temperature
+        T = self.T
         weightedenthalpy = sum(constants.avogadro * sp.numberofparticles 
-                               * (sp.internal_energy(t) + sp.e0 
-                                  + constants.boltzmann * t) 
+                               * (sp.internal_energy(T) + sp.e0 
+                                  + constants.boltzmann * T) 
                                for sp in self.species)
         weightedmolmass = sum(sp.numberofparticles * sp.molarmass
                               for sp in self.species)
