@@ -137,8 +137,8 @@ def build_diatomic_species_json(name, stoichiometry, molarmass, chargenumber,
                                 ionisationenergy, dissociationenergy, sigma_s,
                                 g0, w_e, b_e, sources=None):
     '''Function to take text data retrieved from NIST websites or other sources
-    and build a data dictionary file for a diatomic plasma species, with specified
-    ground state degeneracy and rotational & vibrational parameters.
+    and build a data dictionary file for a diatomic plasma species, with 
+    specified ground state degeneracy and rotational & vibrational parameters.
 
     Parameters
     ----------
@@ -301,7 +301,8 @@ class Species(BaseSpecies):
 
         if self.chargenumber < 0:
             # TODO is this the right exception to raise?
-            raise ValueError('Error! Negatively charged ions not implemented yet.')
+            raise ValueError('Error! Negatively charged ions not ' + 
+                             'implemented yet.')
 
 
 class MonatomicSpecies(Species):
@@ -595,7 +596,8 @@ class Mixture:
             governoriters += 1
 
         if not successyn:
-            warnings.warn('Minimiser could not find a converged solution, results may be inaccurate.')
+            warnings.warn('Minimiser could not find a converged solution, ' + 
+                          'results may be inaccurate.')
 
         # noinspection PyUnboundLocalVariable
         logging.debug(governoriters, relaxfactor, reltol)
