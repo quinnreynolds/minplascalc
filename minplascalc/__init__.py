@@ -619,21 +619,21 @@ class Mixture:
         function is called - can be time-consuming.
         """
 
-        T = self.temperature
+        t = self.temperature
 
         self.initialise_ni([init_ni for i in range(len(self.species))])
-        self.temperature = (1 - rel_delta_t) * T
+        self.temperature = (1 - rel_delta_t) * t
         self.solve_gfe()
         enthalpy_low = self.calculate_enthalpy()
 
         self.initialise_ni([init_ni for i in range(len(self.species))])
-        self.temperature = (1 + rel_delta_t) * T
+        self.temperature = (1 + rel_delta_t) * t
         self.solve_gfe()
         enthalpy_high = self.calculate_enthalpy()
 
-        self.temperature = T
+        self.temperature = t
 
-        return (enthalpy_high - enthalpy_low) / (2. * rel_delta_t * T)
+        return (enthalpy_high - enthalpy_low) / (2. * rel_delta_t * t)
 
     def calculate_enthalpy(self):
         """Calculate the enthalpy of the plasma in J/kg based on current
