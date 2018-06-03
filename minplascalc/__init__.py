@@ -468,7 +468,7 @@ class Mixture:
                 for sp2 in self.species:
                     if (sp2.stoichiometry == sp.stoichiometry 
                         and sp2.chargenumber == sp.chargenumber-1):
-                        sp.ionisedFrom = sp2
+                        sp.ionisedfrom = sp2
 
         # Set stoichiometry and charge coefficient arrays for mass action and
         # electroneutrality constraints
@@ -531,20 +531,19 @@ class Mixture:
                 weightedchargesum += ndi[j] * sp.chargenumber
                 weightedchargesumsqd += ndi[j] * sp.chargenumber ** 2
         zstar = weightedchargesumsqd / weightedchargesum
-        debyed3 = (kbt / (4. * np.pi * (zstar+1) * ndi[-1] 
+        debyed3 = (kbt / (4. * np.pi * (zstar + 1) * ndi[-1] 
                           * constants.fundamentalcharge ** 2)) ** (3/2)
         for j, sp in enumerate(self.species):
             if sp.name != 'e':
-                ai3 = 3 * (sp.chargenumber+1) / (4 * np.pi * ndi[-1])
-                de = kbt * ((ai3/debyed3+1) ** (2/3) - 1) / (2. * (zstar + 1))
+                ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * ndi[-1])
+                de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2. * (zstar + 1))
                 self.deltaionisationenergy = de
         
         for cn in range(1, self.maxchargenumber + 1):
             for sp in self.species:
                 if sp.chargenumber == cn:
-                    sp.e0 = (sp.ionisedFrom.e0
-                             + sp.ionisedFrom.ionisationenergy
-                             - sp.ionisedFrom.deltaionisationenergy)
+                    sp.e0 = (sp.ionisedfrom.e0 + sp.ionisedfrom.ionisationenergy
+                             - sp.ionisedfrom.deltaionisationenergy)
 
     def recalc_gfearrays(self):
         ni = self.ni
