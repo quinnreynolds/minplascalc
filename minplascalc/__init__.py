@@ -420,7 +420,8 @@ class Element:
         '''
 
         self.name = name
-        self.stoichiometriccoeffts = [] if stoichiometriccoeffts is None else stoichiometriccoeffts
+        self.stoichiometriccoeffts = ([] if stoichiometriccoeffts is None 
+                                      else stoichiometriccoeffts)
         self.totalnumber = totalnumber
 
 
@@ -465,7 +466,8 @@ class Mixture:
         for sp in self.species:
             if sp.chargenumber > 0:
                 for sp2 in self.species:
-                    if sp2.stoichiometry == sp.stoichiometry and sp2.chargenumber == sp.chargenumber - 1:
+                    if (sp2.stoichiometry == sp.stoichiometry 
+                        and sp2.chargenumber == sp.chargenumber-1):
                         sp.ionisedFrom = sp2
 
         # Set stoichiometry and charge coefficient arrays for mass action and
@@ -512,36 +514,31 @@ class Mixture:
             sp.numberofparticles = self.ni[j]
 
     def write_numberdensity(self):
-        volume = self.ni.sum() * constants.boltzmann * self.temperature / self.pressure
+        volume = (self.ni.sum() * constants.boltzmann * self.temperature 
+                  / self.pressure)
         for j, sp in enumerate(self.species):
             sp.numberdensity = self.ni[j] / volume
 
     def recalc_e0i(self):
         # deltaionisationenergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
-        ni = self.ni
-        t = self.temperature
-        p = self.pressure
-
-        v = ni.sum() * constants.boltzmann * t / p
+        kbt = constants.boltzmann * self.temperature
+        ndi = self.ni / (self.ni.sum() * kbt / self.pressure)
         weightedchargesumsqd = 0
         weightedchargesum = 0
         for j, sp in enumerate(self.species):
             if sp.chargenumber > 0:
-                weightedchargesum += (ni[j] / v) * sp.chargenumber
-                weightedchargesumsqd += (ni[j] / v) * sp.chargenumber ** 2
-        z_star = weightedchargesumsqd / weightedchargesum
-        debye_d = np.sqrt(constants.boltzmann * t
-                         / (4. * np.pi * (z_star + 1.) * (ni[-1] / v)
-                            * constants.fundamentalcharge ** 2))
+                weightedchargesum += ndi[j] * sp.chargenumber
+                weightedchargesumsqd += ndi[j] * sp.chargenumber ** 2
+        zstar = weightedchargesumsqd / weightedchargesum
+        debyed3 = (kbt / (4. * np.pi * (zstar+1) * ndi[-1] 
+                          * constants.fundamentalcharge ** 2)) ** (3/2)
         for j, sp in enumerate(self.species):
             if sp.name != 'e':
-                ai = (3. * (sp.chargenumber + 1.)
-                      / (4. * np.pi * (ni[-1] / v))) ** (1 / 3)
-                sp.deltaionisationenergy = (constants.boltzmann * t * 
-                                            (((ai / debye_d) ** 3 + 1) ** (2 / 3)
-                                             - 1) / (2. * (z_star + 1)))
-
+                ai3 = 3 * (sp.chargenumber+1) / (4 * np.pi * ndi[-1])
+                de = kbt * ((ai3/debyed3+1) ** (2/3) - 1) / (2. * (zstar + 1))
+                self.deltaionisationenergy = de
+        
         for cn in range(1, self.maxchargenumber + 1):
             for sp in self.species:
                 if sp.chargenumber == cn:
