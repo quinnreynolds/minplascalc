@@ -643,12 +643,12 @@ class Mixture:
         species present.
         """
 
-        T = self.temperature
-        weighted_enthalpy = sum(constants.avogadro * sp.numberofparticles * (sp.internal_energy(T) + sp.e0 + constants.boltzmann * T)
-                                for sp in self.species)
-        weighted_molmass = sum(sp.numberofparticles * sp.molarmass
+        t = self.temperature
+        weightedenthalpy = sum(constants.avogadro * sp.numberofparticles * (sp.internal_energy(t) + sp.e0 + constants.boltzmann * t)
                                for sp in self.species)
-        return weighted_enthalpy / weighted_molmass
+        weightedmolmass = sum(sp.numberofparticles * sp.molarmass
+                              for sp in self.species)
+        return weightedenthalpy / weightedmolmass
 
     def calculateViscosity(self):
         """Calculate the viscosity of the plasma in Pa.s based on current
