@@ -258,18 +258,18 @@ def species_from_name(name, numberofparticles=0, x0=0):
 
 
 class BaseSpecies:
-    def partitionfunction_total(self, V, T):
-        return (V * self.partitionfunction_translational(T)
-                * self.partitionfunction_internal(T))
+    def partitionfunction_total(self, volume, temperature):
+        return (volume * self.partitionfunction_translational(temperature)
+                * self.partitionfunction_internal(temperature))
 
-    def partitionfunction_translational(self, T):
-        return ((2 * np.pi * self.molarmass * constants.boltzmann * T)
+    def partitionfunction_translational(self, temperature):
+        return ((2 * np.pi * self.molarmass * constants.boltzmann * temperature)
                 / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
-    def partitionfunction_internal(self, T):
+    def partitionfunction_internal(self, temperature):
         raise NotImplementedError
 
-    def internal_energy(self, T):
+    def internal_energy(self, temperature):
         raise NotImplementedError
 
 
@@ -300,67 +300,76 @@ class Species(BaseSpecies):
         self.chargenumber = jsondata['chargeNumber']
 
         if self.chargenumber < 0:
-            # TODO is this the right exception to raise?
-            raise ValueError('Error! Negatively charged ions not ' + 
-                             'implemented yet.')
+            raise ValueError('Error! Negatively charged ions not implemented'
+                             + ' yet.')
 
 
 class MonatomicSpecies(Species):
     def __init__(self, jsondata, numberofparticles=0, x0=0):
         super().__init__(jsondata, numberofparticles, x0)
-
-        self.ionisationenergy = constants.invcm_to_joule * jsondata['monatomicData']['ionisationEnergy']
+        
+        jdm = jsondata['monatomicData']
+        self.ionisationenergy = (constants.invcm_to_joule
+                                 * jdm['ionisationEnergy'])
         self.deltaionisationenergy = 0.
         self.energylevels = []
-        for energylevel in jsondata['monatomicData']['energyLevels']:
-            self.energylevels.append([2. * energylevel['J'] + 1.,
-                                      constants.invcm_to_joule * energylevel['Ei']])
+        for energylevel in jdm['energyLevels']:
+            self.energylevels.append([2. * energylevel['J'] + 1., 
+                                      constants.invcm_to_joule 
+                                      * energylevel['Ei']])
         self.e0 = 0
 
     def partitionfunction_internal(self, temperature):
-        partitionval = 0.
+        kbt = constants.boltzmann * temperature
+        partitionval = 0.        
         for twojplusone, eij in self.energylevels:
             if eij < (self.ionisationenergy - self.deltaionisationenergy):
-                partitionval += twojplusone * np.exp(-eij / (constants.boltzmann * temperature))
+                partitionval += twojplusone * np.exp(-eij / kbt)
         return partitionval
 
     def internal_energy(self, temperature):
-        translational_energy = 1.5 * constants.boltzmann * temperature
-        electronic_energy = 0.
+        kbt = constants.boltzmann * temperature
+        translationalenergy = 1.5 * kbt
+        electronicenergy = 0.
         for twojplusone, eij in self.energylevels:
             if eij < (self.ionisationenergy - self.deltaionisationenergy):
-                electronic_energy += twojplusone * eij * np.exp(-eij / (constants.boltzmann * temperature))
-        electronic_energy /= self.partitionfunction_internal(temperature)
-        return translational_energy + electronic_energy
+                electronicenergy += twojplusone * eij * np.exp(-eij / kbt)
+        electronicenergy /= self.partitionfunction_internal(temperature)
+        return translationalenergy + electronicenergy
 
 
 class DiatomicSpecies(Species):
     def __init__(self, jsondata, numberofparticles=0, x0=0):
         super().__init__(jsondata, numberofparticles, x0)
 
-        self.dissociationenergy = constants.invcm_to_joule * jsondata['diatomicData'][
-            'dissociationEnergy']
-        self.ionisationenergy = constants.invcm_to_joule * jsondata['diatomicData'][
-            'ionisationEnergy']
+        jdd = jsondata['diatomicData']
+        self.dissociationenergy = (constants.invcm_to_joule 
+                                   * jdd['dissociationEnergy'])
+        self.ionisationenergy = (constants.invcm_to_joule 
+                                 * jdd['ionisationEnergy'])
         self.deltaionisationenergy = 0.
-        self.sigma_s = jsondata['diatomicData']['sigmaS']
-        self.g0 = jsondata['diatomicData']['g0']
-        self.w_e = constants.invcm_to_joule * jsondata['diatomicData']['we']
-        self.b_e = constants.invcm_to_joule * jsondata['diatomicData']['Be']
+        self.sigma_s = jdd['sigmaS']
+        self.g0 = jdd['g0']
+        self.w_e = constants.invcm_to_joule * jdd['we']
+        self.b_e = constants.invcm_to_joule * jdd['Be']
         self.e0 = -self.dissociationenergy
 
     def partitionfunction_internal(self, temperature):
+        kbt = constants.boltzmann * temperature
         electronicpartition = self.g0
-        vibrationalpartition = 1. / (1. - np.exp(-self.w_e / (constants.boltzmann * temperature)))
-        rotationalpartition = constants.boltzmann * temperature / (self.sigma_s * self.b_e)
+        vibrationalpartition = 1. / (1. - np.exp(-self.w_e / kbt))
+        rotationalpartition = kbt / (self.sigma_s * self.b_e)
         return electronicpartition * vibrationalpartition * rotationalpartition
 
     def internal_energy(self, temperature):
-        translational_energy = 1.5 * constants.boltzmann * temperature
-        electronic_energy = 0.
-        rotational_energy = constants.boltzmann * temperature
-        vibrational_energy = self.w_e * np.exp(-self.w_e / (constants.boltzmann * temperature)) / (1. - np.exp(-self.w_e / (constants.boltzmann * temperature)))
-        return translational_energy + electronic_energy + rotational_energy + vibrational_energy
+        kbt = constants.boltzmann * temperature
+        translationalenergy = 1.5 * kbt
+        electronicenergy = 0.
+        rotationalenergy = kbt
+        vibrationalenergy = self.w_e * (np.exp(-self.w_e / kbt)
+                                        / (1. - np.exp(-self.w_e / kbt)))
+        return (translationalenergy + electronicenergy + rotationalenergy 
+                + vibrationalenergy)
 
 
 class ElectronSpecies(BaseSpecies):
@@ -387,9 +396,9 @@ class ElectronSpecies(BaseSpecies):
         return 2.
 
     def internal_energy(self, temperature):
-        translational_energy = 1.5 * constants.boltzmann * temperature
-        electronic_energy = 0.
-        return translational_energy + electronic_energy
+        translationalenergy = 1.5 * constants.boltzmann * temperature
+        electronicenergy = 0.
+        return translationalenergy + electronicenergy
 
 
 class Element:
