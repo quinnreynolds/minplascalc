@@ -564,7 +564,7 @@ class Mixture:
         success_yn = False
         governoriters = 0
         while not success_yn and governoriters < len(governorfactors):
-            successYN = True
+            success_yn = True
             governorfactor = governorfactors[governoriters]
             reltol = relativetolerance * 10.
             minimiseriters = 0
@@ -575,13 +575,13 @@ class Mixture:
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
                 new_ni = solution[0:len(self.species)]
-                delta_ni = abs(newni - self.ni)
+                delta_ni = abs(new_ni - self.ni)
                 max_allowed_delta_ni = governorfactor * self.ni
 
                 max_ni_index = new_ni.argmax()
                 reltol = delta_ni[max_ni_index] / solution[max_ni_index]
 
-                delta_ni = deltani.clip(min=max_allowed_delta_ni)
+                delta_ni = delta_ni.clip(min=max_allowed_delta_ni)
                 new_relax_factors = max_allowed_delta_ni / delta_ni
                 relax_factor = new_relax_factors.min()
 
