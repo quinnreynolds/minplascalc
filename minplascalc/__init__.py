@@ -650,28 +650,28 @@ class Mixture:
                               for sp in self.species)
         return weightedenthalpy / weightedmolmass
 
-    def calculateViscosity(self):
+    def calculate_viscosity(self):
         """Calculate the viscosity of the plasma in Pa.s based on current
         conditions and species composition.
         """
 
         raise NotImplementedError
 
-    def calculateThermalConductivity(self):
+    def calculate_thermal_conductivity(self):
         """Calculate the thermal conductivity of the plasma in W/m.K based on
         current conditions and species composition.
         """
 
         raise NotImplementedError
 
-    def calculateElectricalConductivity(self):
+    def calculate_electrical_conductivity(self):
         """Calculate the electrical conductivity of the plasma in 1/ohm.m based
         on current conditions and species composition.
         """
 
         raise NotImplementedError
 
-    def calculateTotalEmissionCoefficient(self):
+    def calculate_total_emission_coefficient(self):
         """Calculate the total radiation emission coefficient of the plasma in
         W/m3 based on current conditions and species composition.
         """
