@@ -301,7 +301,7 @@ class Species(BaseSpecies):
 
         if self.chargenumber < 0:
             raise ValueError('Error! Negatively charged ions not implemented'
-                             + ' yet.')
+                             ' yet.')
 
 
 class MonatomicSpecies(Species):
@@ -600,7 +600,7 @@ class Mixture:
             governoriters += 1
 
         if not successyn:
-            warnings.warn('Minimiser could not find a converged solution, ' + 
+            warnings.warn('Minimiser could not find a converged solution, '
                           'results may be inaccurate.')
 
         # noinspection PyUnboundLocalVariable
