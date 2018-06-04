@@ -11,32 +11,32 @@ sourcefields = ('title', 'author', 'publicationInfo', 'http', 'doi')
 DEFSOURCE = collections.OrderedDict([(field, 'test') for field in sourcefields])
 
 
-def test_buildMonatomicSpeciesJSON():
+def test_build_monatomic_species_json():
     # Demo of how to build a JSON data file for a monatomic species
     speciesfile = mpc.DATAPATH / "species_raw" / "nist_C+"
     energylevels = mpc.read_energylevels(speciesfile.open())
-    result = mpc.buildMonatomicSpeciesJSON(
+    result = mpc.build_monatomic_species_json(
         name="C+",
         stoichiometry={"C": 1},
-        molarMass=0.0120107,
-        chargeNumber=1,
-        ionisationEnergy=90820.45,
+        molarmass=0.0120107,
+        chargenumber=1,
+        ionisationenergy=90820.45,
         energylevels=energylevels)
 
     assert len(result["monatomicData"]["energyLevels"]) == 85
 
 
-def test_buildMonatomicSpeciesJSON_sourced():
+def test_build_monatomic_species_json_sourced():
     # Demo of how to build a JSON data file for a monatomic species
     speciesfile = mpc.DATAPATH / "species_raw" / "nist_C+"
     energylevels = mpc.read_energylevels(speciesfile.open())
 
-    result = mpc.buildMonatomicSpeciesJSON(
+    result = mpc.build_monatomic_species_json(
         name="C+",
         stoichiometry={"C": 1},
-        molarMass=0.0120107,
-        chargeNumber=1,
-        ionisationEnergy=90820.45,
+        molarmass=0.0120107,
+        chargenumber=1,
+        ionisationenergy=90820.45,
         energylevels=energylevels,
         sources=[DEFSOURCE])
 
@@ -44,32 +44,32 @@ def test_buildMonatomicSpeciesJSON_sourced():
     assert result["sources"] is not None
 
 
-def test_buildDiatomicSpeciesJSON():
+def test_build_diatomic_species_json():
     # Demo of how to build a JSON data file for a diatomic species
-    result = mpc.buildDiatomicSpeciesJSON(
+    result = mpc.build_diatomic_species_json(
         name="CO",
         stoichiometry={"C": 1, "O": 1},
-        molarMass=0.0280101,
-        chargeNumber=0,
-        ionisationEnergy=113030.54,
-        dissociationEnergy=89862.00,
-        sigmaS=1,
+        molarmass=0.0280101,
+        chargenumber=0,
+        ionisationenergy=113030.54,
+        dissociationenergy=89862.00,
+        sigma_s=1,
         g0=1,
-        we=2169.81358,
-        Be=1.93128087)
+        w_e=2169.81358,
+        b_e=1.93128087)
 
 
-def test_buildDiatomicSpeciesJSON_sourced():
+def test_build_diatomic_species_json_sourced():
     # Demo of how to build a JSON data file for a diatomic species
-    result = mpc.buildDiatomicSpeciesJSON(
+    result = mpc.build_diatomic_species_json(
         name="CO",
         stoichiometry={"C": 1, "O": 1},
-        molarMass=0.0280101,
-        chargeNumber=0,
-        ionisationEnergy=113030.54,
-        dissociationEnergy=89862.00,
-        sigmaS=1,
+        molarmass=0.0280101,
+        chargenumber=0,
+        ionisationenergy=113030.54,
+        dissociationenergy=89862.00,
+        sigma_s=1,
         g0=1,
-        we=2169.81358,
-        Be=1.93128087,
+        w_e=2169.81358,
+        b_e=1.93128087,
         sources=[DEFSOURCE])
