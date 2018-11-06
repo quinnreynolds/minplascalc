@@ -3,8 +3,8 @@ python:
   - "3.5"
   - "3.6"
 install:
-  - python setup.py install
+  - pip install -e .[dev,test]
 script:
-  - pytest
+  - pytest --verbose --durations=5
 #after_success:
 #  - coveralls
