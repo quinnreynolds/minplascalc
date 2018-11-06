@@ -9,3 +9,4 @@ dist
 minplascalc.egg-info
 .ipynb_checkpoints/
 .pytest_cache/
+_build
