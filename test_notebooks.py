@@ -51,7 +51,7 @@ def test_run_notebook(notebook):
     caught by pytest
 
     """
-    with open(notebook) as f:
+    with notebook.open() as f:
         nb = nbformat.read(f, as_version=4)
     ep = ExecutePreprocessor(timeout=600)
     ep.preprocess(nb, {'metadata': {'path': notebook.parent}})
