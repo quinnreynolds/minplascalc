@@ -68,7 +68,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dev': ['matplotlib'],
-        'test': ['coverage', 'pytest', 'nbformat', 'nbconvert'],
+        'test': ['coverage', 'pytest', 'jupyter'],
     },
 
     # If there are data files included in your packages that need to be
