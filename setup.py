@@ -23,11 +23,11 @@ setup(
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://bitbucket.org/kittychunk/minplascalc',
+    url='https://github.com/kittychunk/minplascalc',
 
     # Author details
     author='Quinn Reynolds',
-    author_email='pypa-dev@googlegroups.com',
+    author_email='quinnr@mintek.co.za',
 
     # Choose your license
     license='GPLv3',
@@ -68,7 +68,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dev': ['matplotlib'],
-        'test': ['coverage', 'pytest'],
+        'test': ['coverage', 'pytest', 'jupyter'],
     },
 
     # If there are data files included in your packages that need to be

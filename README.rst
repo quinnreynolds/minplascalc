@@ -1,10 +1,17 @@
 README
 ======
 
+.. image:: https://travis-ci.org/kittychunk/minplascalc.svg?branch=develop
+    :target: https://travis-ci.org/kittychunk/minplascalc
+
+.. image:: https://readthedocs.org/projects/minplascalc/badge/?version=latest
+    :target: https://minplascalc.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
 A simple set of tools for doing calculations of thermal plasma
 compositions relevant to metallurgical problems using Python 3.
 
-*Quinn Reynolds, MINTEK Pyrometallurgy Division, July 2017*
+*Quinn Reynolds, MINTEK Pyrometallurgy Division, November 2018*
 
 What is this repository for?
 ----------------------------

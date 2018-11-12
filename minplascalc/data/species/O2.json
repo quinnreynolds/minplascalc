@@ -16,12 +16,6 @@
     "energyUnit": "1/cm",
     "molarMassUnit": "kg/mol",
     "sources": [
-        {
-            "title": "NIST Chemistry WebBook, NIST Standard Reference Database Number 69",
-            "author": "PJ Linstrom and WG Mallard (Editors)",
-            "publicationInfo": "National Institute of Standards and Technology, Gaithersburg MD., 20899",
-            "http": "http://webbook.nist.gov/chemistry/",
-            "doi": "10.18434/T4D303"
-        }
+        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"    
     ]
 }
