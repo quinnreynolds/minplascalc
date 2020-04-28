@@ -6,7 +6,7 @@
 
 import json
 import numpy as np
-import collections
+#import collections
 import logging
 import warnings
 import pathlib
@@ -116,12 +116,12 @@ def build_monatomic_species_json(name, stoichiometry, molarmass, chargenumber,
                    National Institute of Standards and Technology, Gaithersburg 
                    MD., http://physics.nist.gov/asd"""]
 
-    speciesdict = collections.OrderedDict([
+    speciesdict = dict([
         ('name', name),
         ('stoichiometry', stoichiometry),
         ('molarMass', molarmass),
         ('chargeNumber', chargenumber),
-        ('monatomicData', collections.OrderedDict([
+        ('monatomicData', dict([
             ('ionisationEnergy', ionisationenergy),
             ('energyLevels', energylevels),
         ])),
@@ -175,12 +175,12 @@ def build_diatomic_species_json(name, stoichiometry, molarmass, chargenumber,
                    Institute of Standards and Technology, Gaithersburg MD., 
                    http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"""]
 
-    speciesdict = collections.OrderedDict([
+    speciesdict = dict([
         ('name', name),
         ('stoichiometry', stoichiometry),
         ('molarMass', molarmass),
         ('chargeNumber', chargenumber),
-        ('diatomicData', collections.OrderedDict([
+        ('diatomicData', dict([
             ('ionisationEnergy', ionisationenergy),
             ('dissociationEnergy', dissociationenergy),
             ('sigmaS', sigma_s),
