@@ -290,7 +290,7 @@ class Species(BaseSpecies):
         """
 
         self.numberofparticles = numberofparticles
-        self.numberdensity = 0.
+        self.numberdensity = 0
         self.x0 = x0
 
         # General species data
@@ -311,17 +311,17 @@ class MonatomicSpecies(Species):
         jdm = jsondata['monatomicData']
         self.ionisationenergy = (constants.invcm_to_joule
                                  * jdm['ionisationEnergy'])
-        self.deltaionisationenergy = 0.
+        self.deltaionisationenergy = 0
         self.energylevels = []
         for energylevel in jdm['energyLevels']:
-            self.energylevels.append([2. * energylevel['J'] + 1., 
+            self.energylevels.append([2 * energylevel['J'] + 1, 
                                       constants.invcm_to_joule 
                                       * energylevel['Ei']])
         self.e0 = 0
 
     def partitionfunction_internal(self, T):
         kbt = constants.boltzmann * T
-        partitionval = 0.        
+        partitionval = 0       
         for twojplusone, eij in self.energylevels:
             if eij < (self.ionisationenergy - self.deltaionisationenergy):
                 partitionval += twojplusone * np.exp(-eij / kbt)
@@ -330,7 +330,7 @@ class MonatomicSpecies(Species):
     def internal_energy(self, T):
         kbt = constants.boltzmann * T
         translationalenergy = 1.5 * kbt
-        electronicenergy = 0.
+        electronicenergy = 0
         for twojplusone, eij in self.energylevels:
             if eij < (self.ionisationenergy - self.deltaionisationenergy):
                 electronicenergy += twojplusone * eij * np.exp(-eij / kbt)
@@ -347,7 +347,7 @@ class DiatomicSpecies(Species):
                                    * jdd['dissociationEnergy'])
         self.ionisationenergy = (constants.invcm_to_joule 
                                  * jdd['ionisationEnergy'])
-        self.deltaionisationenergy = 0.
+        self.deltaionisationenergy = 0
         self.sigma_s = jdd['sigmaS']
         self.g0 = jdd['g0']
         self.w_e = constants.invcm_to_joule * jdd['we']
@@ -364,7 +364,7 @@ class DiatomicSpecies(Species):
     def internal_energy(self, T):
         kbt = constants.boltzmann * T
         translationalenergy = 1.5 * kbt
-        electronicenergy = 0.
+        electronicenergy = 0
         rotationalenergy = kbt
         vibrationalenergy = self.w_e * (np.exp(-self.w_e / kbt)
                                         / (1. - np.exp(-self.w_e / kbt)))
@@ -387,7 +387,7 @@ class ElectronSpecies(BaseSpecies):
         self.molarmass = constants.electronmass * constants.avogadro
         self.chargenumber = -1
         self.numberofparticles = numberofparticles
-        self.numberdensity = 0.
+        self.numberdensity = 0
         self.e0 = 0
         self.x0 = 0
 
@@ -397,7 +397,7 @@ class ElectronSpecies(BaseSpecies):
 
     def internal_energy(self, T):
         translationalenergy = 1.5 * constants.boltzmann * T
-        electronicenergy = 0.
+        electronicenergy = 0
         return translationalenergy + electronicenergy
 
 
@@ -426,7 +426,7 @@ class Element:
 
 
 class Mixture:
-    def __init__(self, mixture_file, T=10000., P=101325):
+    def __init__(self, mixture_file, T=10000, P=101325):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -473,7 +473,7 @@ class Mixture:
         # Set stoichiometry and charge coefficient arrays for mass action and
         # electroneutrality constraints
         for elm in self.elements:
-            elm.stoichiometriccoeffts = [sp.stoichiometry.get(elm.name, 0.)
+            elm.stoichiometriccoeffts = [sp.stoichiometry.get(elm.name, 0)
                                          for sp in self.species]
 
         self.chargecoeffts = [sp.chargenumber for sp in self.species]
@@ -530,12 +530,12 @@ class Mixture:
                 weightedchargesum += ndi[j] * sp.chargenumber
                 weightedchargesumsqd += ndi[j] * sp.chargenumber ** 2
         zstar = weightedchargesumsqd / weightedchargesum
-        debyed3 = (kbt / (4. * np.pi * (zstar + 1) * ndi[-1] 
+        debyed3 = (kbt / (4 * np.pi * (zstar + 1) * ndi[-1] 
                           * constants.fundamentalcharge ** 2)) ** (3/2)
         for j, sp in enumerate(self.species):
             if sp.name != 'e':
                 ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * ndi[-1])
-                de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2. * (zstar + 1))
+                de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
                 self.deltaionisationenergy = de
         
         for cn in range(1, self.maxchargenumber + 1):
@@ -571,7 +571,7 @@ class Mixture:
         while not successyn and governoriters < len(governorfactors):
             successyn = True
             governorfactor = governorfactors[governoriters]
-            reltol = relativetolerance * 10.
+            reltol = relativetolerance * 10
             minimiseriters = 0
             while reltol > relativetolerance:
                 self.recalc_e0i()
@@ -590,7 +590,7 @@ class Mixture:
                 newrelaxfactors = maxalloweddeltani / deltani
                 relaxfactor = newrelaxfactors.min()
 
-                self.ni = (1. - relaxfactor) * self.ni + relaxfactor * newni
+                self.ni = (1 - relaxfactor) * self.ni + relaxfactor * newni
 
                 minimiseriters += 1
                 if minimiseriters > maxiters:
@@ -639,7 +639,7 @@ class Mixture:
 
         self.T = T
 
-        return (enthalpyhigh - enthalpylow) / (2. * rel_delta_T * T)
+        return (enthalpyhigh - enthalpylow) / (2 * rel_delta_T * T)
 
     def calculate_enthalpy(self):
         """Calculate the enthalpy of the plasma in J/kg based on current
