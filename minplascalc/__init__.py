@@ -350,30 +350,6 @@ class ElectronSpecies(BaseSpecies):
         return translationalenergy + electronicenergy
 
 
-class Element:
-    def __init__(self, name='', stoichiometriccoeffts=None, totalnumber=0.):
-        """Class acting as struct to hold some information about different
-        elements in the plasma.
-
-        Parameters
-        ----------
-        name : string
-            Name of element, eg 'O' (default empty string)
-        stoichiometriccoeffts : array_like
-            List of number of atoms of this element present in each species, in
-            same order as Mixture.species (default empty list)
-        totalnumber : float
-            Total number of atoms of this element present in the simulation
-            (conserved), calculated from initial conditions during instantiation
-            of Mixture (default 0)
-        """
-
-        self.name = name
-        self.stoichiometriccoeffts = ([] if stoichiometriccoeffts is None 
-                                      else stoichiometriccoeffts)
-        self.totalnumber = totalnumber
-
-
 class Mixture:
     def __init__(self, mixture_file, T=10000, P=101325):
         """Class representing a thermal plasma specification with multiple
@@ -406,9 +382,9 @@ class Mixture:
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs
-        elementset = sorted(set(s for sp in self.species
-                                for s in sp.stoichiometry))
-        self.elements = tuple(Element(name=element) for element in elementset)
+        elements = [{'name': nm, 'stoichometriccoeffts': None, 'totalnumber': 0}
+                    for nm in sorted(set(s for sp in self.species
+                                         for s in sp.stoichiometry))]
 
         self.maxchargenumber = max(sp.chargenumber for sp in self.species)
         # Set species which each +ve charged ion originates from
@@ -421,28 +397,29 @@ class Mixture:
 
         # Set stoichiometry and charge coefficient arrays for mass action and
         # electroneutrality constraints
-        for elm in self.elements:
-            elm.stoichiometriccoeffts = [sp.stoichiometry.get(elm.name, 0)
-                                         for sp in self.species]
+        for elm in elements:
+            elm['stoichiometriccoeffts'] = [sp.stoichiometry.get(elm['name'], 0)
+                                            for sp in self.species]
 
         self.chargecoeffts = [sp.chargenumber for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
         nt0 = self.P / (constants.boltzmann * self.T)
-        for elm in self.elements:
-            elm.totalnumber = sum(nt0 * c * sp.x0
-                                  for c, sp in zip(elm.stoichiometriccoeffts,
-                                                   self.species))
+        for elm in elements:
+            elm['totalnumber'] = sum(nt0 * c * sp.x0
+                                     for c, sp in zip(
+                                             elm['stoichiometriccoeffts'],
+                                             self.species))
 
         # Set up A matrix, b and ni vectors for GFE minimiser
-        minimiser_dof = len(self.species) + len(self.elements) + 1
+        minimiser_dof = len(self.species) + len(elements) + 1
         self.gfematrix = np.zeros((minimiser_dof, minimiser_dof))
         self.gfevector = np.zeros(minimiser_dof)
         self.ni = np.zeros(len(self.species))
 
-        for i, elm in enumerate(self.elements):
-            self.gfevector[len(self.species) + i] = elm.totalnumber
-            for j, sc in enumerate(elm.stoichiometriccoeffts):
+        for i, elm in enumerate(elements):
+            self.gfevector[len(self.species) + i] = elm['totalnumber']
+            for j, sc in enumerate(elm['stoichiometriccoeffts']):
                 self.gfematrix[len(self.species) + i, j] = sc
                 self.gfematrix[j, len(self.species) + i] = sc
         for j, qc in enumerate(self.chargecoeffts):
