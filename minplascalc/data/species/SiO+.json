@@ -1,22 +1,24 @@
 {
     "name": "SiO+",
     "stoichiometry": {
-        "O": 1,
-        "Si": 1
+        "Si": 1,
+        "O": 1
     },
-    "molarMass": 0.044084899999999996,
-    "chargeNumber": 1,
-    "diatomicData": {
-        "ionisationEnergy": -1,
-        "dissociationEnergy": -1,
-        "sigmaS": 1,
-        "g0": 2,
-        "we": 1241.55,
-        "Be": 0.7178
-    },
-    "energyUnit": "1/cm",
-    "molarMassUnit": "kg/mol",
+    "molarmass": 0.0440849,
+    "chargenumber": 1,
+    "numberofparticles": 0,
+    "x0": 0,
+    "numberdensity": 0,
+    "dissociationenergy": -1,
+    "ionisationenergy": -1,
+    "sigma_s": 1,
+    "g0": 2,
+    "w_e": 2.46627153468e-20,
+    "b_e": 1.42587065168e-23,
     "sources": [
-        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"    
-    ]
+        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303",
+        "TE Horton (1970). The Computation of Partition Functions and Thermochemistry Data for Atomic, Ionic, Diatomic, and Polyatomic Species, Technical Report 32-7425, NASA Jet Propulsion Laboratory, California Institute of Technology, 1970"
+    ],
+    "e0": 1,
+    "deltaionisationenergy": 0
 }

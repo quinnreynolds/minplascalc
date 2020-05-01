@@ -3,19 +3,21 @@
     "stoichiometry": {
         "O": 2
     },
-    "molarMass": 0.0319988,
-    "chargeNumber": 0,
-    "diatomicData": {
-        "ionisationEnergy": 97348.7,
-        "dissociationEnergy": 41537.55,
-        "sigmaS": 2,
-        "g0": 3,
-        "we": 1580.19,
-        "Be": 1.4376766
-    },
-    "energyUnit": "1/cm",
-    "molarMassUnit": "kg/mol",
+    "molarmass": 0.0319988,
+    "chargenumber": 0,
+    "numberofparticles": 0,
+    "x0": 0,
+    "numberdensity": 0,
+    "dissociationenergy": 8.251208343228001e-19,
+    "ionisationenergy": 1.9337789678072e-18,
+    "sigma_s": 2,
+    "g0": 3,
+    "w_e": 3.138961472664e-20,
+    "b_e": 2.8558663562929606e-23,
     "sources": [
-        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"    
-    ]
+        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303",
+        "TE Horton (1970). The Computation of Partition Functions and Thermochemistry Data for Atomic, Ionic, Diatomic, and Polyatomic Species, Technical Report 32-7425, NASA Jet Propulsion Laboratory, California Institute of Technology, 1970"
+    ],
+    "e0": -8.251208343228001e-19,
+    "deltaionisationenergy": 0
 }

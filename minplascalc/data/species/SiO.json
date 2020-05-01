@@ -1,22 +1,24 @@
 {
     "name": "SiO",
     "stoichiometry": {
-        "O": 1,
-        "Si": 1
+        "Si": 1,
+        "O": 1
     },
-    "molarMass": 0.044084899999999996,
-    "chargeNumber": 0,
-    "diatomicData": {
-        "ionisationEnergy": 92673.11,
-        "dissociationEnergy": 66707.6,
-        "sigmaS": 1,
-        "g0": 1,
-        "we": 1241.55,
-        "Be": 0.7267512
-    },
-    "energyUnit": "1/cm",
-    "molarMassUnit": "kg/mol",
+    "molarmass": 0.0440849,
+    "chargenumber": 0,
+    "numberofparticles": 0,
+    "x0": 0,
+    "numberdensity": 0,
+    "dissociationenergy": 1.3251101850656002e-18,
+    "ionisationenergy": 1.8409009159781602e-18,
+    "sigma_s": 1,
+    "g0": 1,
+    "w_e": 2.46627153468e-20,
+    "b_e": 1.4436517235347203e-23,
     "sources": [
-        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"    
-    ]
+        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303",
+        "TE Horton (1970). The Computation of Partition Functions and Thermochemistry Data for Atomic, Ionic, Diatomic, and Polyatomic Species, Technical Report 32-7425, NASA Jet Propulsion Laboratory, California Institute of Technology, 1970"
+    ],
+    "e0": -1.3251101850656002e-18,
+    "deltaionisationenergy": 0
 }

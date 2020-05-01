@@ -6,10 +6,11 @@
 
 import json
 import numpy as np
-#import collections
 import logging
 import warnings
 import pathlib
+from copy import deepcopy
+from . import constants
 
 DATAPATH = pathlib.Path(__file__).parent / 'data'
 SPECIESPATH = DATAPATH / 'species'
@@ -21,7 +22,6 @@ def molar_mass_calculator(protons, neutrons, electrons):
     """Estimate the molar mass in kg/mol of a species based on its nuclear and
     electronic structure, if you can't get it anywhere else for some reason.
     """
-
     return constants.avogadro * (protons * constants.protonmass
                                  + electrons * constants.electronmass
                                  + neutrons * (constants.protonmass
@@ -56,10 +56,9 @@ def read_energylevels(data):
     data : file-like
         NIST energy level file data
 
-
     Return
     ------
-    energylevels : list of dict
+    energylevels : list of length-2 lists
          Energy levels. Each dict contains the energy of the level Ei and the 
          associated quantum number J.
     """
@@ -73,7 +72,7 @@ def read_energylevels(data):
     for i, line in enumerate(data):
         try:
             j, ei = parse_values(line)
-            energylevels.append({'J': j, 'Ei': ei})
+            energylevels.append([j, ei])
         except ValueError as exception:
             logging.debug('Ignoring line %i in %s', i, name)
             logging.debug(exception)
@@ -81,144 +80,19 @@ def read_energylevels(data):
     return energylevels
 
 
-def build_monatomic_species_json(name, stoichiometry, molarmass, chargenumber,
-                                 ionisationenergy, energylevels, sources=None):
-    """Function to take text data retrieved from NIST websites or other sources
+# classes and class functions ##################################################
 
-    and build a data dictionary for a monatomic plasma species, with specified
-    electron energy levels and degeneracies.
-
-    Parameters
-    ----------
-    name : string
-        A unique identifier for the species (also the name of the JSON output
-        file)
-    stoichiometry : dictionary
-        Dictionary describing the elemental stoichiometry of the species (e.g.
-        {'O': 1} for O or O+)
-    molarmass : float
-        Molar mass of the species in kg/mol
-    chargenumber : int
-        Charge on the species (in integer units of the fundamental charge)
-    ionisationenergy : float
-        Ionisation energy of the species in 1/cm
-    energylevels : list of dict
-        Path to text file containing raw energy level data (in NIST Atomic
-        Spectra Database format)
-    sources : list of strings
-        Each entry represents a reference source from which the data was
-        obtained (defaults to NIST Atomic Spectra Database)
-    """
-
-    if sources is None:
-        sources = ["""NIST Atomic Spectra Database (ver. 5.3), [Online]. 
-                   A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team, 
-                   National Institute of Standards and Technology, Gaithersburg 
-                   MD., http://physics.nist.gov/asd"""]
-
-    speciesdict = dict([
-        ('name', name),
-        ('stoichiometry', stoichiometry),
-        ('molarMass', molarmass),
-        ('chargeNumber', chargenumber),
-        ('monatomicData', dict([
-            ('ionisationEnergy', ionisationenergy),
-            ('energyLevels', energylevels),
-        ])),
-        ('energyUnit', '1/cm'),
-        ('molarMassUnit', 'kg/mol'),
-        ('sources', sources),
-    ])
-
-    return speciesdict
-
-
-def build_diatomic_species_json(name, stoichiometry, molarmass, chargenumber,
-                                ionisationenergy, dissociationenergy, sigma_s,
-                                g0, w_e, b_e, sources=None):
-    """Function to take text data retrieved from NIST websites or other sources
-    and build a data dictionary file for a diatomic plasma species, with 
-    specified ground state degeneracy and rotational & vibrational parameters.
-
-    Parameters
-    ----------
-    name : string
-        A unique identifier for the species (also the name of the JSON output
-        file)
-
-    stoichiometry : dictionary
-        Dictionary describing the elemental stoichiometry of the species (e.g.
-        {'Si': 1, 'O': 1} for SiO or SiO+)
-    molarmass : float
-        Molar mass of the species in kg/mol
-    chargenumber : int
-        Charge on the species (in integer units of the fundamental charge)
-    ionisationenergy : float
-        Ionisation energy of the species in 1/cm
-    dissociationenergy : float
-        Dissociation energy of the species in 1/cm
-    sigma_s : int
-        Symmetry constant (=2 for homonuclear molecules, =1 for heteronuclear)
-    g0 : float
-        Ground state electronic energy level degeneracy
-    w_e : float
-        Vibrational energy level constant in 1/cm
-    b_e : float
-        Rotational energy level constant in 1/cm
-    sources : list of dictionaries
-        Each dictionary represents a reference source from which the data was
-        obtained (defaults to NIST Chemistry Webbook)
-    """
-    if sources is None:
-        sources = ["""NIST Chemistry WebBook, NIST Standard Reference Database 
-                   Number 69. PJ Linstrom and WG Mallard (Editors), National 
-                   Institute of Standards and Technology, Gaithersburg MD., 
-                   http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"""]
-
-    speciesdict = dict([
-        ('name', name),
-        ('stoichiometry', stoichiometry),
-        ('molarMass', molarmass),
-        ('chargeNumber', chargenumber),
-        ('diatomicData', dict([
-            ('ionisationEnergy', ionisationenergy),
-            ('dissociationEnergy', dissociationenergy),
-            ('sigmaS', sigma_s),
-            ('g0', g0),
-            ('we', w_e),
-            ('Be', b_e),
-        ])),
-        ('energyunit', '1/cm'),
-        ('molarmassunit', 'kg/mol'),
-        ('sources', sources),
-    ])
-
-    return speciesdict
-
-# classes ######################################################################
-
-
-class constants:
-    """A collection of physical and unit-conversion constants useful in plasma
-    calculations.
-    """
-
-    protonmass = 1.6726219e-27
-    electronmass = 9.10938356e-31
-    fundamentalcharge = 1.60217662e-19
-    avogadro = 6.0221409e23
-    boltzmann = 1.38064852e-23
-    planck = 6.62607004e-34
-    c = 2.99792458e8
-    electronvolt_to_kelvin = 11604.505
-    electronvolt_to_joule = 1.60217653e-19
-    invcm_to_joule = 1.9864456e-23
-    joulepermol_to_invcm = 0.0835934811
-    electronvolt_to_invcm = 8065.54446
-
-
+def species_to_file(sp, datafile=None):
+    if datafile:
+        with open(datafile, 'w') as f:
+            json.dump(sp.__dict__, f, indent=4)
+    else:
+        with open(sp.name + '.json', 'w') as f:
+            json.dump(sp.__dict__, f, indent=4)
+        
+        
 def species_from_file(datafile, numberofparticles=0, x0=0):
-    """Create a species from a data file.
+    """Create a species from a data file in JSON format.
 
     Parameters
     ----------
@@ -226,18 +100,27 @@ def species_from_file(datafile, numberofparticles=0, x0=0):
         Path to a JSON data file describing the electronic and molecular
         properties of the species
     numberofparticles : float
-        Initial particle count (default 0)
+        Absolute particle count in plasma (default 0)
     x0 : float
-        initial x
+        Initial mole fraction of species in plasma-gen gas (default 0)
     """
-    # Construct a data object from JSON data file
-    with open(datafile) as df:
-        jsondata = json.load(df)
+    with open(datafile) as f:
+        spdata = json.load(f)
 
-    if 'monatomicData' in jsondata:
-        return MonatomicSpecies(jsondata, numberofparticles, x0)
+    atomcount = sum(v for k, v in spdata['stoichiometry'].items())
+    if atomcount == 1:
+        return MonatomicSpecies(spdata['name'], spdata['stoichiometry'], 
+                                spdata['molarmass'], spdata['chargenumber'], 
+                                spdata['ionisationenergy'], 
+                                spdata['energylevels'], spdata['sources'], 
+                                numberofparticles, x0)
     else:
-        return DiatomicSpecies(jsondata, numberofparticles, x0)
+        return DiatomicSpecies(spdata['name'], spdata['stoichiometry'], 
+                               spdata['molarmass'], spdata['chargenumber'], 
+                               spdata['ionisationenergy'], 
+                               spdata['dissociationenergy'], spdata['sigma_s'], 
+                               spdata['g0'], spdata['w_e'], spdata['b_e'], 
+                               spdata['sources'], numberofparticles, x0)
 
 
 def species_from_name(name, numberofparticles=0, x0=0):
@@ -248,9 +131,9 @@ def species_from_name(name, numberofparticles=0, x0=0):
     name : str
         Name of the species
     numberofparticles : float
-        Initial particle count (default 0)
+        Absolute particle count in plasma (default 0)
     x0 : float
-        initial x
+        Initial mole fraction of species in plasma-gen gas (default 0)
     """
 
     filename = SPECIESPATH / (name + '.json')
@@ -273,86 +156,152 @@ class BaseSpecies:
         raise NotImplementedError
 
 
-# Diatomic molecules, single atoms, and ions
 class Species(BaseSpecies):
-    def __init__(self, jsondata, numberofparticles=0, x0=0):
-        """Base class for species. Either single monatomic or diatomic chemical
-        species in the plasma, eg O2 or Si+
+    def __init__(self, name, stoichiometry, molarmass, chargenumber,
+                 numberofparticles, x0):
+        """Base class for heavy particles. Either single monatomic or diatomic 
+        chemical species in the plasma, eg O2 or Si+
 
         Parameters
         ----------
-        jsondata : dict
-            JSON data describing the electronic and molecular
-            properties of the species
+        name : string
+            A unique identifier for the species
+        stoichiometry : dictionary
+            Dictionary describing the elemental stoichiometry of the species
+        molarmass : float
+            Molar mass of the species in kg/mol
+        chargenumber : int
+            Charge on the species (in integer units of the fundamental charge)
         numberofparticles : float
-            Initial particle count (default 0)
+            Absolute particle count in plasma
         x0 : float
+            Initial mole fraction of species in plasma-gen gas
         """
-
-        self.numberofparticles = numberofparticles
-        self.numberdensity = 0
-        self.x0 = x0
-
-        # General species data
-        self.name = jsondata['name']
-        self.stoichiometry = jsondata['stoichiometry']
-        self.molarmass = jsondata['molarMass']
-        self.chargenumber = jsondata['chargeNumber']
-
+        self.name = name
+        self.stoichiometry = deepcopy(stoichiometry)
+        self.molarmass = molarmass
+        self.chargenumber = chargenumber
         if self.chargenumber < 0:
             raise ValueError('Error! Negatively charged ions not implemented'
                              ' yet.')
+        self.numberofparticles = numberofparticles
+        self.x0 = x0
+
+        self.numberdensity = 0
 
 
 class MonatomicSpecies(Species):
-    def __init__(self, jsondata, numberofparticles=0, x0=0):
-        super().__init__(jsondata, numberofparticles, x0)
+    def __init__(self, name, stoichiometry, molarmass, chargenumber, 
+                 ionisationenergy, energylevels, sources, numberofparticles, 
+                 x0):
+        """Class for monatomic plasma species (single atoms and ions).
+    
+        Parameters
+        ----------
+        name : string
+            A unique identifier for the species
+        stoichiometry : dictionary
+            Dictionary describing the elemental stoichiometry of the species 
+            (e.g. {'O': 1} for O or O+)
+        molarmass : float
+            Molar mass of the species in kg/mol
+        chargenumber : int
+            Charge on the species (in integer units of the fundamental charge)
+        ionisationenergy : float
+            Ionisation energy of the species in J
+        energylevels : list of length-2 lists
+            Atomic energy level data - each entry in the list contains a pair of
+            values giving the level's quantum number and its energy 
+            respectively, with energy in J
+        sources : list of str
+            Each entry represents a reference from which the data was
+            obtained
+        numberofparticles : float
+            Absolute particle count in plasma
+        x0 : float
+            Initial mole fraction of species in plasma-gen gas
+        """
+        super().__init__(name, stoichiometry, molarmass, chargenumber, 
+                         numberofparticles, x0)
         
-        jdm = jsondata['monatomicData']
-        self.ionisationenergy = (constants.invcm_to_joule
-                                 * jdm['ionisationEnergy'])
-        self.deltaionisationenergy = 0
-        self.energylevels = []
-        for energylevel in jdm['energyLevels']:
-            self.energylevels.append([2 * energylevel['J'] + 1, 
-                                      constants.invcm_to_joule 
-                                      * energylevel['Ei']])
+        self.ionisationenergy = ionisationenergy
+        self.energylevels = deepcopy(energylevels)
+        self.sources = deepcopy(sources)
         self.e0 = 0
+
+        self.deltaionisationenergy = 0
 
     def partitionfunction_internal(self, T):
         kbt = constants.boltzmann * T
         partitionval = 0       
-        for twojplusone, eij in self.energylevels:
+        for j, eij in self.energylevels:
             if eij < (self.ionisationenergy - self.deltaionisationenergy):
-                partitionval += twojplusone * np.exp(-eij / kbt)
+                partitionval += (2*j+1) * np.exp(-eij / kbt)
         return partitionval
 
     def internal_energy(self, T):
         kbt = constants.boltzmann * T
         translationalenergy = 1.5 * kbt
         electronicenergy = 0
-        for twojplusone, eij in self.energylevels:
+        for j, eij in self.energylevels:
             if eij < (self.ionisationenergy - self.deltaionisationenergy):
-                electronicenergy += twojplusone * eij * np.exp(-eij / kbt)
+                electronicenergy += (2*j+1) * eij * np.exp(-eij / kbt)
         electronicenergy /= self.partitionfunction_internal(T)
         return translationalenergy + electronicenergy
 
 
 class DiatomicSpecies(Species):
-    def __init__(self, jsondata, numberofparticles=0, x0=0):
-        super().__init__(jsondata, numberofparticles, x0)
+    def __init__(self, name, stoichiometry, molarmass, chargenumber,
+                 ionisationenergy, dissociationenergy, sigma_s, g0, w_e, b_e, 
+                 sources, numberofparticles, x0):
+        """Class for diatomic plasma species (bonded pairs of atoms, as 
+        neutral particles or ions).
+    
+        Parameters
+        ----------
+        name : string
+            A unique identifier for the species
+        stoichiometry : dictionary
+            Dictionary describing the elemental stoichiometry of the species 
+            (e.g. {'Si': 1, 'O': 1} for SiO or SiO+)
+        molarmass : float
+            Molar mass of the species in kg/mol
+        chargenumber : int
+            Charge on the species (in integer units of the fundamental charge)
+        ionisationenergy : float
+            Ionisation energy of the species in J
+        dissociationenergy : float
+            Dissociation energy of the species in J
+        sigma_s : int
+            Symmetry constant (=2 for homonuclear molecules, =1 for 
+            heteronuclear)
+        g0 : float
+            Ground state electronic energy level degeneracy
+        w_e : float
+            Vibrational energy level constant in J
+        b_e : float
+            Rotational energy level constant in J
+        sources : list of str
+            Each dictionary represents a reference source from which the data 
+            was obtained
+        numberofparticles : float
+            Absolute particle count in plasma
+        x0 : float
+            Initial mole fraction of species in plasma-gen gas
+        """
+        super().__init__(name, stoichiometry, molarmass, chargenumber, 
+                         numberofparticles, x0)
 
-        jdd = jsondata['diatomicData']
-        self.dissociationenergy = (constants.invcm_to_joule 
-                                   * jdd['dissociationEnergy'])
-        self.ionisationenergy = (constants.invcm_to_joule 
-                                 * jdd['ionisationEnergy'])
-        self.deltaionisationenergy = 0
-        self.sigma_s = jdd['sigmaS']
-        self.g0 = jdd['g0']
-        self.w_e = constants.invcm_to_joule * jdd['we']
-        self.b_e = constants.invcm_to_joule * jdd['Be']
+        self.dissociationenergy = dissociationenergy
+        self.ionisationenergy = ionisationenergy
+        self.sigma_s = sigma_s
+        self.g0 = g0
+        self.w_e = w_e
+        self.b_e = b_e
+        self.sources = deepcopy(sources)
         self.e0 = -self.dissociationenergy
+
+        self.deltaionisationenergy = 0
 
     def partitionfunction_internal(self, T):
         kbt = constants.boltzmann * T
@@ -373,22 +322,22 @@ class DiatomicSpecies(Species):
 
 
 class ElectronSpecies(BaseSpecies):
-    def __init__(self, numberofparticles=0):
-        """Class describing electrons as a species in the plasma.
+    def __init__(self, numberofparticles):
+        """Class for electrons as a plasma species.
 
         Parameters
         ----------
         numberofparticles : float
-            Initial particle count (default 0)
+            Absolute particle count in plasma
         """
-
         self.name = 'e'
         self.stoichiometry = {}
         self.molarmass = constants.electronmass * constants.avogadro
         self.chargenumber = -1
-        self.numberofparticles = numberofparticles
         self.numberdensity = 0
         self.e0 = 0
+
+        self.numberofparticles = numberofparticles        
         self.x0 = 0
 
     # noinspection PyUnusedLocal
@@ -453,7 +402,7 @@ class Mixture:
         # non-reproducibility between runs. Make sure this order is maintained
         self.species = [species_from_name(spdata['species'], x0=spdata['x0'])
                         for spdata in jsondata['speciesList']]
-        self.species.append(ElectronSpecies())
+        self.species.append(ElectronSpecies(0))
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs
