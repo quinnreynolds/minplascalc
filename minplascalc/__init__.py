@@ -91,7 +91,7 @@ def species_to_file(sp, datafile=None):
             json.dump(sp.__dict__, f, indent=4)
         
         
-def species_from_file(datafile, numberofparticles=0, x0=0):
+def species_from_file(datafile):
     """Create a species from a data file in JSON format.
 
     Parameters
@@ -99,10 +99,6 @@ def species_from_file(datafile, numberofparticles=0, x0=0):
     datafile : string
         Path to a JSON data file describing the electronic and molecular
         properties of the species
-    numberofparticles : float
-        Absolute particle count in plasma (default 0)
-    x0 : float
-        Initial mole fraction of species in plasma-gen gas (default 0)
     """
     with open(datafile) as f:
         spdata = json.load(f)
@@ -112,53 +108,47 @@ def species_from_file(datafile, numberofparticles=0, x0=0):
         return MonatomicSpecies(spdata['name'], spdata['stoichiometry'], 
                                 spdata['molarmass'], spdata['chargenumber'], 
                                 spdata['ionisationenergy'], 
-                                spdata['energylevels'], spdata['sources'], 
-                                numberofparticles, x0)
+                                spdata['energylevels'], spdata['sources'])
     else:
         return DiatomicSpecies(spdata['name'], spdata['stoichiometry'], 
                                spdata['molarmass'], spdata['chargenumber'], 
                                spdata['ionisationenergy'], 
                                spdata['dissociationenergy'], spdata['sigma_s'], 
                                spdata['g0'], spdata['w_e'], spdata['b_e'], 
-                               spdata['sources'], numberofparticles, x0)
+                               spdata['sources'])
 
 
-def species_from_name(name, numberofparticles=0, x0=0):
+def species_from_name(name):
     """ Create a species from the species database
 
     Parameters
     ----------
     name : str
         Name of the species
-    numberofparticles : float
-        Absolute particle count in plasma (default 0)
-    x0 : float
-        Initial mole fraction of species in plasma-gen gas (default 0)
     """
 
     filename = SPECIESPATH / (name + '.json')
-    return species_from_file(str(filename), numberofparticles, x0)
+    return species_from_file(str(filename))
 
 
 class BaseSpecies:
-    def partitionfunction_total(self, V, T):
+    def partitionfunction_total(self, V, T, dE):
         return (V * self.partitionfunction_translational(T)
-                * self.partitionfunction_internal(T))
+                * self.partitionfunction_internal(T, dE))
 
     def partitionfunction_translational(self, T):
         return ((2 * np.pi * self.molarmass * constants.boltzmann * T)
                 / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
-    def partitionfunction_internal(self, T):
+    def partitionfunction_internal(self, T, dE):
         raise NotImplementedError
 
-    def internal_energy(self, T):
+    def internal_energy(self, T, dE):
         raise NotImplementedError
 
 
 class Species(BaseSpecies):
-    def __init__(self, name, stoichiometry, molarmass, chargenumber,
-                 numberofparticles, x0):
+    def __init__(self, name, stoichiometry, molarmass, chargenumber):
         """Base class for heavy particles. Either single monatomic or diatomic 
         chemical species in the plasma, eg O2 or Si+
 
@@ -172,10 +162,6 @@ class Species(BaseSpecies):
             Molar mass of the species in kg/mol
         chargenumber : int
             Charge on the species (in integer units of the fundamental charge)
-        numberofparticles : float
-            Absolute particle count in plasma
-        x0 : float
-            Initial mole fraction of species in plasma-gen gas
         """
         self.name = name
         self.stoichiometry = deepcopy(stoichiometry)
@@ -184,16 +170,11 @@ class Species(BaseSpecies):
         if self.chargenumber < 0:
             raise ValueError('Error! Negatively charged ions not implemented'
                              ' yet.')
-        self.numberofparticles = numberofparticles
-        self.x0 = x0
-
-        self.numberdensity = 0
 
 
 class MonatomicSpecies(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber, 
-                 ionisationenergy, energylevels, sources, numberofparticles, 
-                 x0):
+                 ionisationenergy, energylevels, sources):
         """Class for monatomic plasma species (single atoms and ions).
     
         Parameters
@@ -216,44 +197,37 @@ class MonatomicSpecies(Species):
         sources : list of str
             Each entry represents a reference from which the data was
             obtained
-        numberofparticles : float
-            Absolute particle count in plasma
-        x0 : float
-            Initial mole fraction of species in plasma-gen gas
         """
-        super().__init__(name, stoichiometry, molarmass, chargenumber, 
-                         numberofparticles, x0)
+        super().__init__(name, stoichiometry, molarmass, chargenumber)
         
         self.ionisationenergy = ionisationenergy
         self.energylevels = deepcopy(energylevels)
         self.sources = deepcopy(sources)
         self.e0 = 0
 
-        self.deltaionisationenergy = 0
-
-    def partitionfunction_internal(self, T):
+    def partitionfunction_internal(self, T, dE):
         kbt = constants.boltzmann * T
         partitionval = 0       
         for j, eij in self.energylevels:
-            if eij < (self.ionisationenergy - self.deltaionisationenergy):
+            if eij < (self.ionisationenergy - dE):
                 partitionval += (2*j+1) * np.exp(-eij / kbt)
         return partitionval
 
-    def internal_energy(self, T):
+    def internal_energy(self, T, dE):
         kbt = constants.boltzmann * T
         translationalenergy = 1.5 * kbt
         electronicenergy = 0
         for j, eij in self.energylevels:
-            if eij < (self.ionisationenergy - self.deltaionisationenergy):
+            if eij < (self.ionisationenergy - dE):
                 electronicenergy += (2*j+1) * eij * np.exp(-eij / kbt)
-        electronicenergy /= self.partitionfunction_internal(T)
+        electronicenergy /= self.partitionfunction_internal(T, dE)
         return translationalenergy + electronicenergy
 
 
 class DiatomicSpecies(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber,
                  ionisationenergy, dissociationenergy, sigma_s, g0, w_e, b_e, 
-                 sources, numberofparticles, x0):
+                 sources):
         """Class for diatomic plasma species (bonded pairs of atoms, as 
         neutral particles or ions).
     
@@ -284,13 +258,8 @@ class DiatomicSpecies(Species):
         sources : list of str
             Each dictionary represents a reference source from which the data 
             was obtained
-        numberofparticles : float
-            Absolute particle count in plasma
-        x0 : float
-            Initial mole fraction of species in plasma-gen gas
         """
-        super().__init__(name, stoichiometry, molarmass, chargenumber, 
-                         numberofparticles, x0)
+        super().__init__(name, stoichiometry, molarmass, chargenumber)
 
         self.dissociationenergy = dissociationenergy
         self.ionisationenergy = ionisationenergy
@@ -301,16 +270,14 @@ class DiatomicSpecies(Species):
         self.sources = deepcopy(sources)
         self.e0 = -self.dissociationenergy
 
-        self.deltaionisationenergy = 0
-
-    def partitionfunction_internal(self, T):
+    def partitionfunction_internal(self, T, dE):
         kbt = constants.boltzmann * T
         electronicpartition = self.g0
         vibrationalpartition = 1. / (1. - np.exp(-self.w_e / kbt))
         rotationalpartition = kbt / (self.sigma_s * self.b_e)
         return electronicpartition * vibrationalpartition * rotationalpartition
 
-    def internal_energy(self, T):
+    def internal_energy(self, T, dE):
         kbt = constants.boltzmann * T
         translationalenergy = 1.5 * kbt
         electronicenergy = 0
@@ -322,29 +289,20 @@ class DiatomicSpecies(Species):
 
 
 class ElectronSpecies(BaseSpecies):
-    def __init__(self, numberofparticles):
+    def __init__(self):
         """Class for electrons as a plasma species.
-
-        Parameters
-        ----------
-        numberofparticles : float
-            Absolute particle count in plasma
         """
         self.name = 'e'
         self.stoichiometry = {}
         self.molarmass = constants.electronmass * constants.avogadro
         self.chargenumber = -1
-        self.numberdensity = 0
         self.e0 = 0
 
-        self.numberofparticles = numberofparticles        
-        self.x0 = 0
-
     # noinspection PyUnusedLocal
-    def partitionfunction_internal(self, T):
+    def partitionfunction_internal(self, T, dE):
         return 2.
 
-    def internal_energy(self, T):
+    def internal_energy(self, T, dE):
         translationalenergy = 1.5 * constants.boltzmann * T
         electronicenergy = 0
         return translationalenergy + electronicenergy
@@ -376,15 +334,10 @@ class Mixture:
 
         # Random order upsets the nonlinearities in the minimiser resulting in
         # non-reproducibility between runs. Make sure this order is maintained
-        self.species = [species_from_name(spdata['species'], x0=spdata['x0'])
+        self.species = [species_from_name(spdata['species']) 
                         for spdata in jsondata['speciesList']]
-        self.species.append(ElectronSpecies(0))
+        self.species.append(ElectronSpecies())
 
-        # Random order upsets the nonlinearities in the minimiser resulting in
-        # non-reproducibility between runs
-        elements = [{'name': nm, 'stoichometriccoeffts': None, 'totalnumber': 0}
-                    for nm in sorted(set(s for sp in self.species
-                                         for s in sp.stoichiometry))]
         self.ni = np.zeros(len(self.species))
         self.x0 = np.array([spdata['x0'] for spdata in jsondata['speciesList']])
         self.numberdensity = np.zeros(len(self.species))
@@ -392,7 +345,7 @@ class Mixture:
 
         self.maxchargenumber = max(sp.chargenumber for sp in self.species)
         self.ionisedfrom = [None] * len(self.species)
-        # Set species which each +ve charged ion originates from
+        # Find species which each +ve charged ion originates from
         for i, sp in enumerate(self.species):
             if sp.chargenumber > 0:
                 for sp2 in self.species:
@@ -404,6 +357,9 @@ class Mixture:
         
         # Set stoichiometry and charge coefficient arrays for mass action and
         # electroneutrality constraints
+        elements = [{'name': nm, 'stoichometriccoeffts': None, 'totalnumber': 0}
+                    for nm in sorted(set(s for sp in self.species
+                                         for s in sp.stoichiometry))]
         for elm in elements:
             elm['stoichiometriccoeffts'] = [sp.stoichiometry.get(elm['name'], 0)
                                             for sp in self.species]
@@ -477,7 +433,8 @@ class Mixture:
 
         ondiagonal = constants.boltzmann * T / ni
         self.gfematrix[:nspecies, :nspecies] = offdiagonal + np.diag(ondiagonal)
-        total = [sp.partitionfunction_total(V, T) for sp in self.species]
+        total = [sp.partitionfunction_total(V, T, de) 
+                 for sp, de in zip(self.species, self.deltaionisationenergy)]
         e0 = [sp.e0 for sp in self.species]
         mu = -constants.boltzmann * T * np.log(total / ni) + e0
         self.gfevector[:nspecies] = -mu
@@ -568,9 +525,10 @@ class Mixture:
 
         T = self.T
         weightedenthalpy = sum(constants.avogadro * ni * 
-                               (sp.internal_energy(T) + sp.e0 + 
+                               (sp.internal_energy(T, de) + sp.e0 + 
                                 constants.boltzmann * T) 
-                               for sp, ni in zip(self.species, self.ni))
+                               for sp, ni, de in zip(self.species, self.ni, 
+                                                self.deltaionisationenergy))
         weightedmolmass = sum(ni * sp.molarmass
                               for sp, ni in zip(self.species, self.ni))
         return weightedenthalpy / weightedmolmass
