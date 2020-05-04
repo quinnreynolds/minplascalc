@@ -5,9 +5,6 @@
     },
     "molarmass": 0.0159994,
     "chargenumber": 2,
-    "numberofparticles": 0,
-    "x0": 0,
-    "numberdensity": 0,
     "ionisationenergy": 8.80164248676e-18,
     "energylevels": [
         [
@@ -583,15 +580,15 @@
             8.237313156256001e-18
         ],
         [
+            2.0,
+            8.247324842080001e-18
+        ],
+        [
             1.0,
             8.247324842080001e-18
         ],
         [
             3.0,
-            8.247324842080001e-18
-        ],
-        [
-            2.0,
             8.247324842080001e-18
         ],
         [
@@ -671,10 +668,6 @@
             8.94506246856808e-18
         ],
         [
-            3.0,
-            8.99601618872e-18
-        ],
-        [
             2.0,
             8.99601618872e-18
         ],
@@ -684,19 +677,19 @@
         ],
         [
             3.0,
+            8.99601618872e-18
+        ],
+        [
+            1.0,
+            9.022058490536e-18
+        ],
+        [
+            3.0,
             9.022058490536e-18
         ],
         [
             2.0,
             9.022058490536e-18
-        ],
-        [
-            1.0,
-            9.022058490536e-18
-        ],
-        [
-            1.0,
-            9.089458589744e-18
         ],
         [
             0.0,
@@ -707,13 +700,15 @@
             9.089458589744e-18
         ],
         [
+            1.0,
+            9.089458589744e-18
+        ],
+        [
             3.0,
             9.411024403472001e-18
         ]
     ],
     "sources": [
         "NIST Atomic Spectra Database (ver. 5.3), [Online]. A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team, National Institute of Standards and Technology, Gaithersburg MD., http://physics.nist.gov/asd"
-    ],
-    "e0": 0,
-    "deltaionisationenergy": 0
+    ]
 }

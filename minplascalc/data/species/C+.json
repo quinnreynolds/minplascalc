@@ -5,9 +5,6 @@
     },
     "molarmass": 0.0120107,
     "chargenumber": 1,
-    "numberofparticles": 0,
-    "x0": 0,
-    "numberdensity": 0,
     "ionisationenergy": 3.9068359244632e-18,
     "energylevels": [
         [
@@ -837,7 +834,5 @@
     ],
     "sources": [
         "NIST Atomic Spectra Database (ver. 5.3), [Online]. A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team, National Institute of Standards and Technology, Gaithersburg MD., http://physics.nist.gov/asd"
-    ],
-    "e0": 0,
-    "deltaionisationenergy": 0
+    ]
 }
