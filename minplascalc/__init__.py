@@ -420,7 +420,7 @@ class Mixture:
             for j, sc in enumerate(elm['stoichiometriccoeffts']):
                 self.gfematrix[len(self.species) + i, j] = sc
                 self.gfematrix[j, len(self.species) + i] = sc
-        for j, qc in enumerate([sp.chargenumber for sp in self.species]):
+        for j, qc in enumerate(sp.chargenumber for sp in self.species):
             self.gfematrix[-1, j] = qc
             self.gfematrix[j, -1] = qc
 
