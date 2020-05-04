@@ -385,16 +385,23 @@ class Mixture:
         elements = [{'name': nm, 'stoichometriccoeffts': None, 'totalnumber': 0}
                     for nm in sorted(set(s for sp in self.species
                                          for s in sp.stoichiometry))]
+        self.ni = np.zeros(len(self.species))
+        self.x0 = np.array([spdata['x0'] for spdata in jsondata['speciesList']])
+        self.numberdensity = np.zeros(len(self.species))
+        self.deltaionisationenergy = np.zeros(len(self.species))
 
         self.maxchargenumber = max(sp.chargenumber for sp in self.species)
+        self.ionisedfrom = [None] * len(self.species)
         # Set species which each +ve charged ion originates from
-        for sp in self.species:
+        for i, sp in enumerate(self.species):
             if sp.chargenumber > 0:
                 for sp2 in self.species:
                     if (sp2.stoichiometry == sp.stoichiometry 
                         and sp2.chargenumber == sp.chargenumber-1):
-                        sp.ionisedfrom = sp2
-
+                        for j, sp3 in enumerate(self.species):
+                            if sp2.name == sp3.name:
+                                self.ionisedfrom[i] = j
+        
         # Set stoichiometry and charge coefficient arrays for mass action and
         # electroneutrality constraints
         for elm in elements:
@@ -404,16 +411,15 @@ class Mixture:
         # Set element totals for constraints from provided initial conditions
         nt0 = self.P / (constants.boltzmann * self.T)
         for elm in elements:
-            elm['totalnumber'] = sum(nt0 * c * sp.x0
-                                     for c, sp in zip(
+            elm['totalnumber'] = sum(nt0 * c * x0loc
+                                     for c, sp, x0loc in zip(
                                              elm['stoichiometriccoeffts'],
-                                             self.species))
+                                             self.species, self.x0))
 
         # Set up A matrix, b and ni vectors for GFE minimiser
         minimiser_dof = len(self.species) + len(elements) + 1
         self.gfematrix = np.zeros((minimiser_dof, minimiser_dof))
         self.gfevector = np.zeros(minimiser_dof)
-        self.ni = np.zeros(len(self.species))
 
         for i, elm in enumerate(elements):
             self.gfevector[len(self.species) + i] = elm['totalnumber']
@@ -425,48 +431,39 @@ class Mixture:
             self.gfematrix[j, -1] = qc
 
     def initialise_ni(self, ni):
-        for j, sp in enumerate(self.species):
-            self.ni[j] = ni[j]
-            sp.numberofparticles = ni[j]
+        self.ni = np.array(ni)
 
-    def read_ni(self):
-        for j, sp in enumerate(self.species):
-            self.ni[j] = sp.numberofparticles
-
-    def write_ni(self):
-        for j, sp in enumerate(self.species):
-            sp.numberofparticles = self.ni[j]
-
-    def write_numberdensity(self):
+    def calculate_numberdensity(self):
         V  = self.ni.sum() * constants.boltzmann * self.T / self.P
-        for j, sp in enumerate(self.species):
-            sp.numberdensity = self.ni[j] / V 
+        self.numberdensity = self.ni / V 
 
     def recalc_e0i(self):
         # deltaionisationenergy recalculation, using limitation theory of
         # Stewart & Pyatt 1966
         kbt = constants.boltzmann * self.T
-        ndi = self.ni / (self.ni.sum() * kbt / self.P)
+        self.calculate_numberdensity()
         weightedchargesumsqd = 0
         weightedchargesum = 0
-        for j, sp in enumerate(self.species):
+        for sp, nd in zip(self.species, self.numberdensity):
             if sp.chargenumber > 0:
-                weightedchargesum += ndi[j] * sp.chargenumber
-                weightedchargesumsqd += ndi[j] * sp.chargenumber ** 2
+                weightedchargesum += nd * sp.chargenumber
+                weightedchargesumsqd += nd * sp.chargenumber ** 2
         zstar = weightedchargesumsqd / weightedchargesum
-        debyed3 = (kbt / (4 * np.pi * (zstar + 1) * ndi[-1] 
+        debyed3 = (kbt / (4 * np.pi * (zstar + 1) * self.numberdensity[-1] 
                           * constants.fundamentalcharge ** 2)) ** (3/2)
         for j, sp in enumerate(self.species):
             if sp.name != 'e':
-                ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * ndi[-1])
+                ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * 
+                                                   self.numberdensity[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
-                self.deltaionisationenergy = de
+                self.deltaionisationenergy[j] = de
         
         for cn in range(1, self.maxchargenumber + 1):
-            for sp in self.species:
+            for sp, ifrom in zip(self.species, self.ionisedfrom):
                 if sp.chargenumber == cn:
-                    sp.e0 = (sp.ionisedfrom.e0 + sp.ionisedfrom.ionisationenergy
-                             - sp.ionisedfrom.deltaionisationenergy)
+                    spfrom = self.species[ifrom]
+                    sp.e0 = (spfrom.e0 + spfrom.ionisationenergy
+                             - self.deltaionisationenergy[ifrom])
 
     def recalc_gfearrays(self):
         ni = self.ni
@@ -485,10 +482,7 @@ class Mixture:
         mu = -constants.boltzmann * T * np.log(total / ni) + e0
         self.gfevector[:nspecies] = -mu
 
-
     def solve_gfe(self, relativetolerance=1e-10, maxiters=1000):
-        self.read_ni()
-
         governorfactors = np.linspace(0.9, 0.1, 9)
         successyn = False
         governoriters = 0
@@ -531,16 +525,15 @@ class Mixture:
         logging.debug(governoriters, relaxfactor, reltol)
         logging.debug(self.ni)
 
-        self.write_ni()
-        self.write_numberdensity()
+        self.calculate_numberdensity()
 
     def calculate_density(self):
         """Calculate the density of the plasma in kg/m3 based on current
         conditions and species composition.
         """
 
-        return sum(sp.numberdensity * sp.molarmass / constants.avogadro
-                   for sp in self.species)
+        return sum(nd * sp.molarmass / constants.avogadro
+                   for sp, nd in zip(self.species, self.numberdensity))
 
     def calculate_heat_capacity(self, init_ni=1e20, rel_delta_T=0.001):
         """Calculate the heat capacity at constant pressure of the plasma in
@@ -574,12 +567,12 @@ class Mixture:
         """
 
         T = self.T
-        weightedenthalpy = sum(constants.avogadro * sp.numberofparticles 
-                               * (sp.internal_energy(T) + sp.e0 
-                                  + constants.boltzmann * T) 
-                               for sp in self.species)
-        weightedmolmass = sum(sp.numberofparticles * sp.molarmass
-                              for sp in self.species)
+        weightedenthalpy = sum(constants.avogadro * ni * 
+                               (sp.internal_energy(T) + sp.e0 + 
+                                constants.boltzmann * T) 
+                               for sp, ni in zip(self.species, self.ni))
+        weightedmolmass = sum(ni * sp.molarmass
+                              for sp, ni in zip(self.species, self.ni))
         return weightedenthalpy / weightedmolmass
 
     def calculate_viscosity(self):
