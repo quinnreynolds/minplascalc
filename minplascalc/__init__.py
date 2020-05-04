@@ -203,7 +203,6 @@ class MonatomicSpecies(Species):
         self.ionisationenergy = ionisationenergy
         self.energylevels = deepcopy(energylevels)
         self.sources = deepcopy(sources)
-        self.e0 = 0
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.boltzmann * T
@@ -268,7 +267,6 @@ class DiatomicSpecies(Species):
         self.w_e = w_e
         self.b_e = b_e
         self.sources = deepcopy(sources)
-        self.e0 = -self.dissociationenergy
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.boltzmann * T
@@ -296,7 +294,6 @@ class ElectronSpecies(BaseSpecies):
         self.stoichiometry = {}
         self.molarmass = constants.electronmass * constants.avogadro
         self.chargenumber = -1
-        self.e0 = 0
 
     # noinspection PyUnusedLocal
     def partitionfunction_internal(self, T, dE):
@@ -341,7 +338,11 @@ class Mixture:
         self.ni = np.zeros(len(self.species))
         self.x0 = np.array([spdata['x0'] for spdata in jsondata['speciesList']])
         self.numberdensity = np.zeros(len(self.species))
-        self.deltaionisationenergy = np.zeros(len(self.species))
+        self.E0 = np.zeros(len(self.species))
+        for i, sp in enumerate(self.species):
+            if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
+                self.E0[i] = -sp.dissociationenergy
+        self.dE = np.zeros(len(self.species))
 
         self.maxchargenumber = max(sp.chargenumber for sp in self.species)
         self.ionisedfrom = [None] * len(self.species)
@@ -393,8 +394,8 @@ class Mixture:
         V  = self.ni.sum() * constants.boltzmann * self.T / self.P
         self.numberdensity = self.ni / V 
 
-    def recalc_e0i(self):
-        # deltaionisationenergy recalculation, using limitation theory of
+    def recalc_E0i(self):
+        # Ionisation energy lowering calculation, using limitation theory of
         # Stewart & Pyatt 1966
         kbt = constants.boltzmann * self.T
         self.calculate_numberdensity()
@@ -412,14 +413,14 @@ class Mixture:
                 ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * 
                                                    self.numberdensity[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
-                self.deltaionisationenergy[j] = de
+                self.dE[j] = de
         
         for cn in range(1, self.maxchargenumber + 1):
-            for sp, ifrom in zip(self.species, self.ionisedfrom):
+            for i, (sp, ifrom) in enumerate(zip(self.species, self.ionisedfrom)):
                 if sp.chargenumber == cn:
                     spfrom = self.species[ifrom]
-                    sp.e0 = (spfrom.e0 + spfrom.ionisationenergy
-                             - self.deltaionisationenergy[ifrom])
+                    self.E0[i] = (self.E0[ifrom] + spfrom.ionisationenergy - 
+                                  self.dE[ifrom])
 
     def recalc_gfearrays(self):
         ni = self.ni
@@ -433,10 +434,9 @@ class Mixture:
 
         ondiagonal = constants.boltzmann * T / ni
         self.gfematrix[:nspecies, :nspecies] = offdiagonal + np.diag(ondiagonal)
-        total = [sp.partitionfunction_total(V, T, de) 
-                 for sp, de in zip(self.species, self.deltaionisationenergy)]
-        e0 = [sp.e0 for sp in self.species]
-        mu = -constants.boltzmann * T * np.log(total / ni) + e0
+        total = [sp.partitionfunction_total(V, T, dE) 
+                 for sp, dE in zip(self.species, self.dE)]
+        mu = -constants.boltzmann * T * np.log(total / ni) + self.E0
         self.gfevector[:nspecies] = -mu
 
     def solve_gfe(self, relativetolerance=1e-10, maxiters=1000):
@@ -449,7 +449,7 @@ class Mixture:
             reltol = relativetolerance * 10
             minimiseriters = 0
             while reltol > relativetolerance:
-                self.recalc_e0i()
+                self.recalc_E0i()
                 self.recalc_gfearrays()
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
@@ -525,10 +525,10 @@ class Mixture:
 
         T = self.T
         weightedenthalpy = sum(constants.avogadro * ni * 
-                               (sp.internal_energy(T, de) + sp.e0 + 
+                               (sp.internal_energy(T, dE) + E0 + 
                                 constants.boltzmann * T) 
-                               for sp, ni, de in zip(self.species, self.ni, 
-                                                self.deltaionisationenergy))
+                               for sp, ni, dE, E0 in zip(self.species, self.ni, 
+                                                         self.dE, self.E0))
         weightedmolmass = sum(ni * sp.molarmass
                               for sp, ni in zip(self.species, self.ni))
         return weightedenthalpy / weightedmolmass
