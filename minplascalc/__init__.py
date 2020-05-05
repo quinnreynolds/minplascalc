@@ -131,7 +131,7 @@ def species_from_name(name):
     return species_from_file(str(filename))
 
 
-def mixture_from_names(names, x0, T, P):
+def mixture_from_names(names, x0):
     """ Create a mixture from a list of species names using the species database
 
     Parameters
@@ -141,13 +141,9 @@ def mixture_from_names(names, x0, T, P):
     x0 : list of float
         Initial value of mole fractions for each species, typically the 
         room-temperature composition of the plasma-generating gas
-    T : float
-        Temperature of plasma in K
-    P : float
-        Pressure of plasma in Pa
     """
     species = [species_from_name(nm) for nm in names]
-    return Mixture(species, x0, T, P)
+    return Mixture(species, x0)
     
 
 class BaseSpecies:
@@ -325,7 +321,7 @@ class ElectronSpecies(BaseSpecies):
 
 
 class Mixture:
-    def __init__(self, species, x0, T, P):
+    def __init__(self, species, x0):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -339,17 +335,11 @@ class Mixture:
         x0 : list of float
             Initial value of mole fractions for each species, typically the 
             room-temperature composition of the plasma-generating gas
-        T : float
-            Temperature of plasma in K
-        P : float
-            Pressure of plasma in Pa
         """
         self.species = deepcopy(species)
         self.species.append(ElectronSpecies())
         self.x0 = np.zeros(len(self.species))
         self.x0[:-1] = np.array(x0)
-        self.T = T
-        self.P = P
 
         self.ni = np.zeros(len(self.species))
         self.numberdensity = np.zeros(len(self.species))
@@ -381,9 +371,8 @@ class Mixture:
                                             for sp in self.species]
 
         # Set element totals for constraints from provided initial conditions
-        nt0 = self.P / (constants.boltzmann * self.T)
         for elm in elements:
-            elm['totalnumber'] = sum(nt0 * c * x0loc
+            elm['totalnumber'] = sum(1e24 * c * x0loc
                                      for c, sp, x0loc in zip(
                                              elm['stoichiometriccoeffts'],
                                              self.species, self.x0))
@@ -405,15 +394,25 @@ class Mixture:
     def initialise_ni(self, ni):
         self.ni = np.array(ni)
 
-    def calculate_numberdensity(self):
-        V  = self.ni.sum() * constants.boltzmann * self.T / self.P
+    def calculate_numberdensity(self, T, P):
+        """Update number density (particles/m3) array based on current ni 
+        values.
+
+        Parameters
+        ----------
+        T : float
+            Temperature of plasma in K
+        P : float
+            Pressure of plasma in Pa
+        """
+        V  = self.ni.sum() * constants.boltzmann * T / P
         self.numberdensity = self.ni / V 
 
-    def recalc_E0i(self):
+    def recalc_E0i(self, T, P):
         # Ionisation energy lowering calculation, using limitation theory of
         # Stewart & Pyatt 1966
-        kbt = constants.boltzmann * self.T
-        self.calculate_numberdensity()
+        kbt = constants.boltzmann * T
+        self.calculate_numberdensity(T, P)
         weightedchargesumsqd = 0
         weightedchargesum = 0
         for sp, nd in zip(self.species, self.numberdensity):
@@ -437,10 +436,8 @@ class Mixture:
                     self.E0[i] = (self.E0[ifrom] + spfrom.ionisationenergy - 
                                   self.dE[ifrom])
 
-    def recalc_gfearrays(self):
+    def recalc_gfearrays(self, T, P):
         ni = self.ni
-        T = self.T
-        P = self.P
 
         nisum = ni.sum()
         V = nisum * constants.boltzmann * T / P
@@ -454,7 +451,7 @@ class Mixture:
         mu = -constants.boltzmann * T * np.log(total / ni) + self.E0
         self.gfevector[:nspecies] = -mu
 
-    def solve_gfe(self, relativetolerance=1e-10, maxiters=1000):
+    def solve_gfe(self, T, P, relativetolerance=1e-10, maxiters=1000):
         governorfactors = np.linspace(0.9, 0.1, 9)
         successyn = False
         governoriters = 0
@@ -464,8 +461,8 @@ class Mixture:
             reltol = relativetolerance * 10
             minimiseriters = 0
             while reltol > relativetolerance:
-                self.recalc_E0i()
-                self.recalc_gfearrays()
+                self.recalc_E0i(T, P)
+                self.recalc_gfearrays(T, P)
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
@@ -497,7 +494,7 @@ class Mixture:
         logging.debug(governoriters, relaxfactor, reltol)
         logging.debug(self.ni)
 
-        self.calculate_numberdensity()
+        self.calculate_numberdensity(T, P)
 
     def calculate_density(self):
         """Calculate the density of the plasma in kg/m3 based on current
@@ -507,38 +504,29 @@ class Mixture:
         return sum(nd * sp.molarmass / constants.avogadro
                    for sp, nd in zip(self.species, self.numberdensity))
 
-    def calculate_heat_capacity(self, init_ni=1e20, rel_delta_T=0.001):
+    def calculate_heat_capacity(self, T, P, init_ni=1e20, rel_delta_T=0.001):
         """Calculate the heat capacity at constant pressure of the plasma in
         J/kg.K based on current conditions and species composition. Note that
         this is done by performing two full composition simulations when this
         function is called - can be time-consuming.
         """
-
-        T = self.T
+        self.initialise_ni([init_ni for i in range(len(self.species))])
+        self.solve_gfe((1-rel_delta_T)*T, P)
+        enthalpylow = self.calculate_enthalpy(T)
 
         self.initialise_ni([init_ni for i in range(len(self.species))])
-        self.T = (1 - rel_delta_T) * T
-        self.solve_gfe()
-        enthalpylow = self.calculate_enthalpy()
-
-        self.initialise_ni([init_ni for i in range(len(self.species))])
-        self.T = (1 + rel_delta_T) * T
-        self.solve_gfe()
-        enthalpyhigh = self.calculate_enthalpy()
-
-        self.T = T
+        self.solve_gfe((1+rel_delta_T)*T, P)
+        enthalpyhigh = self.calculate_enthalpy(T)
 
         return (enthalpyhigh - enthalpylow) / (2 * rel_delta_T * T)
 
-    def calculate_enthalpy(self):
+    def calculate_enthalpy(self, T):
         """Calculate the enthalpy of the plasma in J/kg based on current
         conditions and species composition. Note that the value returned is not
         absolute, it is relative to an arbitrary reference which may be
         negative or positive depending on the reference energies of the diatomic
         species present.
         """
-
-        T = self.T
         weightedenthalpy = sum(constants.avogadro * ni * 
                                (sp.internal_energy(T, dE) + E0 + 
                                 constants.boltzmann * T) 
