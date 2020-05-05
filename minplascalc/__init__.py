@@ -90,7 +90,7 @@ def species_to_file(sp, datafile=None):
         with open(sp.name + '.json', 'w') as f:
             json.dump(sp.__dict__, f, indent=4)
         
-        
+
 def species_from_file(datafile):
     """Create a species from a data file in JSON format.
 
@@ -306,7 +306,7 @@ class ElectronSpecies(BaseSpecies):
 
 
 class Mixture:
-    def __init__(self, mixture_file, T=10000, P=101325):
+    def __init__(self, name, species, x0, T, P):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -314,29 +314,37 @@ class Mixture:
 
         Parameters
         ----------
-        mixture_file : string
-            Path to a JSON data file containing species and initial mole
-            fractions
+        name : str
+            A short descriptive name for the mixture
+        species : list of obj
+            All species participating in the mixture (excluding electrons which
+            are added automatically), as minplascalc Species objects
+        x0 : list of float
+            Initial value of mole fractions for each species, typically the 
+            room-temperature composition of the plasma-generating gas
         T : float
-            Temperature value in K, for initialisation (default 10000)
+            Temperature of plasma in K
         P : float
-            Pressure value in Pa, for initialisation (default 101325)
+            Pressure of plasma in Pa
         """
-
+        self.name = name
+        self.species = deepcopy(species)
+        self.species.append(ElectronSpecies())
+        self.x0 = np.zeros(len(self.species))
+        self.x0[:-1] = np.array(x0)
         self.T = T
         self.P = P
 
-        with open(mixture_file) as sf:
-            jsondata = json.load(sf)
+        # with open(mixture_file) as sf:
+        #     jsondata = json.load(sf)
 
-        # Random order upsets the nonlinearities in the minimiser resulting in
-        # non-reproducibility between runs. Make sure this order is maintained
-        self.species = [species_from_name(spdata['species']) 
-                        for spdata in jsondata['speciesList']]
-        self.species.append(ElectronSpecies())
+        # # Random order upsets the nonlinearities in the minimiser resulting in
+        # # non-reproducibility between runs. Make sure this order is maintained
+        # self.species = [species_from_name(spdata['species']) 
+        #                 for spdata in jsondata['speciesList']]
+        # self.species.append(ElectronSpecies())
 
         self.ni = np.zeros(len(self.species))
-        self.x0 = np.array([spdata['x0'] for spdata in jsondata['speciesList']])
         self.numberdensity = np.zeros(len(self.species))
         self.E0 = np.zeros(len(self.species))
         for i, sp in enumerate(self.species):
