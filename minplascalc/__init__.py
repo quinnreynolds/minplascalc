@@ -131,6 +131,25 @@ def species_from_name(name):
     return species_from_file(str(filename))
 
 
+def mixture_from_names(names, x0, T, P):
+    """ Create a mixture from a list of species names using the species database
+
+    Parameters
+    ----------
+    names : list of str
+        Names of the species
+    x0 : list of float
+        Initial value of mole fractions for each species, typically the 
+        room-temperature composition of the plasma-generating gas
+    T : float
+        Temperature of plasma in K
+    P : float
+        Pressure of plasma in Pa
+    """
+    species = [species_from_name(nm) for nm in names]
+    return Mixture(species, x0, T, P)
+    
+
 class BaseSpecies:
     def partitionfunction_total(self, V, T, dE):
         return (V * self.partitionfunction_translational(T)
@@ -306,7 +325,7 @@ class ElectronSpecies(BaseSpecies):
 
 
 class Mixture:
-    def __init__(self, name, species, x0, T, P):
+    def __init__(self, species, x0, T, P):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -314,8 +333,6 @@ class Mixture:
 
         Parameters
         ----------
-        name : str
-            A short descriptive name for the mixture
         species : list of obj
             All species participating in the mixture (excluding electrons which
             are added automatically), as minplascalc Species objects
@@ -327,7 +344,6 @@ class Mixture:
         P : float
             Pressure of plasma in Pa
         """
-        self.name = name
         self.species = deepcopy(species)
         self.species.append(ElectronSpecies())
         self.x0 = np.zeros(len(self.species))
