@@ -351,15 +351,6 @@ class Mixture:
         self.T = T
         self.P = P
 
-        # with open(mixture_file) as sf:
-        #     jsondata = json.load(sf)
-
-        # # Random order upsets the nonlinearities in the minimiser resulting in
-        # # non-reproducibility between runs. Make sure this order is maintained
-        # self.species = [species_from_name(spdata['species']) 
-        #                 for spdata in jsondata['speciesList']]
-        # self.species.append(ElectronSpecies())
-
         self.ni = np.zeros(len(self.species))
         self.numberdensity = np.zeros(len(self.species))
         self.E0 = np.zeros(len(self.species))
