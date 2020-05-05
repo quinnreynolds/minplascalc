@@ -391,9 +391,6 @@ class Mixture:
             self.gfematrix[-1, j] = qc
             self.gfematrix[j, -1] = qc
 
-    def initialise_ni(self, ni):
-        self.ni = np.array(ni)
-
     def calculate_numberdensity(self, T, P):
         """Update number density (particles/m3) array based on current ni 
         values.
@@ -451,7 +448,8 @@ class Mixture:
         mu = -constants.boltzmann * T * np.log(total / ni) + self.E0
         self.gfevector[:nspecies] = -mu
 
-    def solve_gfe(self, T, P, relativetolerance=1e-10, maxiters=1000):
+    def solve_gfe(self, T, P, ni0=1e20, relativetolerance=1e-10, maxiters=1000):
+        self.ni = np.full(len(self.species), ni0)
         governorfactors = np.linspace(0.9, 0.1, 9)
         successyn = False
         governoriters = 0
@@ -504,18 +502,17 @@ class Mixture:
         return sum(nd * sp.molarmass / constants.avogadro
                    for sp, nd in zip(self.species, self.numberdensity))
 
-    def calculate_heat_capacity(self, T, P, init_ni=1e20, rel_delta_T=0.001):
+    def calculate_heat_capacity(self, T, P, rel_delta_T=0.001, ni0=1e20, 
+                                relativetolerance=1e-10, maxiters=1000):
         """Calculate the heat capacity at constant pressure of the plasma in
         J/kg.K based on current conditions and species composition. Note that
         this is done by performing two full composition simulations when this
         function is called - can be time-consuming.
         """
-        self.initialise_ni([init_ni for i in range(len(self.species))])
-        self.solve_gfe((1-rel_delta_T)*T, P)
+        self.solve_gfe((1-rel_delta_T)*T, P, ni0, relativetolerance, maxiters)
         enthalpylow = self.calculate_enthalpy(T)
 
-        self.initialise_ni([init_ni for i in range(len(self.species))])
-        self.solve_gfe((1+rel_delta_T)*T, P)
+        self.solve_gfe((1+rel_delta_T)*T, P, ni0, relativetolerance, maxiters)
         enthalpyhigh = self.calculate_enthalpy(T)
 
         return (enthalpyhigh - enthalpylow) / (2 * rel_delta_T * T)
