@@ -373,9 +373,9 @@ class Mixture:
         # Set element totals for constraints from provided initial conditions
         for elm in elements:
             elm['totalnumber'] = sum(1e24 * c * x0loc
-                                     for c, sp, x0loc in zip(
+                                     for c, x0loc in zip(
                                              elm['stoichiometriccoeffts'],
-                                             self.species, self.x0))
+                                             self.x0))
 
         # Set up A matrix, b and ni vectors for GFE minimiser
         minimiser_dof = len(self.species) + len(elements) + 1
