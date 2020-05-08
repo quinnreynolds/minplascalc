@@ -391,27 +391,12 @@ class Mixture:
             self.gfematrix[-1, j] = qc
             self.gfematrix[j, -1] = qc
 
-    def calculate_numberdensity(self, T, P):
-        """Update number density (particles/m3) array based on current ni 
-        values.
-
-        Parameters
-        ----------
-        T : float
-            Temperature of plasma in K
-        P : float
-            Pressure of plasma in Pa
-        """
-        V  = self.ni.sum() * constants.boltzmann * T / P
-        self.numberdensity = self.ni / V 
-
     def recalc_E0i(self, T, P):
         # Ionisation energy lowering calculation, using limitation theory of
         # Stewart & Pyatt 1966
         kbt = constants.boltzmann * T
-        self.calculate_numberdensity(T, P)
-        weightedchargesumsqd = 0
-        weightedchargesum = 0
+        self.numberdensity = self.ni * P / (self.ni.sum() * kbt) 
+        weightedchargesumsqd, weightedchargesum = 0, 0
         for sp, nd in zip(self.species, self.numberdensity):
             if sp.chargenumber > 0:
                 weightedchargesum += nd * sp.chargenumber
@@ -421,8 +406,8 @@ class Mixture:
                           * constants.fundamentalcharge ** 2)) ** (3/2)
         for j, sp in enumerate(self.species):
             if sp.name != 'e':
-                ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * 
-                                                   self.numberdensity[-1])
+                ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi 
+                                                   * self.numberdensity[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
                 self.dE[j] = de
         
@@ -430,8 +415,8 @@ class Mixture:
             for i, (sp, ifrom) in enumerate(zip(self.species, self.ionisedfrom)):
                 if sp.chargenumber == cn:
                     spfrom = self.species[ifrom]
-                    self.E0[i] = (self.E0[ifrom] + spfrom.ionisationenergy - 
-                                  self.dE[ifrom])
+                    self.E0[i] = (self.E0[ifrom] + spfrom.ionisationenergy 
+                                  - self.dE[ifrom])
 
     def recalc_gfearrays(self, T, P):
         ni = self.ni
@@ -484,15 +469,15 @@ class Mixture:
 
             governoriters += 1
 
+        self.numberdensity = self.ni*P / (self.ni.sum()*constants.boltzmann*T) 
+
         if not successyn:
             warnings.warn('Minimiser could not find a converged solution, '
                           'results may be inaccurate.')
-
+        
         # noinspection PyUnboundLocalVariable
         logging.debug(governoriters, relaxfactor, reltol)
         logging.debug(self.ni)
-
-        self.calculate_numberdensity(T, P)
 
     def calculate_density(self):
         """Calculate the density of the plasma in kg/m3 based on current
@@ -525,8 +510,8 @@ class Mixture:
         species present.
         """
         weightedenthalpy = sum(constants.avogadro * ni * 
-                               (sp.internal_energy(T, dE) + E0 + 
-                                constants.boltzmann * T) 
+                               (sp.internal_energy(T, dE) + E0 
+                                + constants.boltzmann * T) 
                                for sp, ni, dE, E0 in zip(self.species, self.ni, 
                                                          self.dE, self.E0))
         weightedmolmass = sum(ni * sp.molarmass
