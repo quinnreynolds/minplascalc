@@ -526,12 +526,10 @@ class Mixture:
         T_start = self.T
         
         self.T = T_start * (1-rel_delta_T)        
-        self.solve_gfe(ni0, relativetolerance, maxiters)
-        enthalpylow = self.calculate_enthalpy()
+        enthalpylow = self.calculate_enthalpy(ni0, relativetolerance, maxiters)
 
         self.T = T_start * (1+rel_delta_T)        
-        self.solve_gfe(ni0, relativetolerance, maxiters)
-        enthalpyhigh = self.calculate_enthalpy()
+        enthalpyhigh = self.calculate_enthalpy(ni0, relativetolerance, maxiters)
         
         self.T = T_start
 
