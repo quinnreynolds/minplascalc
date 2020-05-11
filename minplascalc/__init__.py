@@ -131,7 +131,7 @@ def species_from_name(name):
     return species_from_file(str(filename))
 
 
-def mixture_from_names(names, x0):
+def mixture_from_names(names, x0, T, P):
     """ Create a mixture from a list of species names using the species database
 
     Parameters
@@ -141,9 +141,13 @@ def mixture_from_names(names, x0):
     x0 : list of float
         Initial value of mole fractions for each species, typically the 
         room-temperature composition of the plasma-generating gas
+    T : float
+        LTE plasma temperature, in K
+    P : float
+        LTE plasma pressure, in Pa            
     """
     species = [species_from_name(nm) for nm in names]
-    return Mixture(species, x0)
+    return Mixture(species, x0, T, P)
     
 
 class BaseSpecies:
@@ -321,7 +325,7 @@ class ElectronSpecies(BaseSpecies):
 
 
 class Mixture:
-    def __init__(self, species, x0):
+    def __init__(self, species, x0, T, P):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
@@ -335,12 +339,18 @@ class Mixture:
         x0 : list of float
             Initial value of mole fractions for each species, typically the 
             room-temperature composition of the plasma-generating gas
+        T : float
+            LTE plasma temperature, in K
+        P : float
+            LTE plasma pressure, in Pa            
         """
         self.species = deepcopy(species)
         self.species.append(ElectronSpecies())
         self.x0 = np.zeros(len(self.species))
         self.x0[:-1] = np.array(x0)
-
+        self.T = T
+        self.P = P
+        
         self.ni = np.zeros(len(self.species))
         self.numberdensity = np.zeros(len(self.species))
         self.E0 = np.zeros(len(self.species))
@@ -391,9 +401,10 @@ class Mixture:
             self.gfematrix[-1, j] = qc
             self.gfematrix[j, -1] = qc
 
-    def recalc_E0i(self, T, P):
+    def recalc_E0i(self):
         # Ionisation energy lowering calculation, using limitation theory of
         # Stewart & Pyatt 1966
+        T, P = self.T, self.P
         kbt = constants.boltzmann * T
         self.numberdensity = self.ni * P / (self.ni.sum() * kbt) 
         weightedchargesumsqd, weightedchargesum = 0, 0
@@ -418,22 +429,23 @@ class Mixture:
                     self.E0[i] = (self.E0[ifrom] + spfrom.ionisationenergy 
                                   - self.dE[ifrom])
 
-    def recalc_gfearrays(self, T, P):
-        ni = self.ni
+    def recalc_gfearrays(self):
+        T, P = self.T, self.P
 
-        nisum = ni.sum()
+        nisum = self.ni.sum()
         V = nisum * constants.boltzmann * T / P
         offdiagonal = -constants.boltzmann * T / nisum
         nspecies = len(self.species)
 
-        ondiagonal = constants.boltzmann * T / ni
+        ondiagonal = constants.boltzmann * T / self.ni
         self.gfematrix[:nspecies, :nspecies] = offdiagonal + np.diag(ondiagonal)
         total = [sp.partitionfunction_total(V, T, dE) 
                  for sp, dE in zip(self.species, self.dE)]
-        mu = -constants.boltzmann * T * np.log(total / ni) + self.E0
+        mu = -constants.boltzmann * T * np.log(total / self.ni) + self.E0
         self.gfevector[:nspecies] = -mu
 
-    def solve_gfe(self, T, P, ni0=1e20, relativetolerance=1e-10, maxiters=1000):
+    def solve_gfe(self, ni0=1e20, relativetolerance=1e-10, maxiters=1000):
+        T, P = self.T, self.P
         self.ni = np.full(len(self.species), ni0)
         governorfactors = np.linspace(0.9, 0.1, 9)
         successyn = False
@@ -444,8 +456,8 @@ class Mixture:
             reltol = relativetolerance * 10
             minimiseriters = 0
             while reltol > relativetolerance:
-                self.recalc_E0i(T, P)
-                self.recalc_gfearrays(T, P)
+                self.recalc_E0i()
+                self.recalc_gfearrays()
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
@@ -479,44 +491,51 @@ class Mixture:
         logging.debug(governoriters, relaxfactor, reltol)
         logging.debug(self.ni)
 
-    def calculate_density(self):
-        """Calculate the density of the plasma in kg/m3 based on current
-        conditions and species composition.
+    def calculate_density(self, ni0=1e20, relativetolerance=1e-10, 
+                          maxiters=1000):
+        """Calculate the LTE density of the plasma in kg/m3.
         """
-
+        self.solve_gfe(ni0, relativetolerance, maxiters)
         return sum(nd * sp.molarmass / constants.avogadro
                    for sp, nd in zip(self.species, self.numberdensity))
 
-    def calculate_heat_capacity(self, T, P, rel_delta_T=0.001, ni0=1e20, 
+    def calculate_enthalpy(self, ni0=1e20, relativetolerance=1e-10, 
+                          maxiters=1000):
+        """Calculate the LTE enthalpy of the plasma in J/kg. Note that the 
+        value returned is not absolute, it is relative to an arbitrary 
+        reference which may be negative or positive depending on the reference 
+        energies of the diatomic species present.
+        """
+        self.solve_gfe(ni0, relativetolerance, maxiters)
+        weightedenthalpy = sum(constants.avogadro * ni * 
+                               (sp.internal_energy(self.T, dE) + E0 
+                                + constants.boltzmann * self.T) 
+                               for sp, ni, dE, E0 in zip(self.species, self.ni, 
+                                                         self.dE, self.E0))
+        weightedmolmass = sum(ni * sp.molarmass
+                              for sp, ni in zip(self.species, self.ni))
+        return weightedenthalpy / weightedmolmass
+
+    def calculate_heat_capacity(self, rel_delta_T=0.001, ni0=1e20, 
                                 relativetolerance=1e-10, maxiters=1000):
         """Calculate the heat capacity at constant pressure of the plasma in
         J/kg.K based on current conditions and species composition. Note that
         this is done by performing two full composition simulations when this
         function is called - can be time-consuming.
         """
-        self.solve_gfe((1-rel_delta_T)*T, P, ni0, relativetolerance, maxiters)
-        enthalpylow = self.calculate_enthalpy(T)
+        T_start = self.T
+        
+        self.T = T_start * (1-rel_delta_T)        
+        self.solve_gfe(ni0, relativetolerance, maxiters)
+        enthalpylow = self.calculate_enthalpy()
 
-        self.solve_gfe((1+rel_delta_T)*T, P, ni0, relativetolerance, maxiters)
-        enthalpyhigh = self.calculate_enthalpy(T)
+        self.T = T_start * (1+rel_delta_T)        
+        self.solve_gfe(ni0, relativetolerance, maxiters)
+        enthalpyhigh = self.calculate_enthalpy()
+        
+        self.T = T_start
 
-        return (enthalpyhigh - enthalpylow) / (2 * rel_delta_T * T)
-
-    def calculate_enthalpy(self, T):
-        """Calculate the enthalpy of the plasma in J/kg based on current
-        conditions and species composition. Note that the value returned is not
-        absolute, it is relative to an arbitrary reference which may be
-        negative or positive depending on the reference energies of the diatomic
-        species present.
-        """
-        weightedenthalpy = sum(constants.avogadro * ni * 
-                               (sp.internal_energy(T, dE) + E0 
-                                + constants.boltzmann * T) 
-                               for sp, ni, dE, E0 in zip(self.species, self.ni, 
-                                                         self.dE, self.E0))
-        weightedmolmass = sum(ni * sp.molarmass
-                              for sp, ni in zip(self.species, self.ni))
-        return weightedenthalpy / weightedmolmass
+        return (enthalpyhigh - enthalpylow) / (2 * rel_delta_T * self.T)
 
     def calculate_viscosity(self):
         """Calculate the viscosity of the plasma in Pa.s based on current
