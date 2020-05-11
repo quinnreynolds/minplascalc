@@ -4,15 +4,15 @@ import minplascalc as mpc
 
 @pytest.fixture
 def mixture():
-    c = mpc.Mixture(str(mpc.MIXTUREPATH / "OxygenPlasma5sp.json"),
+    c = mpc.Mixture(species=[mpc.species_from_name(sp) for sp in 
+                             ['O2','O2+','O','O+','O++']],
+                    x0=[1,0,0,0,0],
                     T=1000, P=101325)
-    c.initialise_ni([1e20]*len(c.species))
     return c
 
 
 def test_solver(mixture):
     mixture.T = 1000
-    mixture.solve_gfe()
 
     assert mixture.calculate_density() == pytest.approx(0.3899566)
 
@@ -45,7 +45,6 @@ def test_heat_capacity(mixture, T, P, result, tol):
 def test_enthalpy(mixture, T, P, result, tol):
     mixture.T = T
     mixture.P = P
-    mixture.solve_gfe()
 
     assert mixture.calculate_enthalpy() == pytest.approx(result, abs=tol)
 
