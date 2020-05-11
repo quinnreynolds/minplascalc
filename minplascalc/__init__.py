@@ -14,7 +14,6 @@ from . import constants
 
 DATAPATH = pathlib.Path(__file__).parent / 'data'
 SPECIESPATH = DATAPATH / 'species'
-MIXTUREPATH = DATAPATH / 'mixtures'
 
 # utility functions ############################################################
 
@@ -361,7 +360,6 @@ class Mixture:
 
         self.maxchargenumber = max(sp.chargenumber for sp in self.species)
         self.ionisedfrom = [None] * len(self.species)
-        # Find species which each +ve charged ion originates from
         for i, sp in enumerate(self.species):
             if sp.chargenumber > 0:
                 for sp2 in self.species:
@@ -371,8 +369,6 @@ class Mixture:
                             if sp2.name == sp3.name:
                                 self.ionisedfrom[i] = j
         
-        # Set stoichiometry and charge coefficient arrays for mass action and
-        # electroneutrality constraints
         elements = [{'name': nm, 'stoichometriccoeffts': None, 'totalnumber': 0}
                     for nm in sorted(set(s for sp in self.species
                                          for s in sp.stoichiometry))]
@@ -380,14 +376,12 @@ class Mixture:
             elm['stoichiometriccoeffts'] = [sp.stoichiometry.get(elm['name'], 0)
                                             for sp in self.species]
 
-        # Set element totals for constraints from provided initial conditions
         for elm in elements:
             elm['totalnumber'] = sum(1e24 * c * x0loc
                                      for c, x0loc in zip(
                                              elm['stoichiometriccoeffts'],
                                              self.x0))
 
-        # Set up A matrix, b and ni vectors for GFE minimiser
         minimiser_dof = len(self.species) + len(elements) + 1
         self.gfematrix = np.zeros((minimiser_dof, minimiser_dof))
         self.gfevector = np.zeros(minimiser_dof)
@@ -402,8 +396,9 @@ class Mixture:
             self.gfematrix[j, -1] = qc
 
     def recalc_E0i(self):
-        # Ionisation energy lowering calculation, using limitation theory of
-        # Stewart & Pyatt 1966
+        """Calculate the ionisation energy lowering, using limitation theory of
+        Stewart & Pyatt 1966
+        """
         T, P = self.T, self.P
         kbt = constants.boltzmann * T
         self.numberdensity = self.ni * P / (self.ni.sum() * kbt) 
