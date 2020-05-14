@@ -345,21 +345,22 @@ class Mixture:
         """
         self.species = deepcopy(species)
         self.species.append(ElectronSpecies())
-        self.x0 = np.zeros(len(self.species))
+        self.nspecies = len(self.species)
+        self.x0 = np.zeros(self.nspecies)
         self.x0[:-1] = np.array(x0)
         self.T = T
         self.P = P
         
-        self.ni = np.zeros(len(self.species))
-        self.numberdensity = np.zeros(len(self.species))
-        self.E0 = np.zeros(len(self.species))
+        self.ni = np.zeros(self.nspecies)
+        self.numberdensity = np.zeros(self.nspecies)
+        self.E0 = np.zeros(self.nspecies)
         for i, sp in enumerate(self.species):
             if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
                 self.E0[i] = -sp.dissociationenergy
-        self.dE = np.zeros(len(self.species))
+        self.dE = np.zeros(self.nspecies)
 
         self.maxchargenumber = max(sp.chargenumber for sp in self.species)
-        self.ionisedfrom = [None] * len(self.species)
+        self.ionisedfrom = [None] * self.nspecies
         for i, sp in enumerate(self.species):
             if sp.chargenumber > 0:
                 for sp2 in self.species:
@@ -382,15 +383,15 @@ class Mixture:
                                              elm['stoichiometriccoeffts'],
                                              self.x0))
 
-        minimiser_dof = len(self.species) + len(elements) + 1
+        minimiser_dof = self.nspecies + len(elements) + 1
         self.gfematrix = np.zeros((minimiser_dof, minimiser_dof))
         self.gfevector = np.zeros(minimiser_dof)
 
         for i, elm in enumerate(elements):
-            self.gfevector[len(self.species) + i] = elm['totalnumber']
+            self.gfevector[self.nspecies + i] = elm['totalnumber']
             for j, sc in enumerate(elm['stoichiometriccoeffts']):
-                self.gfematrix[len(self.species) + i, j] = sc
-                self.gfematrix[j, len(self.species) + i] = sc
+                self.gfematrix[self.nspecies + i, j] = sc
+                self.gfematrix[j, self.nspecies + i] = sc
         for j, qc in enumerate(sp.chargenumber for sp in self.species):
             self.gfematrix[-1, j] = qc
             self.gfematrix[j, -1] = qc
@@ -430,7 +431,7 @@ class Mixture:
         nisum = self.ni.sum()
         V = nisum * constants.boltzmann * T / P
         offdiagonal = -constants.boltzmann * T / nisum
-        nspecies = len(self.species)
+        nspecies = self.nspecies
 
         ondiagonal = constants.boltzmann * T / self.ni
         self.gfematrix[:nspecies, :nspecies] = offdiagonal + np.diag(ondiagonal)
@@ -441,7 +442,7 @@ class Mixture:
 
     def solve_gfe(self, ni0=1e20, relativetolerance=1e-10, maxiters=1000):
         T, P = self.T, self.P
-        self.ni = np.full(len(self.species), ni0)
+        self.ni = np.full(self.nspecies, ni0)
         governorfactors = np.linspace(0.9, 0.1, 9)
         successyn = False
         governoriters = 0
@@ -456,7 +457,7 @@ class Mixture:
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
-                newni = solution[0:len(self.species)]
+                newni = solution[0:self.nspecies]
                 deltani = abs(newni - self.ni)
                 maxalloweddeltani = governorfactor * self.ni
 
