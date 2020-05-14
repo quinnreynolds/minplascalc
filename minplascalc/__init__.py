@@ -513,13 +513,15 @@ class Mixture:
         energies of the diatomic species present.
         """
         self.solve_gfe()
-        weightedenthalpy = sum(constants.avogadro * ni * 
-                               (sp.internal_energy(self.T, dE) + E0 
-                                + constants.boltzmann * self.T) 
-                               for sp, ni, dE, E0 in zip(self.species, self.ni, 
+        weightedenthalpy = sum(constants.avogadro * nd 
+                               * (sp.internal_energy(self.T, dE) + E0 
+                                  + constants.boltzmann * self.T) 
+                               for sp, nd, dE, E0 in zip(self.species, 
+                                                         self.numberdensity, 
                                                          self.dE, self.E0))
-        weightedmolmass = sum(ni * sp.molarmass
-                              for sp, ni in zip(self.species, self.ni))
+        weightedmolmass = sum(nd * sp.molarmass
+                              for sp, nd in zip(self.species, 
+                                                self.numberdensity))
         return weightedenthalpy / weightedmolmass
 
     def calculate_heat_capacity(self, rel_delta_T=0.001):
