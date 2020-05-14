@@ -414,7 +414,7 @@ class Mixture:
             self.gfematrix[-1, j] = qc
             self.gfematrix[j, -1] = qc
 
-    def recalc_E0i(self):
+    def __recalcE0i(self):
         """Calculate the ionisation energy lowering, using limitation theory of
         Stewart & Pyatt 1966
         """
@@ -455,7 +455,7 @@ class Mixture:
             reltol = self.gfe_reltol * 10
             minimiseriters = 0
             while reltol > self.gfe_reltol:
-                self.recalc_E0i()
+                self.__recalcE0i()
 
                 nisum = self.ni.sum()
                 V = nisum * constants.boltzmann*T / P
