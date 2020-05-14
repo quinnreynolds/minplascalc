@@ -370,7 +370,6 @@ class Mixture:
         self.gfe_maxiter = gfe_maxiter
         
         self.__ni = np.zeros(nspecies)
-        #self.numberdensity = np.zeros(nspecies)
         self.E0 = np.zeros(nspecies)
         for i, sp in enumerate(self.species):
             if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
@@ -442,7 +441,9 @@ class Mixture:
                     self.E0[i] = (self.E0[ifrom] + spfrom.ionisationenergy 
                                   - self.dE[ifrom])
 
-    def solve_gfe(self):
+    def calculate_composition(self):
+        """Calculate the LTE composition of the plasma in particles/m3.
+        """
         T, P, nspecies = self.T, self.P, len(self.species)
         self.__ni = np.full(nspecies, self.gfe_ni0)
         governorfactors = np.linspace(0.9, 0.1, 9)
@@ -501,7 +502,7 @@ class Mixture:
     def calculate_density(self):
         """Calculate the LTE density of the plasma in kg/m3.
         """
-        ndi = self.solve_gfe()
+        ndi = self.calculate_composition()
         return sum(nd * sp.molarmass / constants.avogadro
                    for sp, nd in zip(self.species, ndi))
 
@@ -511,7 +512,7 @@ class Mixture:
         reference which may be negative or positive depending on the reference 
         energies of the diatomic species present.
         """
-        ndi = self.solve_gfe()
+        ndi = self.calculate_composition()
         weightedenthalpy = sum(constants.avogadro * nd 
                                * (sp.internal_energy(self.T, dE) + E0 
                                   + constants.boltzmann * self.T) 
