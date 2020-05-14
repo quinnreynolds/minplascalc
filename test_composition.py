@@ -7,7 +7,8 @@ def mixture():
     c = mpc.Mixture(species=[mpc.species_from_name(sp) for sp in 
                              ['O2','O2+','O','O+','O++']],
                     x0=[1,0,0,0,0],
-                    T=1000, P=101325)
+                    T=1000, P=101325,
+                    gfe_ni0=1e20, gfe_reltol=1e-10, gfe_maxiter=1000)
     return c
 
 
