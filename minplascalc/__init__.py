@@ -359,8 +359,7 @@ class Mixture:
         """
         self.species = deepcopy(species)
         self.species.append(ElectronSpecies())
-        nspecies = len(self.species)
-        self.x0 = np.zeros(nspecies)
+        self.x0 = np.zeros(len(self.species))
         self.x0[:-1] = np.array(x0)
         self.T = T
         self.P = P
@@ -368,8 +367,10 @@ class Mixture:
         self.gfe_ni0 = gfe_ni0
         self.gfe_reltol = gfe_reltol
         self.gfe_maxiter = gfe_maxiter
+        self.__ni = np.full(len(self.species), self.gfe_ni0)
         
-        self.__ni = np.zeros(nspecies)
+    def __initialise_solver(self):
+        nspecies = len(self.species)
         self.E0 = np.zeros(nspecies)
         for i, sp in enumerate(self.species):
             if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
@@ -444,58 +445,80 @@ class Mixture:
     def calculate_composition(self):
         """Calculate the LTE composition of the plasma in particles/m3.
         """
+        self.__initialise_solver()
         T, P, nspecies = self.T, self.P, len(self.species)
-        self.__ni = np.full(nspecies, self.gfe_ni0)
-        governorfactors = np.linspace(0.9, 0.1, 9)
-        successyn = False
-        governoriters = 0
-        while not successyn and governoriters < len(governorfactors):
-            successyn = True
-            governorfactor = governorfactors[governoriters]
-            reltol = self.gfe_reltol * 10
-            minimiseriters = 0
-            while reltol > self.gfe_reltol:
-                self.__recalcE0i()
-
-                nisum = self.__ni.sum()
-                V = nisum * constants.boltzmann*T / P
-                offdiag = -constants.boltzmann*T / nisum
-                ondiag = constants.boltzmann*T / self.__ni
-                self.gfematrix[:nspecies, :nspecies] = offdiag + np.diag(ondiag)
-                total = [sp.partitionfunction_total(V, T, dE) 
-                         for sp, dE in zip(self.species, self.dE)]
-                mu = -constants.boltzmann*T * np.log(total/self.__ni) + self.E0
-                self.gfevector[:nspecies] = -mu
-
-                solution = np.linalg.solve(self.gfematrix, self.gfevector)
-
-                newni = solution[0:nspecies]
-                deltani = abs(newni - self.__ni)
-                maxalloweddeltani = governorfactor * self.__ni
-
-                maxniindex = newni.argmax()
-                reltol = deltani[maxniindex] / solution[maxniindex]
-
-                deltani = deltani.clip(min=maxalloweddeltani)
-                newrelaxfactors = maxalloweddeltani / deltani
-                relaxfactor = newrelaxfactors.min()
-
-                self.__ni = (1 - relaxfactor) * self.__ni + relaxfactor * newni
-
-                minimiseriters += 1
-                if minimiseriters > self.gfe_maxiter:
-                    successyn = False
-                    break
-
-            governoriters += 1
-
-        if not successyn:
-            warnings.warn('Minimiser could not find a converged solution, '
-                          'results may be inaccurate.')
         
-        # noinspection PyUnboundLocalVariable
-        logging.debug(governoriters, relaxfactor, reltol)
-        logging.debug(self.__ni)
+        # Test if the current values of __ni represent a good-enough soln
+        self.__recalcE0i()
+        nisum = self.__ni.sum()
+        V = nisum * constants.boltzmann*T / P
+        offdiag = -constants.boltzmann*T / nisum
+        ondiag = constants.boltzmann*T / self.__ni
+        self.gfematrix[:nspecies, :nspecies] = offdiag + np.diag(ondiag)
+        total = [sp.partitionfunction_total(V, T, dE) 
+                 for sp, dE in zip(self.species, self.dE)]
+        mu = -constants.boltzmann*T * np.log(total/self.__ni) + self.E0
+        self.gfevector[:nspecies] = -mu
+        solution = np.linalg.solve(self.gfematrix, self.gfevector)
+        newni = solution[0:nspecies]
+        deltani = abs(newni - self.__ni)
+        maxniindex = newni.argmax()
+        test_reltol = deltani[maxniindex] / solution[maxniindex]
+        
+        if test_reltol > self.gfe_reltol:
+            
+            # Full reinitialisation and LTE recalculation
+            self.__ni = np.full(nspecies, self.gfe_ni0)
+            governorfactors = np.linspace(0.9, 0.1, 9)
+            successyn = False
+            governoriters = 0
+            while not successyn and governoriters < len(governorfactors):
+                successyn = True
+                governorfactor = governorfactors[governoriters]
+                reltol = self.gfe_reltol * 10
+                minimiseriters = 0
+                while reltol > self.gfe_reltol:
+                    self.__recalcE0i()
+    
+                    nisum = self.__ni.sum()
+                    V = nisum * constants.boltzmann*T / P
+                    offdiag = -constants.boltzmann*T / nisum
+                    ondiag = np.diag(constants.boltzmann*T / self.__ni)
+                    self.gfematrix[:nspecies, :nspecies] = offdiag + ondiag
+                    total = [sp.partitionfunction_total(V, T, dE) 
+                             for sp, dE in zip(self.species, self.dE)]
+                    mu = -constants.boltzmann*T*np.log(total/self.__ni)+self.E0
+                    self.gfevector[:nspecies] = -mu
+    
+                    solution = np.linalg.solve(self.gfematrix, self.gfevector)
+    
+                    newni = solution[0:nspecies]
+                    deltani = abs(newni - self.__ni)
+                    maxalloweddeltani = governorfactor * self.__ni
+    
+                    maxniindex = newni.argmax()
+                    reltol = deltani[maxniindex] / solution[maxniindex]
+    
+                    deltani = deltani.clip(min=maxalloweddeltani)
+                    newrelaxfactors = maxalloweddeltani / deltani
+                    relaxfactor = newrelaxfactors.min()
+    
+                    self.__ni = (1-relaxfactor)*self.__ni + relaxfactor*newni
+    
+                    minimiseriters += 1
+                    if minimiseriters > self.gfe_maxiter:
+                        successyn = False
+                        break
+                
+                governoriters += 1
+    
+            if not successyn:
+                warnings.warn('Minimiser could not find a converged solution, '
+                              'results may be inaccurate.')
+        
+            # noinspection PyUnboundLocalVariable
+            logging.debug(governoriters, relaxfactor, reltol)
+            logging.debug(self.__ni)
 
         return self.__ni*P / (self.__ni.sum()*constants.boltzmann*T) 
 
