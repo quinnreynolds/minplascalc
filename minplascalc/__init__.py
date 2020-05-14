@@ -369,8 +369,8 @@ class Mixture:
         self.gfe_reltol = gfe_reltol
         self.gfe_maxiter = gfe_maxiter
         
-        self.ni = np.zeros(nspecies)
-        self.numberdensity = np.zeros(nspecies)
+        self.__ni = np.zeros(nspecies)
+        #self.numberdensity = np.zeros(nspecies)
         self.E0 = np.zeros(nspecies)
         for i, sp in enumerate(self.species):
             if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
@@ -420,19 +420,18 @@ class Mixture:
         """
         T, P = self.T, self.P
         kbt = constants.boltzmann * T
-        self.numberdensity = self.ni * P / (self.ni.sum() * kbt) 
+        ndi = self.__ni * P / (self.__ni.sum() * kbt) 
         weightedchargesumsqd, weightedchargesum = 0, 0
-        for sp, nd in zip(self.species, self.numberdensity):
+        for sp, nd in zip(self.species, ndi):
             if sp.chargenumber > 0:
                 weightedchargesum += nd * sp.chargenumber
                 weightedchargesumsqd += nd * sp.chargenumber ** 2
         zstar = weightedchargesumsqd / weightedchargesum
-        debyed3 = (kbt / (4 * np.pi * (zstar + 1) * self.numberdensity[-1] 
+        debyed3 = (kbt / (4 * np.pi * (zstar + 1) * ndi[-1] 
                           * constants.fundamentalcharge ** 2)) ** (3/2)
         for j, sp in enumerate(self.species):
             if sp.name != 'e':
-                ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi 
-                                                   * self.numberdensity[-1])
+                ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * ndi[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
                 self.dE[j] = de
         
@@ -445,7 +444,7 @@ class Mixture:
 
     def solve_gfe(self):
         T, P, nspecies = self.T, self.P, len(self.species)
-        self.ni = np.full(nspecies, self.gfe_ni0)
+        self.__ni = np.full(nspecies, self.gfe_ni0)
         governorfactors = np.linspace(0.9, 0.1, 9)
         successyn = False
         governoriters = 0
@@ -457,21 +456,21 @@ class Mixture:
             while reltol > self.gfe_reltol:
                 self.__recalcE0i()
 
-                nisum = self.ni.sum()
+                nisum = self.__ni.sum()
                 V = nisum * constants.boltzmann*T / P
                 offdiag = -constants.boltzmann*T / nisum
-                ondiag = constants.boltzmann*T / self.ni
+                ondiag = constants.boltzmann*T / self.__ni
                 self.gfematrix[:nspecies, :nspecies] = offdiag + np.diag(ondiag)
                 total = [sp.partitionfunction_total(V, T, dE) 
                          for sp, dE in zip(self.species, self.dE)]
-                mu = -constants.boltzmann*T * np.log(total / self.ni) + self.E0
+                mu = -constants.boltzmann*T * np.log(total/self.__ni) + self.E0
                 self.gfevector[:nspecies] = -mu
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
                 newni = solution[0:nspecies]
-                deltani = abs(newni - self.ni)
-                maxalloweddeltani = governorfactor * self.ni
+                deltani = abs(newni - self.__ni)
+                maxalloweddeltani = governorfactor * self.__ni
 
                 maxniindex = newni.argmax()
                 reltol = deltani[maxniindex] / solution[maxniindex]
@@ -480,7 +479,7 @@ class Mixture:
                 newrelaxfactors = maxalloweddeltani / deltani
                 relaxfactor = newrelaxfactors.min()
 
-                self.ni = (1 - relaxfactor) * self.ni + relaxfactor * newni
+                self.__ni = (1 - relaxfactor) * self.__ni + relaxfactor * newni
 
                 minimiseriters += 1
                 if minimiseriters > self.gfe_maxiter:
@@ -489,22 +488,22 @@ class Mixture:
 
             governoriters += 1
 
-        self.numberdensity = self.ni*P / (self.ni.sum()*constants.boltzmann*T) 
-
         if not successyn:
             warnings.warn('Minimiser could not find a converged solution, '
                           'results may be inaccurate.')
         
         # noinspection PyUnboundLocalVariable
         logging.debug(governoriters, relaxfactor, reltol)
-        logging.debug(self.ni)
+        logging.debug(self.__ni)
+
+        return self.__ni*P / (self.__ni.sum()*constants.boltzmann*T) 
 
     def calculate_density(self):
         """Calculate the LTE density of the plasma in kg/m3.
         """
-        self.solve_gfe()
+        ndi = self.solve_gfe()
         return sum(nd * sp.molarmass / constants.avogadro
-                   for sp, nd in zip(self.species, self.numberdensity))
+                   for sp, nd in zip(self.species, ndi))
 
     def calculate_enthalpy(self):
         """Calculate the LTE enthalpy of the plasma in J/kg. Note that the 
@@ -512,16 +511,14 @@ class Mixture:
         reference which may be negative or positive depending on the reference 
         energies of the diatomic species present.
         """
-        self.solve_gfe()
+        ndi = self.solve_gfe()
         weightedenthalpy = sum(constants.avogadro * nd 
                                * (sp.internal_energy(self.T, dE) + E0 
                                   + constants.boltzmann * self.T) 
-                               for sp, nd, dE, E0 in zip(self.species, 
-                                                         self.numberdensity, 
+                               for sp, nd, dE, E0 in zip(self.species, ndi, 
                                                          self.dE, self.E0))
         weightedmolmass = sum(nd * sp.molarmass
-                              for sp, nd in zip(self.species, 
-                                                self.numberdensity))
+                              for sp, nd in zip(self.species, ndi))
         return weightedenthalpy / weightedmolmass
 
     def calculate_heat_capacity(self, rel_delta_T=0.001):
