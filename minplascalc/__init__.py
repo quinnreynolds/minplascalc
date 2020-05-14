@@ -425,20 +425,6 @@ class Mixture:
                     self.E0[i] = (self.E0[ifrom] + spfrom.ionisationenergy 
                                   - self.dE[ifrom])
 
-    def recalc_gfearrays(self):
-        T, P, nspecies = self.T, self.P, len(self.species)
-
-        nisum = self.ni.sum()
-        V = nisum * constants.boltzmann * T / P
-        offdiagonal = -constants.boltzmann * T / nisum
-
-        ondiagonal = constants.boltzmann * T / self.ni
-        self.gfematrix[:nspecies, :nspecies] = offdiagonal + np.diag(ondiagonal)
-        total = [sp.partitionfunction_total(V, T, dE) 
-                 for sp, dE in zip(self.species, self.dE)]
-        mu = -constants.boltzmann * T * np.log(total / self.ni) + self.E0
-        self.gfevector[:nspecies] = -mu
-
     def solve_gfe(self, ni0=1e20, relativetolerance=1e-10, maxiters=1000):
         T, P, nspecies = self.T, self.P, len(self.species)
         self.ni = np.full(nspecies, ni0)
@@ -452,7 +438,16 @@ class Mixture:
             minimiseriters = 0
             while reltol > relativetolerance:
                 self.recalc_E0i()
-                self.recalc_gfearrays()
+
+                nisum = self.ni.sum()
+                V = nisum * constants.boltzmann*T / P
+                offdiag = -constants.boltzmann*T / nisum
+                ondiag = constants.boltzmann*T / self.ni
+                self.gfematrix[:nspecies, :nspecies] = offdiag + np.diag(ondiag)
+                total = [sp.partitionfunction_total(V, T, dE) 
+                         for sp, dE in zip(self.species, self.dE)]
+                mu = -constants.boltzmann*T * np.log(total / self.ni) + self.E0
+                self.gfevector[:nspecies] = -mu
 
                 solution = np.linalg.solve(self.gfematrix, self.gfevector)
 
