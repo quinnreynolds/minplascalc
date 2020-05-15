@@ -31,11 +31,9 @@ def parse_values(nist_line):
     """Helper function to tidy up a string of data copied from NIST online
     databases.
     """
-
     table = str.maketrans('', '', '+x?[]')
     line = ''.join(nist_line.split()).translate(table)
     records = line.split('|')[:-1]
-
     values = []
     for record in records:
         if '/' in record:
@@ -62,12 +60,10 @@ def read_energylevels(data):
          associated quantum number J.
     """
     energylevels = []
-
     try:
         name = data.name
     except AttributeError:
         name = 'input'
-
     for i, line in enumerate(data):
         try:
             j, ei = parse_values(line)
@@ -101,7 +97,6 @@ def species_from_file(datafile):
     """
     with open(datafile) as f:
         spdata = json.load(f)
-
     atomcount = sum(v for k, v in spdata['stoichiometry'].items())
     if atomcount == 1:
         return MonatomicSpecies(spdata['name'], spdata['stoichiometry'], 
@@ -125,7 +120,6 @@ def species_from_name(name):
     name : str
         Name of the species
     """
-
     filename = SPECIESPATH / (name + '.json')
     return species_from_file(str(filename))
 
@@ -293,7 +287,7 @@ class DiatomicSpecies(Species):
     def partitionfunction_internal(self, T, dE):
         kbt = constants.boltzmann * T
         electronicpartition = self.g0
-        vibrationalpartition = 1. / (1. - np.exp(-self.w_e / kbt))
+        vibrationalpartition = 1 / (1 - np.exp(-self.w_e / kbt))
         rotationalpartition = kbt / (self.sigma_s * self.b_e)
         return electronicpartition * vibrationalpartition * rotationalpartition
 
@@ -303,7 +297,7 @@ class DiatomicSpecies(Species):
         electronicenergy = 0
         rotationalenergy = kbt
         vibrationalenergy = self.w_e * (np.exp(-self.w_e / kbt)
-                                        / (1. - np.exp(-self.w_e / kbt)))
+                                        / (1 - np.exp(-self.w_e / kbt)))
         return (translationalenergy + electronicenergy + rotationalenergy 
                 + vibrationalenergy)
 
@@ -357,13 +351,17 @@ class Mixture:
             Gibbs Free Energy minimiser solution control: Bailout loop count 
             value for iterative solver. Typically O(1e3).
         """
+        if 'e' in [sp.name for sp in species]:
+            raise ValueError('Electrons are added automatically, please don\'t'
+                             'include them in your species list')
+        if len(species) != len(x0):
+            raise ValueError('Lists species and x0 must be the same length.')
         self.species = deepcopy(species)
         self.species.append(ElectronSpecies())
         self.x0 = np.zeros(len(self.species))
         self.x0[:-1] = np.array(x0)
         self.T = T
         self.P = P
-        
         self.gfe_ni0 = gfe_ni0
         self.gfe_reltol = gfe_reltol
         self.gfe_maxiter = gfe_maxiter
@@ -388,7 +386,6 @@ class Mixture:
                 ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * ndi[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
                 self.__dE[i] = de
-        
         for cn in range(1, max(sp.chargenumber for sp in self.species) + 1):
             for i, (sp, ifrom) in enumerate(zip(self.species, 
                                                 self.__ionisedfrom)):
@@ -462,7 +459,6 @@ class Mixture:
 
         # ...if it doesn't, run a full GFE recalculation        
         if test_reltol > self.gfe_reltol:
-            
             self.__ni = np.full(nspecies, self.gfe_ni0)
             governorfactors = np.linspace(0.9, 0.1, 9)
             successyn = False
@@ -474,7 +470,6 @@ class Mixture:
                 minimiseriters = 0
                 while reltol > self.gfe_reltol:
                     self.__recalcE0i()
-    
                     nisum = self.__ni.sum()
                     V = nisum * kbt / self.P
                     offdiag, ondiag = -kbt/nisum, np.diag(kbt/self.__ni)
@@ -483,37 +478,29 @@ class Mixture:
                              for sp, dE in zip(self.species, self.__dE)]
                     mu = -kbt * np.log(total/self.__ni) + self.__E0
                     gfevector[:nspecies] = -mu
-    
                     solution = np.linalg.solve(gfematrix, gfevector)
-    
                     newni = solution[0:nspecies]
                     deltani = abs(newni - self.__ni)
-                    maxalloweddeltani = governorfactor * self.__ni
-    
                     maxniindex = newni.argmax()
                     reltol = deltani[maxniindex] / solution[maxniindex]
     
+                    maxalloweddeltani = governorfactor * self.__ni
                     deltani = deltani.clip(min=maxalloweddeltani)
                     newrelaxfactors = maxalloweddeltani / deltani
                     relaxfactor = newrelaxfactors.min()
-    
                     self.__ni = (1-relaxfactor)*self.__ni + relaxfactor*newni
     
                     minimiseriters += 1
                     if minimiseriters > self.gfe_maxiter:
                         successyn = False
-                        break
-                
+                        break 
                 governoriters += 1
-    
             if not successyn:
                 warnings.warn('Minimiser could not find a converged solution, '
                               'results may be inaccurate.')
-        
             # noinspection PyUnboundLocalVariable
             logging.debug(governoriters, relaxfactor, reltol)
             logging.debug(self.__ni)
-
         return self.__ni*self.P / (self.__ni.sum()*kbt) 
 
     def calculate_density(self):
@@ -565,16 +552,12 @@ class Mixture:
         float
             Heat capacity, in J/kg.K
         """
-        T_start = self.T
-        
-        self.T = T_start * (1-rel_delta_T)        
+        startT = self.T
+        self.T = startT * (1-rel_delta_T)        
         enthalpylow = self.calculate_enthalpy()
-
-        self.T = T_start * (1+rel_delta_T)        
+        self.T = startT * (1+rel_delta_T)        
         enthalpyhigh = self.calculate_enthalpy()
-        
-        self.T = T_start
-
+        self.T = startT
         return (enthalpyhigh - enthalpylow) / (2 * rel_delta_T * self.T)
 
     def calculate_viscosity(self):
