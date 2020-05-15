@@ -399,6 +399,12 @@ class Mixture:
 
     def calculate_composition(self):
         """Calculate the LTE composition of the plasma in particles/m3.
+        
+        Returns
+        -------
+        ndarray
+            Number density of each species in the plasma as listed in 
+            Mixture.species, in particles/m3
         """
         nspecies = len(self.species)
         kbt = constants.boltzmann*self.T
@@ -417,7 +423,6 @@ class Mixture:
                         for j, sp3 in enumerate(self.species):
                             if sp2.name == sp3.name:
                                 self.__ionisedfrom[i] = j
-        
         elements = [{'name': nm, 'stoichcoeff': None, 'ntot': 0}
                     for nm in sorted(set(s for sp in self.species
                                          for s in sp.stoichiometry))]
@@ -512,17 +517,28 @@ class Mixture:
         return self.__ni*self.P / (self.__ni.sum()*kbt) 
 
     def calculate_density(self):
-        """Calculate the LTE density of the plasma in kg/m3.
+        """Calculate the LTE density of the plasma.
+
+        Returns
+        -------
+        float
+            Fluid density, in kg/m3
         """
         ndi = self.calculate_composition()
         return sum(nd * sp.molarmass / constants.avogadro
                    for sp, nd in zip(self.species, ndi))
 
     def calculate_enthalpy(self):
-        """Calculate the LTE enthalpy of the plasma in J/kg. Note that the 
-        value returned is not absolute, it is relative to an arbitrary 
-        reference which may be negative or positive depending on the reference 
-        energies of the diatomic species present.
+        """Calculate the LTE enthalpy of the plasma. 
+        
+        The value returned is relative to an arbitrary reference level which 
+        may be negative, zero, or positive depending on the reference energies 
+        of the plasma species present.
+
+        Returns
+        -------
+        float
+            Enthalpy, in J/kg
         """
         ndi = self.calculate_composition()
         weightedenthalpy = sum(constants.avogadro * nd 
@@ -535,10 +551,19 @@ class Mixture:
         return weightedenthalpy / weightedmolmass
 
     def calculate_heat_capacity(self, rel_delta_T=0.001):
-        """Calculate the heat capacity at constant pressure of the plasma in
-        J/kg.K based on current conditions and species composition. Note that
-        this is done by performing two full composition simulations when this
-        function is called - can be time-consuming.
+        """Calculate the LTE heat capacity at constant pressure of the plasma 
+        based on current conditions and species composition. 
+        
+        This is done by performing multiple LTE composition recalculations and 
+        can be time-consuming to execute - when performing large quantities of 
+        Cp calculations at different temperatures, it is more efficient to 
+        calculate enthalpies and perform a numerical derivative external to 
+        minplascalc.
+
+        Returns
+        -------
+        float
+            Heat capacity, in J/kg.K
         """
         T_start = self.T
         
@@ -553,29 +578,27 @@ class Mixture:
         return (enthalpyhigh - enthalpylow) / (2 * rel_delta_T * self.T)
 
     def calculate_viscosity(self):
-        """Calculate the viscosity of the plasma in Pa.s based on current
+        """Calculate the LTE viscosity of the plasma in Pa.s based on current
         conditions and species composition.
         """
 
         raise NotImplementedError
 
     def calculate_thermal_conductivity(self):
-        """Calculate the thermal conductivity of the plasma in W/m.K based on
-        current conditions and species composition.
+        """Calculate the LTE thermal conductivity of the plasma in W/m.K.
         """
 
         raise NotImplementedError
 
     def calculate_electrical_conductivity(self):
-        """Calculate the electrical conductivity of the plasma in 1/ohm.m based
-        on current conditions and species composition.
+        """Calculate the LTE electrical conductivity of the plasma in 1/ohm.m.
         """
 
         raise NotImplementedError
 
     def calculate_total_emission_coefficient(self):
-        """Calculate the total radiation emission coefficient of the plasma in
-        W/m3 based on current conditions and species composition.
+        """Calculate the LTE total radiation emission coefficient of the plasma 
+        in W/m3.
         """
 
         raise NotImplementedError
