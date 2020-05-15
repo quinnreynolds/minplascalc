@@ -371,11 +371,11 @@ class Mixture:
         
     def __initialise_solver(self):
         nspecies = len(self.species)
-        self.E0 = np.zeros(nspecies)
+        self.__E0 = np.zeros(nspecies)
         for i, sp in enumerate(self.species):
             if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
-                self.E0[i] = -sp.dissociationenergy
-        self.dE = np.zeros(nspecies)
+                self.__E0[i] = -sp.dissociationenergy
+        self.__dE = np.zeros(nspecies)
 
         self.maxchargenumber = max(sp.chargenumber for sp in self.species)
         self.ionisedfrom = [None] * nspecies
@@ -433,41 +433,42 @@ class Mixture:
             if sp.name != 'e':
                 ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * ndi[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
-                self.dE[j] = de
+                self.__dE[j] = de
         
         for cn in range(1, self.maxchargenumber + 1):
             for i, (sp, ifrom) in enumerate(zip(self.species, self.ionisedfrom)):
                 if sp.chargenumber == cn:
                     spfrom = self.species[ifrom]
-                    self.E0[i] = (self.E0[ifrom] + spfrom.ionisationenergy 
-                                  - self.dE[ifrom])
+                    self.__E0[i] = (self.__E0[ifrom] + spfrom.ionisationenergy 
+                                  - self.__dE[ifrom])
 
     def calculate_composition(self):
         """Calculate the LTE composition of the plasma in particles/m3.
         """
         self.__initialise_solver()
         T, P, nspecies = self.T, self.P, len(self.species)
+        kbt = constants.boltzmann * T
         
-        # Test if the current values of __ni represent a good-enough soln
+        # Test if the current object state represents an LTE soln...
         self.__recalcE0i()
         nisum = self.__ni.sum()
-        V = nisum * constants.boltzmann*T / P
-        offdiag = -constants.boltzmann*T / nisum
-        ondiag = constants.boltzmann*T / self.__ni
+        V = nisum * kbt / P
+        offdiag = -kbt / nisum
+        ondiag = kbt / self.__ni
         self.gfematrix[:nspecies, :nspecies] = offdiag + np.diag(ondiag)
         total = [sp.partitionfunction_total(V, T, dE) 
-                 for sp, dE in zip(self.species, self.dE)]
-        mu = -constants.boltzmann*T * np.log(total/self.__ni) + self.E0
+                 for sp, dE in zip(self.species, self.__dE)]
+        mu = -kbt * np.log(total/self.__ni) + self.__E0
         self.gfevector[:nspecies] = -mu
         solution = np.linalg.solve(self.gfematrix, self.gfevector)
         newni = solution[0:nspecies]
         deltani = abs(newni - self.__ni)
         maxniindex = newni.argmax()
         test_reltol = deltani[maxniindex] / solution[maxniindex]
-        
+
+        # ...if it doesn't, run a full reinitialisation and GFE recalculation        
         if test_reltol > self.gfe_reltol:
             
-            # Full reinitialisation and LTE recalculation
             self.__ni = np.full(nspecies, self.gfe_ni0)
             governorfactors = np.linspace(0.9, 0.1, 9)
             successyn = False
@@ -481,13 +482,13 @@ class Mixture:
                     self.__recalcE0i()
     
                     nisum = self.__ni.sum()
-                    V = nisum * constants.boltzmann*T / P
-                    offdiag = -constants.boltzmann*T / nisum
-                    ondiag = np.diag(constants.boltzmann*T / self.__ni)
+                    V = nisum * kbt / P
+                    offdiag = -kbt / nisum
+                    ondiag = np.diag(kbt / self.__ni)
                     self.gfematrix[:nspecies, :nspecies] = offdiag + ondiag
                     total = [sp.partitionfunction_total(V, T, dE) 
-                             for sp, dE in zip(self.species, self.dE)]
-                    mu = -constants.boltzmann*T*np.log(total/self.__ni)+self.E0
+                             for sp, dE in zip(self.species, self.__dE)]
+                    mu = -kbt * np.log(total/self.__ni) + self.__E0
                     self.gfevector[:nspecies] = -mu
     
                     solution = np.linalg.solve(self.gfematrix, self.gfevector)
@@ -540,7 +541,7 @@ class Mixture:
                                * (sp.internal_energy(self.T, dE) + E0 
                                   + constants.boltzmann * self.T) 
                                for sp, nd, dE, E0 in zip(self.species, ndi, 
-                                                         self.dE, self.E0))
+                                                         self.__dE, self.__E0))
         weightedmolmass = sum(nd * sp.molarmass
                               for sp, nd in zip(self.species, ndi))
         return weightedenthalpy / weightedmolmass
