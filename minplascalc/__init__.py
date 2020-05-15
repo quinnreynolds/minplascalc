@@ -418,9 +418,8 @@ class Mixture:
         """Calculate the ionisation energy lowering, using limitation theory of
         Stewart & Pyatt 1966
         """
-        T, P = self.T, self.P
-        kbt = constants.boltzmann * T
-        ndi = self.__ni * P / (self.__ni.sum() * kbt) 
+        kbt = constants.boltzmann * self.T
+        ndi = self.__ni * self.P / (self.__ni.sum() * kbt) 
         weightedchargesumsqd, weightedchargesum = 0, 0
         for sp, nd in zip(self.species, ndi):
             if sp.chargenumber > 0:
@@ -446,17 +445,17 @@ class Mixture:
         """Calculate the LTE composition of the plasma in particles/m3.
         """
         self.__initialise_solver()
-        T, P, nspecies = self.T, self.P, len(self.species)
-        kbt = constants.boltzmann * T
+        nspecies = len(self.species)
+        kbt = constants.boltzmann * self.T
         
         # Test if the current object state represents an LTE soln...
         self.__recalcE0i()
         nisum = self.__ni.sum()
-        V = nisum * kbt / P
+        V = nisum * kbt / self.P
         offdiag = -kbt / nisum
         ondiag = kbt / self.__ni
         self.gfematrix[:nspecies, :nspecies] = offdiag + np.diag(ondiag)
-        total = [sp.partitionfunction_total(V, T, dE) 
+        total = [sp.partitionfunction_total(V, self.T, dE) 
                  for sp, dE in zip(self.species, self.__dE)]
         mu = -kbt * np.log(total/self.__ni) + self.__E0
         self.gfevector[:nspecies] = -mu
@@ -482,11 +481,11 @@ class Mixture:
                     self.__recalcE0i()
     
                     nisum = self.__ni.sum()
-                    V = nisum * kbt / P
+                    V = nisum * kbt / self.P
                     offdiag = -kbt / nisum
                     ondiag = np.diag(kbt / self.__ni)
                     self.gfematrix[:nspecies, :nspecies] = offdiag + ondiag
-                    total = [sp.partitionfunction_total(V, T, dE) 
+                    total = [sp.partitionfunction_total(V, self.T, dE) 
                              for sp, dE in zip(self.species, self.__dE)]
                     mu = -kbt * np.log(total/self.__ni) + self.__E0
                     self.gfevector[:nspecies] = -mu
@@ -521,7 +520,7 @@ class Mixture:
             logging.debug(governoriters, relaxfactor, reltol)
             logging.debug(self.__ni)
 
-        return self.__ni*P / (self.__ni.sum()*constants.boltzmann*T) 
+        return self.__ni*self.P / (self.__ni.sum()*kbt) 
 
     def calculate_density(self):
         """Calculate the LTE density of the plasma in kg/m3.
