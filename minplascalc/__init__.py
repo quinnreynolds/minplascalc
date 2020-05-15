@@ -368,51 +368,6 @@ class Mixture:
         self.gfe_reltol = gfe_reltol
         self.gfe_maxiter = gfe_maxiter
         self.__ni = np.full(len(self.species), self.gfe_ni0)
-        
-    def __initialise_solver(self):
-        nspecies = len(self.species)
-        self.__E0 = np.zeros(nspecies)
-        for i, sp in enumerate(self.species):
-            if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
-                self.__E0[i] = -sp.dissociationenergy
-        self.__dE = np.zeros(nspecies)
-
-        self.maxchargenumber = max(sp.chargenumber for sp in self.species)
-        self.ionisedfrom = [None] * nspecies
-        for i, sp in enumerate(self.species):
-            if sp.chargenumber > 0:
-                for sp2 in self.species:
-                    if (sp2.stoichiometry == sp.stoichiometry 
-                        and sp2.chargenumber == sp.chargenumber-1):
-                        for j, sp3 in enumerate(self.species):
-                            if sp2.name == sp3.name:
-                                self.ionisedfrom[i] = j
-        
-        elements = [{'name': nm, 'stoichometriccoeffts': None, 'totalnumber': 0}
-                    for nm in sorted(set(s for sp in self.species
-                                         for s in sp.stoichiometry))]
-        for elm in elements:
-            elm['stoichiometriccoeffts'] = [sp.stoichiometry.get(elm['name'], 0)
-                                            for sp in self.species]
-
-        for elm in elements:
-            elm['totalnumber'] = sum(1e24 * c * x0loc
-                                     for c, x0loc in zip(
-                                             elm['stoichiometriccoeffts'],
-                                             self.x0))
-
-        minimiser_dof = nspecies + len(elements) + 1
-        self.gfematrix = np.zeros((minimiser_dof, minimiser_dof))
-        self.gfevector = np.zeros(minimiser_dof)
-
-        for i, elm in enumerate(elements):
-            self.gfevector[nspecies + i] = elm['totalnumber']
-            for j, sc in enumerate(elm['stoichiometriccoeffts']):
-                self.gfematrix[nspecies + i, j] = sc
-                self.gfematrix[j, nspecies + i] = sc
-        for j, qc in enumerate(sp.chargenumber for sp in self.species):
-            self.gfematrix[-1, j] = qc
-            self.gfematrix[j, -1] = qc
 
     def __recalcE0i(self):
         """Calculate the ionisation energy lowering, using limitation theory of
@@ -428,44 +383,81 @@ class Mixture:
         zstar = weightedchargesumsqd / weightedchargesum
         debyed3 = (kbt / (4 * np.pi * (zstar + 1) * ndi[-1] 
                           * constants.fundamentalcharge ** 2)) ** (3/2)
-        for j, sp in enumerate(self.species):
+        for i, sp in enumerate(self.species):
             if sp.name != 'e':
                 ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * ndi[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
-                self.__dE[j] = de
+                self.__dE[i] = de
         
-        for cn in range(1, self.maxchargenumber + 1):
-            for i, (sp, ifrom) in enumerate(zip(self.species, self.ionisedfrom)):
+        for cn in range(1, max(sp.chargenumber for sp in self.species) + 1):
+            for i, (sp, ifrom) in enumerate(zip(self.species, 
+                                                self.__ionisedfrom)):
                 if sp.chargenumber == cn:
                     spfrom = self.species[ifrom]
                     self.__E0[i] = (self.__E0[ifrom] + spfrom.ionisationenergy 
-                                  - self.__dE[ifrom])
+                                    - self.__dE[ifrom])
 
     def calculate_composition(self):
         """Calculate the LTE composition of the plasma in particles/m3.
         """
-        self.__initialise_solver()
         nspecies = len(self.species)
-        kbt = constants.boltzmann * self.T
+        kbt = constants.boltzmann*self.T
+
+        # Initialise variables for GFE calculation
+        self.__E0, self.__dE = np.zeros(nspecies), np.zeros(nspecies)
+        for i, sp in enumerate(self.species):
+            if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
+                self.__E0[i] = -sp.dissociationenergy
+        self.__ionisedfrom = [None] * nspecies
+        for i, sp in enumerate(self.species):
+            if sp.chargenumber > 0:
+                for sp2 in self.species:
+                    if (sp2.stoichiometry == sp.stoichiometry 
+                        and sp2.chargenumber == sp.chargenumber-1):
+                        for j, sp3 in enumerate(self.species):
+                            if sp2.name == sp3.name:
+                                self.__ionisedfrom[i] = j
         
+        elements = [{'name': nm, 'stoichometriccoeffts': None, 'totalnumber': 0}
+                    for nm in sorted(set(s for sp in self.species
+                                         for s in sp.stoichiometry))]
+        for elm in elements:
+            elm['stoichiometriccoeffts'] = [sp.stoichiometry.get(elm['name'], 0)
+                                            for sp in self.species]
+        for elm in elements:
+            elm['totalnumber'] = sum(1e24 * c * x0loc
+                                     for c, x0loc in zip(
+                                             elm['stoichiometriccoeffts'],
+                                             self.x0))
+        minimiser_dof = nspecies + len(elements) + 1
+        gfematrix = np.zeros((minimiser_dof, minimiser_dof))
+        gfevector = np.zeros(minimiser_dof)
+        for i, elm in enumerate(elements):
+            gfevector[nspecies + i] = elm['totalnumber']
+            for j, sc in enumerate(elm['stoichiometriccoeffts']):
+                gfematrix[nspecies + i, j] = sc
+                gfematrix[j, nspecies + i] = sc
+        for j, qc in enumerate(sp.chargenumber for sp in self.species):
+            gfematrix[-1, j] = qc
+            gfematrix[j, -1] = qc
+
         # Test if the current object state represents an LTE soln...
         self.__recalcE0i()
         nisum = self.__ni.sum()
         V = nisum * kbt / self.P
-        offdiag = -kbt / nisum
-        ondiag = kbt / self.__ni
-        self.gfematrix[:nspecies, :nspecies] = offdiag + np.diag(ondiag)
+        offdiag, ondiag = -kbt/nisum, np.diag(kbt/self.__ni)
+        gfematrix[:nspecies, :nspecies] = offdiag + ondiag
         total = [sp.partitionfunction_total(V, self.T, dE) 
                  for sp, dE in zip(self.species, self.__dE)]
         mu = -kbt * np.log(total/self.__ni) + self.__E0
-        self.gfevector[:nspecies] = -mu
-        solution = np.linalg.solve(self.gfematrix, self.gfevector)
+        gfevector[:nspecies] = -mu
+        solution = np.linalg.solve(gfematrix, gfevector)
         newni = solution[0:nspecies]
         deltani = abs(newni - self.__ni)
         maxniindex = newni.argmax()
         test_reltol = deltani[maxniindex] / solution[maxniindex]
 
-        # ...if it doesn't, run a full reinitialisation and GFE recalculation        
+        # ...if it doesn't, run a full GFE recalculation        
         if test_reltol > self.gfe_reltol:
             
             self.__ni = np.full(nspecies, self.gfe_ni0)
@@ -482,15 +474,14 @@ class Mixture:
     
                     nisum = self.__ni.sum()
                     V = nisum * kbt / self.P
-                    offdiag = -kbt / nisum
-                    ondiag = np.diag(kbt / self.__ni)
-                    self.gfematrix[:nspecies, :nspecies] = offdiag + ondiag
+                    offdiag, ondiag = -kbt/nisum, np.diag(kbt/self.__ni)
+                    gfematrix[:nspecies, :nspecies] = offdiag + ondiag
                     total = [sp.partitionfunction_total(V, self.T, dE) 
                              for sp, dE in zip(self.species, self.__dE)]
                     mu = -kbt * np.log(total/self.__ni) + self.__E0
-                    self.gfevector[:nspecies] = -mu
+                    gfevector[:nspecies] = -mu
     
-                    solution = np.linalg.solve(self.gfematrix, self.gfevector)
+                    solution = np.linalg.solve(gfematrix, gfevector)
     
                     newni = solution[0:nspecies]
                     deltani = abs(newni - self.__ni)
