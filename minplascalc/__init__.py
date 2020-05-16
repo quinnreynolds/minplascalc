@@ -356,10 +356,8 @@ class Mixture:
                              'include them in your species list')
         if len(species) != len(x0):
             raise ValueError('Lists species and x0 must be the same length.')
-        self.species = deepcopy(species)
-        self.species.append(ElectronSpecies())
-        self.x0 = np.zeros(len(self.species))
-        self.x0[:-1] = np.array(x0)
+        self.species = tuple(list(species) + [ElectronSpecies()])
+        self.x0 = tuple(list(x0) + [0])
         self.T = T
         self.P = P
         self.gfe_ni0 = gfe_ni0
