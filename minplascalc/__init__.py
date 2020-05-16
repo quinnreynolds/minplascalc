@@ -352,19 +352,61 @@ class Mixture:
             value for iterative solver. Typically O(1e3).
         """
         if 'e' in [sp.name for sp in species]:
-            raise ValueError('Electrons are added automatically, please don\'t'
+            raise ValueError('Electrons are added automatically, please don\'t '
                              'include them in your species list')
         if len(species) != len(x0):
             raise ValueError('Lists species and x0 must be the same length.')
-        self.species = tuple(list(species) + [ElectronSpecies()])
-        self.x0 = tuple(list(x0) + [0])
+        self.__species = tuple(list(species) + [ElectronSpecies()])
+        self.x0 = x0
         self.T = T
         self.P = P
         self.gfe_ni0 = gfe_ni0
         self.gfe_reltol = gfe_reltol
         self.gfe_maxiter = gfe_maxiter
+        self.__isLTE = False
         self.__ni = np.full(len(self.species), self.gfe_ni0)
+    
+    @property
+    def species(self):
+        return self.__species
+    
+    @species.setter
+    def species(self, species):
+        raise TypeError('Attribute species is read-only. Please create a new '
+                        'Mixture object if you wish to change the plasma '
+                        'species.')
 
+    @property
+    def x0(self):
+        return self.__x0
+    
+    @x0.setter
+    def x0(self, x0):
+        self.__isLTE = False
+        if len(x0) == len(self.species)-1:
+            self.__x0 = tuple(list(x0) + [0])
+        else:
+            raise ValueError('Please specify constraint mole fractions for all '
+                             'species except electrons.')
+        
+    @property
+    def T(self):
+        return self.__T
+    
+    @T.setter
+    def T(self, T):
+        self.__isLTE = False
+        self.__T = T
+        
+    @property
+    def P(self):
+        return self.__P
+    
+    @P.setter
+    def P(self, P):
+        self.__isLTE = False
+        self.__P = P
+    
     def __recalcE0i(self):
         """Calculate the ionisation energy lowering, using limitation theory of
         Stewart & Pyatt 1966
@@ -499,6 +541,7 @@ class Mixture:
             # noinspection PyUnboundLocalVariable
             logging.debug(governoriters, relaxfactor, reltol)
             logging.debug(self.__ni)
+        self.__isLTE = True
         return self.__ni*self.P / (self.__ni.sum()*kbt) 
 
     def calculate_density(self):
