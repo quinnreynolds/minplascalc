@@ -143,6 +143,9 @@ def mixture_from_names(names, x0, T, P):
     -------
     A Mixture object instance.
     """
+    if 'e' in names:
+        raise ValueError('Electrons are added automatically, please don\'t '
+                         'include them in your species list.')
     species = [species_from_name(nm) for nm in names]
     return Mixture(species, x0, T, P, 1e20, 1e-10, 1000)
     
@@ -184,8 +187,7 @@ class Species(BaseSpecies):
         self.molarmass = molarmass
         self.chargenumber = chargenumber
         if self.chargenumber < 0:
-            raise ValueError('Error! Negatively charged ions not implemented'
-                             ' yet.')
+            raise ValueError('Negatively charged ions not implemented.')
 
 
 class MonatomicSpecies(Species):
@@ -330,11 +332,11 @@ class Mixture:
 
         Parameters
         ----------
-        species : list of obj
+        species : list or tuple of obj
             All species participating in the mixture (excluding electrons which
             are added automatically), as minplascalc Species objects
-        x0 : list of float
-            Initial value of mole fractions for each species, typically the 
+        x0 : list or tuple of float
+            Constraint mole fractions for each species, typically the 
             room-temperature composition of the plasma-generating gas
         T : float
             LTE plasma temperature, in K
@@ -353,7 +355,7 @@ class Mixture:
         """
         if 'e' in [sp.name for sp in species]:
             raise ValueError('Electrons are added automatically, please don\'t '
-                             'include them in your species list')
+                             'include them in your species list.')
         if len(species) != len(x0):
             raise ValueError('Lists species and x0 must be the same length.')
         self.__species = tuple(list(species) + [ElectronSpecies()])
@@ -364,7 +366,6 @@ class Mixture:
         self.gfe_reltol = gfe_reltol
         self.gfe_maxiter = gfe_maxiter
         self.__isLTE = False
-        self.__ni = np.full(len(self.species), self.gfe_ni0)
     
     @property
     def species(self):
@@ -446,7 +447,6 @@ class Mixture:
         nspecies = len(self.species)
         kbt = constants.boltzmann*self.T
 
-        # Initialise variables for GFE calculation
         self.__E0, self.__dE = np.zeros(nspecies), np.zeros(nspecies)
         for i, sp in enumerate(self.species):
             if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
@@ -481,24 +481,7 @@ class Mixture:
             gfematrix[-1, j] = qc
             gfematrix[j, -1] = qc
 
-        # Test if the current object state represents an LTE soln...
-        self.__recalcE0i()
-        nisum = self.__ni.sum()
-        V = nisum * kbt / self.P
-        offdiag, ondiag = -kbt/nisum, np.diag(kbt/self.__ni)
-        gfematrix[:nspecies, :nspecies] = offdiag + ondiag
-        total = [sp.partitionfunction_total(V, self.T, dE) 
-                 for sp, dE in zip(self.species, self.__dE)]
-        mu = -kbt * np.log(total/self.__ni) + self.__E0
-        gfevector[:nspecies] = -mu
-        solution = np.linalg.solve(gfematrix, gfevector)
-        newni = solution[0:nspecies]
-        deltani = abs(newni - self.__ni)
-        maxniindex = newni.argmax()
-        test_reltol = deltani[maxniindex] / solution[maxniindex]
-
-        # ...if it doesn't, run a full GFE recalculation        
-        if test_reltol > self.gfe_reltol:
+        if not self.__isLTE:
             self.__ni = np.full(nspecies, self.gfe_ni0)
             governorfactors = np.linspace(0.9, 0.1, 9)
             successyn = False
