@@ -383,8 +383,8 @@ class Mixture:
     
     @x0.setter
     def x0(self, x0):
-        self.__isLTE = False
         if len(x0) == len(self.species)-1:
+            self.__isLTE = False
             self.__x0 = tuple(list(x0) + [0])
         else:
             raise ValueError('Please specify constraint mole fractions for all '
