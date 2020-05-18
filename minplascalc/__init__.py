@@ -473,42 +473,42 @@ class Mixture:
         """
         nspecies = len(self.species)
         kbt = constants.boltzmann*self.T
-
-        self.__E0, self.__dE = np.zeros(nspecies), np.zeros(nspecies)
-        for i, sp in enumerate(self.species):
-            if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
-                self.__E0[i] = -sp.dissociationenergy
-        self.__ionisedfrom = [None] * nspecies
-        for i, sp in enumerate(self.species):
-            if sp.chargenumber > 0:
-                for sp2 in self.species:
-                    if (sp2.stoichiometry == sp.stoichiometry 
-                        and sp2.chargenumber == sp.chargenumber-1):
-                        for j, sp3 in enumerate(self.species):
-                            if sp2.name == sp3.name:
-                                self.__ionisedfrom[i] = j
-        elements = [{'name': nm, 'stoichcoeff': None, 'ntot': 0}
-                    for nm in sorted(set(s for sp in self.species
-                                         for s in sp.stoichiometry))]
-        for elm in elements:
-            elm['stoichcoeff'] = [sp.stoichiometry.get(elm['name'], 0)
-                                  for sp in self.species]
-        for elm in elements:
-            elm['ntot'] = sum(1e24 * c * x0loc
-                              for c, x0loc in zip(elm['stoichcoeff'], self.x0))
-        minimiser_dof = nspecies + len(elements) + 1
-        gfematrix = np.zeros((minimiser_dof, minimiser_dof))
-        gfevector = np.zeros(minimiser_dof)
-        for i, elm in enumerate(elements):
-            gfevector[nspecies + i] = elm['ntot']
-            for j, sc in enumerate(elm['stoichcoeff']):
-                gfematrix[nspecies + i, j] = sc
-                gfematrix[j, nspecies + i] = sc
-        for j, qc in enumerate(sp.chargenumber for sp in self.species):
-            gfematrix[-1, j] = qc
-            gfematrix[j, -1] = qc
-
+        
         if not self.__isLTE:
+            self.__E0, self.__dE = np.zeros(nspecies), np.zeros(nspecies)
+            for i, sp in enumerate(self.species):
+                if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
+                    self.__E0[i] = -sp.dissociationenergy
+            self.__ionisedfrom = [None] * nspecies
+            for i, sp in enumerate(self.species):
+                if sp.chargenumber > 0:
+                    for sp2 in self.species:
+                        if (sp2.stoichiometry == sp.stoichiometry 
+                            and sp2.chargenumber == sp.chargenumber-1):
+                            for j, sp3 in enumerate(self.species):
+                                if sp2.name == sp3.name:
+                                    self.__ionisedfrom[i] = j
+            elements = [{'name': nm, 'stoichcoeff': None, 'ntot': 0}
+                        for nm in sorted(set(s for sp in self.species
+                                             for s in sp.stoichiometry))]
+            for elm in elements:
+                elm['stoichcoeff'] = [sp.stoichiometry.get(elm['name'], 0)
+                                      for sp in self.species]
+            for elm in elements:
+                elm['ntot'] = sum(1e24 * c * x0loc
+                                  for c, x0loc in zip(elm['stoichcoeff'], self.x0))
+            minimiser_dof = nspecies + len(elements) + 1
+            gfematrix = np.zeros((minimiser_dof, minimiser_dof))
+            gfevector = np.zeros(minimiser_dof)
+            for i, elm in enumerate(elements):
+                gfevector[nspecies + i] = elm['ntot']
+                for j, sc in enumerate(elm['stoichcoeff']):
+                    gfematrix[nspecies + i, j] = sc
+                    gfematrix[j, nspecies + i] = sc
+            for j, qc in enumerate(sp.chargenumber for sp in self.species):
+                gfematrix[-1, j] = qc
+                gfematrix[j, -1] = qc
+    
             self.__ni = np.full(nspecies, self.gfe_ni0)
             governorfactors = np.linspace(0.9, 0.1, 9)
             successyn = False
@@ -551,6 +551,7 @@ class Mixture:
             # noinspection PyUnboundLocalVariable
             logging.debug(governoriters, relaxfactor, reltol)
             logging.debug(self.__ni)
+
         self.__isLTE = True
         return self.__ni*self.P / (self.__ni.sum()*kbt) 
 
