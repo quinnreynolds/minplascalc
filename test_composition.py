@@ -11,23 +11,30 @@ def mixture():
                     gfe_ni0=1e20, gfe_reltol=1e-10, gfe_maxiter=1000)
     return c
 
-
-def test_solver(mixture):
-    mixture.T = 1000
-
-    assert mixture.calculate_density() == pytest.approx(0.3899566)
-
-
-LOW_T = 1000
-HIGH_T = 25000
-LOW_P = 10132.5
-HIGH_P = 1013250
+LOW_T, MID_T, HIGH_T = 1000, 10000, 25000
+LOW_P, MID_P, HIGH_P = 10132.5, 101325, 1013250
 
 @pytest.mark.parametrize("T, P, result, tol", [
-    (LOW_T, LOW_P, 1081.252, 1e-3),
-    (HIGH_T, LOW_P, 23193.92, 1e-2),
-    (LOW_T, HIGH_P, 1081.252, 1e-3),
-    (HIGH_T, HIGH_P, 5829.868, 1e-3),
+    (MID_T, MID_P,   0.01911388, 1e-7),
+    (LOW_T, LOW_P,   0.03899566, 1e-7),
+    (HIGH_T, LOW_P,  0.00036478, 1e-7),
+    (LOW_T, HIGH_P,  3.89956587, 1e-7),
+    (HIGH_T, HIGH_P, 0.04053962, 1e-7),
+])
+def test_density(mixture, T, P, result, tol):
+    mixture.T = T
+    mixture.P = P
+
+    thisresult = mixture.calculate_density()
+
+    assert thisresult == pytest.approx(result, abs=tol)
+
+@pytest.mark.parametrize("T, P, result, tol", [
+    (MID_T, MID_P, 3249.165, 1e-2),
+    (LOW_T, LOW_P, 1081.252, 1e-2),
+    (HIGH_T, LOW_P, 23193.92, 1e-1),
+    (LOW_T, HIGH_P, 1081.252, 1e-2),
+    (HIGH_T, HIGH_P, 5829.868, 1e-2),
 ])
 def test_heat_capacity(mixture, T, P, result, tol):
     mixture.T = T
@@ -38,6 +45,7 @@ def test_heat_capacity(mixture, T, P, result, tol):
     assert thisresult == pytest.approx(result, abs=tol)
 
 @pytest.mark.parametrize("T, P, result, tol", [
+    (MID_T, MID_P, 1.5633632e7, 1e1),
     (LOW_T, LOW_P, -1.455147e7, 1e1),
     (HIGH_T, LOW_P, 1.893144e8, 1e2),
     (LOW_T, HIGH_P, -1.455147e7, 1e1),
@@ -48,21 +56,6 @@ def test_enthalpy(mixture, T, P, result, tol):
     mixture.P = P
 
     assert mixture.calculate_enthalpy() == pytest.approx(result, abs=tol)
-
-
-def test_species_setter_exception(mixture):
-    with pytest.raises(TypeError):
-        mixture.species = [mpc.species_from_name(sp) for sp in ['O','O+']]
-
-
-def test_species_item_exception(mixture):
-    with pytest.raises(TypeError):
-        mixture.species[0] = mpc.species_from_name('O')
-
-
-def test_x0_item_exception(mixture):
-    with pytest.raises(TypeError):
-        mixture.x0[0] = 0.5
 
 
 def test_calculate_viscosity(mixture):
@@ -84,3 +77,17 @@ def test_calculate_total_emission_coefficient(mixture):
     with pytest.raises(NotImplementedError):
         mixture.calculate_total_emission_coefficient()
 
+
+def test_species_setter_exception(mixture):
+    with pytest.raises(TypeError):
+        mixture.species = [mpc.species_from_name(sp) for sp in ['O','O+']]
+
+
+def test_species_item_exception(mixture):
+    with pytest.raises(TypeError):
+        mixture.species[0] = mpc.species_from_name('O')
+
+
+def test_x0_item_exception(mixture):
+    with pytest.raises(TypeError):
+        mixture.x0[0] = 0.5
