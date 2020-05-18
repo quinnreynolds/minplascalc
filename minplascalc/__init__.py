@@ -266,6 +266,32 @@ class MonatomicSpecies(Species):
                 electronicenergy += (2*j+1) * eij * np.exp(-eij / kbt)
         electronicenergy /= self.partitionfunction_internal(T, dE)
         return translationalenergy + electronicenergy
+    
+    def __repr__(self):
+        return ('MonatomicSpecies(name=' + self.name + ','
+                + 'stoichiometry=' + str(self.stoichiometry) + ','
+                + 'molarmass=' + str(self.molarmass) + ','
+                + 'chargenumber=' + str(self.chargenumber) + ','
+                + 'ionisationenergy=' + str(self.ionisationenergy) + ','
+                + 'energylevels=' + str(self.energylevels) + ','
+                + 'sources=' + str(self.sources) + ')')
+
+    def __str__(self):
+        if np.isclose(0, self.chargenumber):
+            sptype = 'Monatomic atom'
+        else:
+            sptype = 'Monatomic ion'
+        if self.ionisationenergy < 0:
+            ien = 'N/A'
+        else:
+            ien = str(self.ionisationenergy)
+        return ('Species: ' + self.name + '\n'
+                + 'Type: ' + sptype + '\n'
+                + 'Stoichiometry: ' + str(self.stoichiometry) + '\n'
+                + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
+                + 'Charge number: ' + str(self.chargenumber) + '\n'
+                + 'Ionisation energy: ' + ien + ' J\n'
+                + 'Energy levels: ' + str(len(self.energylevels)) + '\n')
 
 
 class DiatomicSpecies(Species):
@@ -330,6 +356,44 @@ class DiatomicSpecies(Species):
         return (translationalenergy + electronicenergy + rotationalenergy 
                 + vibrationalenergy)
 
+    def __repr__(self):
+        return ('DiatomicSpecies(name=' + self.name + ','
+                + 'stoichiometry=' + str(self.stoichiometry) + ','
+                + 'molarmass=' + str(self.molarmass) + ','
+                + 'chargenumber=' + str(self.chargenumber) + ','
+                + 'dissociationenergy=' + str(self.dissociationenergy) + ','
+                + 'ionisationenergy=' + str(self.ionisationenergy) + ','
+                + 'sigma_s=' + str(self.sigma_s) + ','
+                + 'g0=' + str(self.g0) + ','
+                + 'w_e=' + str(self.w_e) + ','
+                + 'b_e=' + str(self.b_e) + ','
+                + 'sources=' + str(self.sources) + ')')
+
+    def __str__(self):
+        if np.isclose(0, self.chargenumber):
+            sptype = 'Diatomic molecule'
+        else:
+            sptype = 'Diatomic ion'
+        if self.ionisationenergy < 0:
+            ien = 'N/A'
+        else:
+            ien = str(self.ionisationenergy)
+        if self.dissociationenergy < 0:
+            den = 'N/A'
+        else:
+            den = str(self.dissociationenergy)
+        return ('Species: ' + self.name + '\n'
+                + 'Type: ' + sptype + '\n'
+                + 'Stoichiometry: ' + str(self.stoichiometry) + '\n'
+                + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
+                + 'Charge number: ' + str(self.chargenumber) + '\n'
+                + 'Dissociation energy: ' + den + ' J\n'
+                + 'Ionisation energy: ' + ien + ' J\n'
+                + u'\u03C3\u209B: ' + str(self.sigma_s) + '\n'
+                + u'g\u2080: ' + str(self.g0) + '\n'
+                + u'\u03C9\u2091: ' + str(self.w_e) + ' J\n'
+                + u'B\u2091: ' + str(self.b_e) + ' J\n')
+
 
 class ElectronSpecies(BaseSpecies):
     def __init__(self):
@@ -348,6 +412,17 @@ class ElectronSpecies(BaseSpecies):
         translationalenergy = 1.5 * constants.boltzmann * T
         electronicenergy = 0
         return translationalenergy + electronicenergy
+
+    def __repr__(self):
+        return ('ElectronSpecies(name=' + self.name + ','
+                + 'molarmass=' + str(self.molarmass) + ','
+                + 'chargenumber=' + str(self.chargenumber) + ')')
+
+    def __str__(self):
+        return ('Species: e\n'
+                + 'Type: Electron\n'
+                + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
+                + 'Charge number: ' + str(self.chargenumber) + '\n')
 
 
 class Mixture:
