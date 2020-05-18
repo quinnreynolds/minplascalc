@@ -249,24 +249,6 @@ class MonatomicSpecies(Species):
         self.energylevels = deepcopy(energylevels)
         self.sources = deepcopy(sources)
 
-    def partitionfunction_internal(self, T, dE):
-        kbt = constants.boltzmann * T
-        partitionval = 0       
-        for j, eij in self.energylevels:
-            if eij < (self.ionisationenergy - dE):
-                partitionval += (2*j+1) * np.exp(-eij / kbt)
-        return partitionval
-
-    def internal_energy(self, T, dE):
-        kbt = constants.boltzmann * T
-        translationalenergy = 1.5 * kbt
-        electronicenergy = 0
-        for j, eij in self.energylevels:
-            if eij < (self.ionisationenergy - dE):
-                electronicenergy += (2*j+1) * eij * np.exp(-eij / kbt)
-        electronicenergy /= self.partitionfunction_internal(T, dE)
-        return translationalenergy + electronicenergy
-    
     def __repr__(self):
         return ('MonatomicSpecies(name=' + self.name + ','
                 + 'stoichiometry=' + str(self.stoichiometry) + ','
@@ -291,8 +273,26 @@ class MonatomicSpecies(Species):
                 + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
                 + 'Charge number: ' + str(self.chargenumber) + '\n'
                 + 'Ionisation energy: ' + ien + ' J\n'
-                + 'Energy levels: ' + str(len(self.energylevels)) + '\n')
+                + 'Energy levels: ' + str(len(self.energylevels)))
 
+    def partitionfunction_internal(self, T, dE):
+        kbt = constants.boltzmann * T
+        partitionval = 0       
+        for j, eij in self.energylevels:
+            if eij < (self.ionisationenergy - dE):
+                partitionval += (2*j+1) * np.exp(-eij / kbt)
+        return partitionval
+
+    def internal_energy(self, T, dE):
+        kbt = constants.boltzmann * T
+        translationalenergy = 1.5 * kbt
+        electronicenergy = 0
+        for j, eij in self.energylevels:
+            if eij < (self.ionisationenergy - dE):
+                electronicenergy += (2*j+1) * eij * np.exp(-eij / kbt)
+        electronicenergy /= self.partitionfunction_internal(T, dE)
+        return translationalenergy + electronicenergy
+    
 
 class DiatomicSpecies(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber,
@@ -339,23 +339,6 @@ class DiatomicSpecies(Species):
         self.b_e = b_e
         self.sources = deepcopy(sources)
 
-    def partitionfunction_internal(self, T, dE):
-        kbt = constants.boltzmann * T
-        electronicpartition = self.g0
-        vibrationalpartition = 1 / (1 - np.exp(-self.w_e / kbt))
-        rotationalpartition = kbt / (self.sigma_s * self.b_e)
-        return electronicpartition * vibrationalpartition * rotationalpartition
-
-    def internal_energy(self, T, dE):
-        kbt = constants.boltzmann * T
-        translationalenergy = 1.5 * kbt
-        electronicenergy = 0
-        rotationalenergy = kbt
-        vibrationalenergy = self.w_e * (np.exp(-self.w_e / kbt)
-                                        / (1 - np.exp(-self.w_e / kbt)))
-        return (translationalenergy + electronicenergy + rotationalenergy 
-                + vibrationalenergy)
-
     def __repr__(self):
         return ('DiatomicSpecies(name=' + self.name + ','
                 + 'stoichiometry=' + str(self.stoichiometry) + ','
@@ -389,10 +372,27 @@ class DiatomicSpecies(Species):
                 + 'Charge number: ' + str(self.chargenumber) + '\n'
                 + 'Dissociation energy: ' + den + ' J\n'
                 + 'Ionisation energy: ' + ien + ' J\n'
-                + u'\u03C3\u209B: ' + str(self.sigma_s) + '\n'
-                + u'g\u2080: ' + str(self.g0) + '\n'
-                + u'\u03C9\u2091: ' + str(self.w_e) + ' J\n'
-                + u'B\u2091: ' + str(self.b_e) + ' J\n')
+                + 'sigma_s: ' + str(self.sigma_s) + '\n'
+                + 'g0: ' + str(self.g0) + '\n'
+                + 'w_e: ' + str(self.w_e) + ' J\n'
+                + 'B_e: ' + str(self.b_e) + ' J')
+
+    def partitionfunction_internal(self, T, dE):
+        kbt = constants.boltzmann * T
+        electronicpartition = self.g0
+        vibrationalpartition = 1 / (1 - np.exp(-self.w_e / kbt))
+        rotationalpartition = kbt / (self.sigma_s * self.b_e)
+        return electronicpartition * vibrationalpartition * rotationalpartition
+
+    def internal_energy(self, T, dE):
+        kbt = constants.boltzmann * T
+        translationalenergy = 1.5 * kbt
+        electronicenergy = 0
+        rotationalenergy = kbt
+        vibrationalenergy = self.w_e * (np.exp(-self.w_e / kbt)
+                                        / (1 - np.exp(-self.w_e / kbt)))
+        return (translationalenergy + electronicenergy + rotationalenergy 
+                + vibrationalenergy)
 
 
 class ElectronSpecies(BaseSpecies):
@@ -404,15 +404,6 @@ class ElectronSpecies(BaseSpecies):
         self.molarmass = constants.electronmass * constants.avogadro
         self.chargenumber = -1
 
-    # noinspection PyUnusedLocal
-    def partitionfunction_internal(self, T, dE):
-        return 2.
-
-    def internal_energy(self, T, dE):
-        translationalenergy = 1.5 * constants.boltzmann * T
-        electronicenergy = 0
-        return translationalenergy + electronicenergy
-
     def __repr__(self):
         return ('ElectronSpecies(name=' + self.name + ','
                 + 'molarmass=' + str(self.molarmass) + ','
@@ -422,7 +413,16 @@ class ElectronSpecies(BaseSpecies):
         return ('Species: e\n'
                 + 'Type: Electron\n'
                 + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
-                + 'Charge number: ' + str(self.chargenumber) + '\n')
+                + 'Charge number: ' + str(self.chargenumber))
+
+    # noinspection PyUnusedLocal
+    def partitionfunction_internal(self, T, dE):
+        return 2.
+
+    def internal_energy(self, T, dE):
+        translationalenergy = 1.5 * constants.boltzmann * T
+        electronicenergy = 0
+        return translationalenergy + electronicenergy
 
 
 class Mixture:
@@ -510,6 +510,22 @@ class Mixture:
         self.__isLTE = False
         self.__P = P
     
+    def __repr__(self):
+        return ('Mixture(species=' + str(self.species) + ','
+                + 'x0=' + str(self.x0) + ','
+                + 'T=' + str(self.T) + ','
+                + 'P=' + str(self.P) + ','
+                + 'gfe_ni0=' + str(self.gfe_ni0) + ','
+                + 'gfe_reltol=' + str(self.gfe_reltol) + ','
+                + 'gfe_maxiter=' + str(self.gfe_maxiter) + ')')
+
+    def __str__(self):
+        return ('Mixture species: '
+                + str(tuple([sp.name for sp in self.species[:-1]])) + '\n'
+                + 'Initial composition: ' + str(self.x0[:-1]) + '\n'
+                + 'Temperature: ' + str(self.T) + ' K\n'
+                + 'Pressure: ' + str(self.P) + ' Pa\n')
+        
     def __recalcE0i(self):
         """Calculate the ionisation energy lowering, using limitation theory of
         Stewart & Pyatt 1966.
