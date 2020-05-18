@@ -50,6 +50,21 @@ def test_enthalpy(mixture, T, P, result, tol):
     assert mixture.calculate_enthalpy() == pytest.approx(result, abs=tol)
 
 
+def test_species_setter_exception(mixture):
+    with pytest.raises(TypeError):
+        mixture.species = [mpc.species_from_name(sp) for sp in ['O','O+']]
+
+
+def test_species_item_exception(mixture):
+    with pytest.raises(TypeError):
+        mixture.species[0] = mpc.species_from_name('O')
+
+
+def test_x0_item_exception(mixture):
+    with pytest.raises(TypeError):
+        mixture.x0[0] = 0.5
+
+
 def test_calculate_viscosity(mixture):
     with pytest.raises(NotImplementedError):
         mixture.calculate_viscosity()
