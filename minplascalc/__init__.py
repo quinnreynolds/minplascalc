@@ -5,7 +5,7 @@
 # Q Reynolds 2017
 
 import json
-import numpy as np
+import numpy
 import logging
 import warnings
 import pathlib
@@ -79,7 +79,7 @@ def read_energylevels(data):
     try:
         name = data.name
     except AttributeError:
-        name = 'input'
+        name = 'inumpyut'
     for i, line in enumerate(data):
         try:
             j, ei = parse_values(line)
@@ -183,7 +183,7 @@ class BaseSpecies:
                 * self.partitionfunction_internal(T, dE))
 
     def partitionfunction_translational(self, T):
-        return ((2 * np.pi * self.molarmass * constants.boltzmann * T)
+        return ((2 * numpy.pi * self.molarmass * constants.boltzmann * T)
                 / (constants.avogadro * constants.planck ** 2)) ** 1.5
 
     def partitionfunction_internal(self, T, dE):
@@ -259,7 +259,7 @@ class MonatomicSpecies(Species):
                 + 'sources=' + str(self.sources) + ')')
 
     def __str__(self):
-        if np.isclose(0, self.chargenumber):
+        if numpy.isclose(0, self.chargenumber):
             sptype = 'Monatomic atom'
         else:
             sptype = 'Monatomic ion'
@@ -280,7 +280,7 @@ class MonatomicSpecies(Species):
         partitionval = 0       
         for j, eij in self.energylevels:
             if eij < (self.ionisationenergy - dE):
-                partitionval += (2*j+1) * np.exp(-eij / kbt)
+                partitionval += (2*j+1) * numpy.exp(-eij / kbt)
         return partitionval
 
     def internal_energy(self, T, dE):
@@ -289,7 +289,7 @@ class MonatomicSpecies(Species):
         electronicenergy = 0
         for j, eij in self.energylevels:
             if eij < (self.ionisationenergy - dE):
-                electronicenergy += (2*j+1) * eij * np.exp(-eij / kbt)
+                electronicenergy += (2*j+1) * eij * numpy.exp(-eij / kbt)
         electronicenergy /= self.partitionfunction_internal(T, dE)
         return translationalenergy + electronicenergy
     
@@ -353,7 +353,7 @@ class DiatomicSpecies(Species):
                 + 'sources=' + str(self.sources) + ')')
 
     def __str__(self):
-        if np.isclose(0, self.chargenumber):
+        if numpy.isclose(0, self.chargenumber):
             sptype = 'Diatomic molecule'
         else:
             sptype = 'Diatomic ion'
@@ -380,7 +380,7 @@ class DiatomicSpecies(Species):
     def partitionfunction_internal(self, T, dE):
         kbt = constants.boltzmann * T
         electronicpartition = self.g0
-        vibrationalpartition = 1 / (1 - np.exp(-self.w_e / kbt))
+        vibrationalpartition = 1 / (1 - numpy.exp(-self.w_e / kbt))
         rotationalpartition = kbt / (self.sigma_s * self.b_e)
         return electronicpartition * vibrationalpartition * rotationalpartition
 
@@ -389,8 +389,8 @@ class DiatomicSpecies(Species):
         translationalenergy = 1.5 * kbt
         electronicenergy = 0
         rotationalenergy = kbt
-        vibrationalenergy = self.w_e * (np.exp(-self.w_e / kbt)
-                                        / (1 - np.exp(-self.w_e / kbt)))
+        vibrationalenergy = self.w_e * (numpy.exp(-self.w_e / kbt)
+                                        / (1 - numpy.exp(-self.w_e / kbt)))
         return (translationalenergy + electronicenergy + rotationalenergy 
                 + vibrationalenergy)
 
@@ -538,11 +538,11 @@ class Mixture:
                 weightedchargesum += nd * sp.chargenumber
                 weightedchargesumsqd += nd * sp.chargenumber ** 2
         zstar = weightedchargesumsqd / weightedchargesum
-        debyed3 = (kbt / (4 * np.pi * (zstar + 1) * ndi[-1] 
+        debyed3 = (kbt / (4 * numpy.pi * (zstar + 1) * ndi[-1] 
                           * constants.fundamentalcharge ** 2)) ** (3/2)
         for i, sp in enumerate(self.species):
             if sp.name != 'e':
-                ai3 = 3 * (sp.chargenumber + 1) / (4 * np.pi * ndi[-1])
+                ai3 = 3 * (sp.chargenumber + 1) / (4 * numpy.pi * ndi[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
                 self.__dE[i] = de
         for cn in range(1, max(sp.chargenumber for sp in self.species) + 1):
@@ -566,7 +566,7 @@ class Mixture:
         kbt = constants.boltzmann*self.T
         
         if not self.__isLTE:
-            self.__E0, self.__dE = np.zeros(nspecies), np.zeros(nspecies)
+            self.__E0, self.__dE = numpy.zeros(nspecies), numpy.zeros(nspecies)
             for i, sp in enumerate(self.species):
                 if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
                     self.__E0[i] = -sp.dissociationenergy
@@ -589,8 +589,8 @@ class Mixture:
                 elm['ntot'] = sum(1e24 * c * x0loc
                                   for c, x0loc in zip(elm['stoichcoeff'], self.x0))
             minimiser_dof = nspecies + len(elements) + 1
-            gfematrix = np.zeros((minimiser_dof, minimiser_dof))
-            gfevector = np.zeros(minimiser_dof)
+            gfematrix = numpy.zeros((minimiser_dof, minimiser_dof))
+            gfevector = numpy.zeros(minimiser_dof)
             for i, elm in enumerate(elements):
                 gfevector[nspecies + i] = elm['ntot']
                 for j, sc in enumerate(elm['stoichcoeff']):
@@ -600,8 +600,8 @@ class Mixture:
                 gfematrix[-1, j] = qc
                 gfematrix[j, -1] = qc
     
-            self.__ni = np.full(nspecies, self.gfe_ni0)
-            governorfactors = np.linspace(0.9, 0.1, 9)
+            self.__ni = numpy.full(nspecies, self.gfe_ni0)
+            governorfactors = numpy.linspace(0.9, 0.1, 9)
             successyn = False
             governoriters = 0
             while not successyn and governoriters < len(governorfactors):
@@ -613,13 +613,13 @@ class Mixture:
                     self.__recalcE0i()
                     nisum = self.__ni.sum()
                     V = nisum * kbt / self.P
-                    offdiag, ondiag = -kbt/nisum, np.diag(kbt/self.__ni)
+                    offdiag, ondiag = -kbt/nisum, numpy.diag(kbt/self.__ni)
                     gfematrix[:nspecies, :nspecies] = offdiag + ondiag
                     total = [sp.partitionfunction_total(V, self.T, dE) 
                              for sp, dE in zip(self.species, self.__dE)]
-                    mu = -kbt * np.log(total/self.__ni) + self.__E0
+                    mu = -kbt * numpy.log(total/self.__ni) + self.__E0
                     gfevector[:nspecies] = -mu
-                    solution = np.linalg.solve(gfematrix, gfevector)
+                    solution = numpy.linalg.solve(gfematrix, gfevector)
                     newni = solution[0:nspecies]
                     deltani = abs(newni - self.__ni)
                     maxniindex = newni.argmax()
