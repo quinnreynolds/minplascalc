@@ -32,6 +32,22 @@ def test_density(mixture_simple, T, P, result, tol):
 
 
 @pytest.mark.parametrize("T, P, result, tol", [
+    (MID_T, MID_P, 1.5633632e7, 1e1),
+    (LOW_T, LOW_P, -1.455147e7, 1e1),
+    (HIGH_T, LOW_P, 1.893144e8, 1e2),
+    (LOW_T, HIGH_P, -1.455147e7, 1e1),
+    (HIGH_T, HIGH_P, 1.483885e8, 1e2),
+])
+def test_enthalpy(mixture_simple, T, P, result, tol):
+    mixture_simple.T = T
+    mixture_simple.P = P
+    
+    thisresult = mixture_simple.calculate_enthalpy()
+
+    assert thisresult == pytest.approx(result, abs=tol)
+
+
+@pytest.mark.parametrize("T, P, result, tol", [
     (MID_T, MID_P, 3249.165, 1e-2),
     (LOW_T, LOW_P, 1081.252, 1e-2),
     (HIGH_T, LOW_P, 23193.92, 1e-1),
@@ -54,10 +70,11 @@ def test_heat_capacity(mixture_simple, T, P, result, tol):
     (LOW_T, HIGH_P, -1.455147e7, 1e1),
     (HIGH_T, HIGH_P, 1.483885e8, 1e2),
 ])
-def test_enthalpy(mixture_simple, T, P, result, tol):
+def test_LTE_fallthrough(mixture_simple, T, P, result, tol):
     mixture_simple.T = T
     mixture_simple.P = P
     
+    mixture_simple.calculate_composition()
     thisresult = mixture_simple.calculate_enthalpy()
 
     assert thisresult == pytest.approx(result, abs=tol)
