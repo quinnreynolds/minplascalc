@@ -20,6 +20,11 @@ SPECIESPATH = DATAPATH / 'species'
 def molar_mass_calculator(protons, neutrons, electrons):
     """Estimate the molar mass in kg/mol of a species based on its nuclear and
     electronic structure, if you can't get it anywhere else for some reason.
+    
+    Returns
+    -------
+    float
+        Molar mass in kg/mol.
     """
     return constants.avogadro * (protons * constants.protonmass
                                  + electrons * constants.electronmass
@@ -30,6 +35,17 @@ def molar_mass_calculator(protons, neutrons, electrons):
 def parse_values(nist_line):
     """Helper function to tidy up a string of data copied from NIST online
     databases.
+    
+    Parameters
+    ----------
+    nist_line : str
+        A string representing a line of information obtained from a NIST-style 
+        data source.
+    
+    Returns
+    -------
+    list of float
+        Each value in the data string.
     """
     table = str.maketrans('', '', '+x?[]')
     line = ''.join(nist_line.split()).translate(table)
@@ -51,11 +67,11 @@ def read_energylevels(data):
     Parameters
     ----------
     data : file-like
-        NIST energy level file data
+        NIST energy level file data.
 
     Return
     ------
-    energylevels : list of length-2 lists
+    list of length-2 lists
          Energy levels. Each dict contains the energy of the level Ei and the 
          associated quantum number J.
     """
@@ -78,6 +94,17 @@ def read_energylevels(data):
 # classes and class functions ##################################################
 
 def species_to_file(sp, datafile=None):
+    """Save a Species object to a file for easy re-use.
+    
+    Parameters
+    ----------
+    sp : obj
+        A minplascalc Species object.
+    datafile : str or Path, optional
+        The file to which the output should be saved (full path). The default 
+        is None, in which case the Species' name attrubute will be used for the
+        file name.
+    """
     if datafile:
         with open(datafile, 'w') as f:
             json.dump(sp.__dict__, f, indent=4)
@@ -93,7 +120,7 @@ def species_from_file(datafile):
     ----------
     datafile : string
         Path to a JSON data file describing the electronic and molecular
-        properties of the species
+        properties of the species.
     """
     with open(datafile) as f:
         spdata = json.load(f)
@@ -118,7 +145,7 @@ def species_from_name(name):
     Parameters
     ----------
     name : str
-        Name of the species
+        Name of the species.
     """
     filename = SPECIESPATH / (name + '.json')
     return species_from_file(str(filename))
@@ -130,14 +157,14 @@ def mixture_from_names(names, x0, T, P):
     Parameters
     ----------
     names : list of str
-        Names of the species
+        Names of the species.
     x0 : list of float
         Initial value of mole fractions for each species, typically the 
-        room-temperature composition of the plasma-generating gas
+        room-temperature composition of the plasma-generating gas.
     T : float
-        LTE plasma temperature, in K
+        LTE plasma temperature, in K.
     P : float
-        LTE plasma pressure, in Pa
+        LTE plasma pressure, in Pa.
         
     Returns
     -------
@@ -174,13 +201,13 @@ class Species(BaseSpecies):
         Parameters
         ----------
         name : string
-            A unique identifier for the species
+            A unique identifier for the species.
         stoichiometry : dictionary
-            Dictionary describing the elemental stoichiometry of the species
+            Dictionary describing the elemental stoichiometry of the species.
         molarmass : float
-            Molar mass of the species in kg/mol
+            Molar mass of the species in kg/mol.
         chargenumber : int
-            Charge on the species (in integer units of the fundamental charge)
+            Charge on the species (in integer units of the fundamental charge).
         """
         self.name = name
         self.stoichiometry = deepcopy(stoichiometry)
@@ -198,23 +225,23 @@ class MonatomicSpecies(Species):
         Parameters
         ----------
         name : string
-            A unique identifier for the species
+            A unique identifier for the species.
         stoichiometry : dictionary
             Dictionary describing the elemental stoichiometry of the species 
-            (e.g. {'O': 1} for O or O+)
+            (e.g. {'O': 1} for O or O+).
         molarmass : float
-            Molar mass of the species in kg/mol
+            Molar mass of the species in kg/mol.
         chargenumber : int
-            Charge on the species (in integer units of the fundamental charge)
+            Charge on the species (in integer units of the fundamental charge).
         ionisationenergy : float
-            Ionisation energy of the species in J
+            Ionisation energy of the species in J.
         energylevels : list of length-2 lists
             Atomic energy level data - each entry in the list contains a pair of
-            values giving the level's quantum number and its energy 
-            respectively, with energy in J
+            values giving the level's quantum number and its energy
+            respectively, with energy in J.
         sources : list of str
             Each entry represents a reference from which the data was
-            obtained
+            obtained.
         """
         super().__init__(name, stoichiometry, molarmass, chargenumber)
         
@@ -251,30 +278,30 @@ class DiatomicSpecies(Species):
         Parameters
         ----------
         name : string
-            A unique identifier for the species
+            A unique identifier for the species.
         stoichiometry : dictionary
             Dictionary describing the elemental stoichiometry of the species 
-            (e.g. {'Si': 1, 'O': 1} for SiO or SiO+)
+            (e.g. {'Si': 1, 'O': 1} for SiO or SiO+).
         molarmass : float
-            Molar mass of the species in kg/mol
+            Molar mass of the species in kg/mol.
         chargenumber : int
-            Charge on the species (in integer units of the fundamental charge)
+            Charge on the species (in integer units of the fundamental charge).
         ionisationenergy : float
-            Ionisation energy of the species in J
+            Ionisation energy of the species in J.
         dissociationenergy : float
-            Dissociation energy of the species in J
+            Dissociation energy of the species in J.
         sigma_s : int
             Symmetry constant (=2 for homonuclear molecules, =1 for 
-            heteronuclear)
+            heteronuclear).
         g0 : float
-            Ground state electronic energy level degeneracy
+            Ground state electronic energy level degeneracy.
         w_e : float
-            Vibrational energy level constant in J
+            Vibrational energy level constant in J.
         b_e : float
-            Rotational energy level constant in J
+            Rotational energy level constant in J.
         sources : list of str
             Each dictionary represents a reference source from which the data 
-            was obtained
+            was obtained.
         """
         super().__init__(name, stoichiometry, molarmass, chargenumber)
 
@@ -334,14 +361,14 @@ class Mixture:
         ----------
         species : list or tuple of obj
             All species participating in the mixture (excluding electrons which
-            are added automatically), as minplascalc Species objects
+            are added automatically), as minplascalc Species objects.
         x0 : list or tuple of float
             Constraint mole fractions for each species, typically the 
-            room-temperature composition of the plasma-generating gas
+            room-temperature composition of the plasma-generating gas.
         T : float
-            LTE plasma temperature, in K
+            LTE plasma temperature, in K.
         P : float
-            LTE plasma pressure, in Pa            
+            LTE plasma pressure, in Pa.           
         gfe_ni0 : float
             Gibbs Free Energy minimiser solution control: Starting estimate for 
             number of particles of each species. Typically O(1e20).         
@@ -410,7 +437,7 @@ class Mixture:
     
     def __recalcE0i(self):
         """Calculate the ionisation energy lowering, using limitation theory of
-        Stewart & Pyatt 1966
+        Stewart & Pyatt 1966.
         """
         kbt = constants.boltzmann * self.T
         ndi = self.__ni * self.P / (self.__ni.sum() * kbt) 
@@ -442,7 +469,7 @@ class Mixture:
         -------
         ndarray
             Number density of each species in the plasma as listed in 
-            Mixture.species, in particles/m3
+            Mixture.species, in particles/m3.
         """
         nspecies = len(self.species)
         kbt = constants.boltzmann*self.T
@@ -533,7 +560,7 @@ class Mixture:
         Returns
         -------
         float
-            Fluid density, in kg/m3
+            Fluid density, in kg/m3.
         """
         ndi = self.calculate_composition()
         return sum(nd * sp.molarmass / constants.avogadro
@@ -549,7 +576,7 @@ class Mixture:
         Returns
         -------
         float
-            Enthalpy, in J/kg
+            Enthalpy, in J/kg.
         """
         ndi = self.calculate_composition()
         weightedenthalpy = sum(constants.avogadro * nd 
@@ -574,7 +601,7 @@ class Mixture:
         Returns
         -------
         float
-            Heat capacity, in J/kg.K
+            Heat capacity, in J/kg.K.
         """
         startT = self.T
         self.T = startT * (1-rel_delta_T)        
