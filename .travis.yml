@@ -5,6 +5,6 @@ python:
 install:
   - pip install -e .[dev,test]
 script:
-  - pytest --verbose --durations=5
+  - pytest test --verbose --durations=5
 #after_success:
 #  - coveralls
