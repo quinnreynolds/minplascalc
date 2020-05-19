@@ -47,7 +47,7 @@ def parse_values(nist_line):
     list of float
         Each value in the data string.
     """
-    table = str.maketrans('', '', '+x?[]')
+    table = str.maketrans('', '', '+x?[]()')
     line = ''.join(nist_line.split()).translate(table)
     records = line.split('|')[:-1]
     values = []
@@ -79,7 +79,7 @@ def read_energylevels(data):
     try:
         name = data.name
     except AttributeError:
-        name = 'inumpyut'
+        name = 'input'
     for i, line in enumerate(data):
         try:
             j, ei = parse_values(line)
