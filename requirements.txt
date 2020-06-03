@@ -1,6 +1,7 @@
 pytest
 matplotlib
 numpy
+scipy
 requests
 sphinx>=1.4
 nbsphinx
