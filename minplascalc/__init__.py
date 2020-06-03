@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
-#
 # Classes for gas/plasma data and LTE calculations with simple species
-#
-# Q Reynolds 2017
 
 import json
 import numpy
@@ -10,7 +6,7 @@ import logging
 import warnings
 import pathlib
 from copy import deepcopy
-from . import constants
+from scipy import constants
 
 DATAPATH = pathlib.Path(__file__).parent / 'data'
 SPECIESPATH = DATAPATH / 'species'
@@ -26,10 +22,9 @@ def molar_mass_calculator(protons, neutrons, electrons):
     float
         Molar mass in kg/mol.
     """
-    return constants.avogadro * (protons * constants.protonmass
-                                 + electrons * constants.electronmass
-                                 + neutrons * (constants.protonmass
-                                               + constants.electronmass))
+    return constants.Avogadro * (protons * constants.proton_mass
+                                 + electrons * constants.electron_mass
+                                 + neutrons * (constants.neutron_mass))
 
 
 def parse_values(nist_line):
@@ -140,7 +135,7 @@ def species_from_file(datafile):
 
 
 def species_from_name(name):
-    """ Create a species from the species database
+    """Create a species from the species database.
 
     Parameters
     ----------
@@ -152,7 +147,7 @@ def species_from_name(name):
 
 
 def mixture_from_names(names, x0, T, P):
-    """ Create a mixture from a list of species names using the species database
+    """Create a mixture from a list of species names using the species database.
 
     Parameters
     ----------
@@ -183,8 +178,8 @@ class BaseSpecies:
                 * self.partitionfunction_internal(T, dE))
 
     def partitionfunction_translational(self, T):
-        return ((2 * numpy.pi * self.molarmass * constants.boltzmann * T)
-                / (constants.avogadro * constants.planck ** 2)) ** 1.5
+        return ((2 * numpy.pi * self.molarmass * constants.Boltzmann * T)
+                / (constants.Avogadro * constants.Planck ** 2)) ** 1.5
 
     def partitionfunction_internal(self, T, dE):
         raise NotImplementedError
@@ -276,7 +271,7 @@ class MonatomicSpecies(Species):
                 + 'Energy levels: ' + str(len(self.energylevels)))
 
     def partitionfunction_internal(self, T, dE):
-        kbt = constants.boltzmann * T
+        kbt = constants.Boltzmann * T
         partitionval = 0       
         for j, eij in self.energylevels:
             if eij < (self.ionisationenergy - dE):
@@ -284,7 +279,7 @@ class MonatomicSpecies(Species):
         return partitionval
 
     def internal_energy(self, T, dE):
-        kbt = constants.boltzmann * T
+        kbt = constants.Boltzmann * T
         translationalenergy = 1.5 * kbt
         electronicenergy = 0
         for j, eij in self.energylevels:
@@ -378,14 +373,14 @@ class DiatomicSpecies(Species):
                 + 'B_e: ' + str(self.b_e) + ' J')
 
     def partitionfunction_internal(self, T, dE):
-        kbt = constants.boltzmann * T
+        kbt = constants.Boltzmann * T
         electronicpartition = self.g0
         vibrationalpartition = 1 / (1 - numpy.exp(-self.w_e / kbt))
         rotationalpartition = kbt / (self.sigma_s * self.b_e)
         return electronicpartition * vibrationalpartition * rotationalpartition
 
     def internal_energy(self, T, dE):
-        kbt = constants.boltzmann * T
+        kbt = constants.Boltzmann * T
         translationalenergy = 1.5 * kbt
         electronicenergy = 0
         rotationalenergy = kbt
@@ -401,7 +396,7 @@ class ElectronSpecies(BaseSpecies):
         """
         self.name = 'e'
         self.stoichiometry = {}
-        self.molarmass = constants.electronmass * constants.avogadro
+        self.molarmass = constants.electron_mass * constants.Avogadro
         self.chargenumber = -1
 
     def __repr__(self):
@@ -420,7 +415,7 @@ class ElectronSpecies(BaseSpecies):
         return 2.
 
     def internal_energy(self, T, dE):
-        translationalenergy = 1.5 * constants.boltzmann * T
+        translationalenergy = 1.5 * constants.Boltzmann * T
         electronicenergy = 0
         return translationalenergy + electronicenergy
 
@@ -530,7 +525,7 @@ class Mixture:
         """Calculate the ionisation energy lowering, using limitation theory of
         Stewart & Pyatt 1966.
         """
-        kbt = constants.boltzmann * self.T
+        kbt = constants.Boltzmann * self.T
         ndi = self.__ni * self.P / (self.__ni.sum() * kbt) 
         weightedchargesumsqd, weightedchargesum = 0, 0
         for sp, nd in zip(self.species, ndi):
@@ -539,7 +534,7 @@ class Mixture:
                 weightedchargesumsqd += nd * sp.chargenumber ** 2
         zstar = weightedchargesumsqd / weightedchargesum
         debyed3 = (kbt / (4 * numpy.pi * (zstar + 1) * ndi[-1] 
-                          * constants.fundamentalcharge ** 2)) ** (3/2)
+                          * constants.elementary_charge ** 2)) ** (3/2)
         for i, sp in enumerate(self.species):
             if sp.name != 'e':
                 ai3 = 3 * (sp.chargenumber + 1) / (4 * numpy.pi * ndi[-1])
@@ -563,7 +558,7 @@ class Mixture:
             Mixture.species, in particles/m3.
         """
         nspecies = len(self.species)
-        kbt = constants.boltzmann*self.T
+        kbt = constants.Boltzmann*self.T
         
         if not self.__isLTE:
             self.__E0, self.__dE = numpy.zeros(nspecies), numpy.zeros(nspecies)
@@ -587,7 +582,8 @@ class Mixture:
                                       for sp in self.species]
             for elm in elements:
                 elm['ntot'] = sum(1e24 * c * x0loc
-                                  for c, x0loc in zip(elm['stoichcoeff'], self.x0))
+                                  for c, x0loc in zip(elm['stoichcoeff'], 
+                                                      self.x0))
             minimiser_dof = nspecies + len(elements) + 1
             gfematrix = numpy.zeros((minimiser_dof, minimiser_dof))
             gfevector = numpy.zeros(minimiser_dof)
@@ -655,7 +651,7 @@ class Mixture:
             Fluid density, in kg/m3.
         """
         ndi = self.calculate_composition()
-        return sum(nd * sp.molarmass / constants.avogadro
+        return sum(nd * sp.molarmass / constants.Avogadro
                    for sp, nd in zip(self.species, ndi))
 
     def calculate_enthalpy(self):
@@ -671,9 +667,9 @@ class Mixture:
             Enthalpy, in J/kg.
         """
         ndi = self.calculate_composition()
-        weightedenthalpy = sum(constants.avogadro * nd 
+        weightedenthalpy = sum(constants.Avogadro * nd 
                                * (sp.internal_energy(self.T, dE) + E0 
-                                  + constants.boltzmann * self.T) 
+                                  + constants.Boltzmann * self.T) 
                                for sp, nd, dE, E0 in zip(self.species, ndi, 
                                                          self.__dE, self.__E0))
         weightedmolmass = sum(nd * sp.molarmass

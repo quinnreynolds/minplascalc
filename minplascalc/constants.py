@@ -1,8 +1,4 @@
-#!/usr/bin/env python3
-#
 # Constants useful for plasma calculations
-#
-# Q Reynolds 2020
 
 protonmass = 1.6726219e-27
 electronmass = 9.10938356e-31
