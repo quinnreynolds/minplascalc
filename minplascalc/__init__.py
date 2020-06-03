@@ -258,16 +258,12 @@ class MonatomicSpecies(Species):
             sptype = 'Monatomic atom'
         else:
             sptype = 'Monatomic ion'
-        if self.ionisationenergy < 0:
-            ien = 'N/A'
-        else:
-            ien = str(self.ionisationenergy)
         return ('Species: ' + self.name + '\n'
                 + 'Type: ' + sptype + '\n'
                 + 'Stoichiometry: ' + str(self.stoichiometry) + '\n'
                 + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
                 + 'Charge number: ' + str(self.chargenumber) + '\n'
-                + 'Ionisation energy: ' + ien + ' J\n'
+                + 'Ionisation energy: ' + str(self.ionisationenergy) + ' J\n'
                 + 'Energy levels: ' + str(len(self.energylevels)))
 
     def partitionfunction_internal(self, T, dE):
@@ -352,21 +348,14 @@ class DiatomicSpecies(Species):
             sptype = 'Diatomic molecule'
         else:
             sptype = 'Diatomic ion'
-        if self.ionisationenergy < 0:
-            ien = 'N/A'
-        else:
-            ien = str(self.ionisationenergy)
-        if self.dissociationenergy < 0:
-            den = 'N/A'
-        else:
-            den = str(self.dissociationenergy)
         return ('Species: ' + self.name + '\n'
                 + 'Type: ' + sptype + '\n'
                 + 'Stoichiometry: ' + str(self.stoichiometry) + '\n'
                 + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
                 + 'Charge number: ' + str(self.chargenumber) + '\n'
-                + 'Dissociation energy: ' + den + ' J\n'
-                + 'Ionisation energy: ' + ien + ' J\n'
+                + 'Dissociation energy: ' + str(self.dissociationenergy) 
+                + ' J\n'
+                + 'Ionisation energy: ' + str(self.ionisationenergy) + ' J\n'
                 + 'sigma_s: ' + str(self.sigma_s) + '\n'
                 + 'g0: ' + str(self.g0) + '\n'
                 + 'w_e: ' + str(self.w_e) + ' J\n'
