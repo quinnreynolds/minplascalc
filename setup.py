@@ -23,7 +23,7 @@ setup(
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/kittychunk/minplascalc',
+    url='https://github.com/quinnreynolds/minplascalc',
 
     # Author details
     author='Quinn Reynolds',
@@ -60,7 +60,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy', 'scipy'],
+    install_requires=['numpy', 'scipy>=1.4'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
