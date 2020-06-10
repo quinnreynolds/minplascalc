@@ -2,11 +2,6 @@ import pytest
 import minplascalc as mpc
 
 
-def test_molarmass():
-    mm = mpc.molar_mass_calculator(8, 8, 8)
-    assert mm == pytest.approx(0.016, abs=1e-3)
-
-
 @pytest.fixture
 def diatomic_sample_species():
     return mpc.species_from_name('O2')

@@ -3,6 +3,7 @@
 from setuptools import setup, find_packages
 from codecs import open
 from os import path
+import minplascalc
 
 here = path.abspath(path.dirname(__file__))
 
@@ -16,7 +17,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.6.0',
+    version=minplascalc.__version__,
 
     description='A simple set of tools for doing calculations of thermal plasma '
                 'compositions relevant to metallurgical problems using Python 3',
