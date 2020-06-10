@@ -13,20 +13,6 @@ SPECIESPATH = DATAPATH / 'species'
 
 # utility functions ############################################################
 
-def molar_mass_calculator(protons, neutrons, electrons):
-    """Estimate the molar mass in kg/mol of a species based on its nuclear and
-    electronic structure, if you can't get it anywhere else for some reason.
-    
-    Returns
-    -------
-    float
-        Molar mass in kg/mol.
-    """
-    return constants.Avogadro * (protons * constants.proton_mass
-                                 + electrons * constants.electron_mass
-                                 + neutrons * (constants.neutron_mass))
-
-
 def parse_values(nist_line):
     """Helper function to tidy up a string of data copied from NIST online
     databases.
