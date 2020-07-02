@@ -1,6 +1,6 @@
-__all__ = ['nist_string', 'nist_energylevels']
-
 import logging
+
+__all__ = ['nist_string', 'nist_energylevels']
 
 
 def nist_string(nist_line):

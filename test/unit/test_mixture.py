@@ -4,8 +4,8 @@ import minplascalc as mpc
 
 @pytest.fixture
 def mixture_simple():
-    c = mpc.mixture.LTE(species=[mpc.species.from_name(sp) for sp in 
-                                 ['O2','O2+','O','O+','O++']],
+    c = mpc.mixture.Mixture(species=[mpc.species.from_name(sp) for sp in 
+                                     ['O2','O2+','O','O+','O++']],
                         x0=[1,0,0,0,0],
                         T=1000, P=101325,
                         gfe_ni0=1e20, gfe_reltol=1e-10, gfe_maxiter=1000)
@@ -13,9 +13,10 @@ def mixture_simple():
 
 @pytest.fixture
 def mixture_complex():
-    c = mpc.mixture.LTE(species=[mpc.species.from_name(sp) for sp in 
-                                 ['O2','O2+','O','O+','O++','CO','CO+','C','C+',
-                                  'C++','SiO','SiO+','Si','Si+','Si++']],
+    c = mpc.mixture.Mixture(species=[mpc.species.from_name(sp) for sp in 
+                                     ['O2','O2+','O','O+','O++','CO','CO+','C',
+                                      'C+','C++','SiO','SiO+','Si','Si+',
+                                      'Si++']],
                         x0=[0,0,0,0,0,0.5,0,0,0,0,0.5,0,0,0,0],
                         T=10000, P=101325,
                         gfe_ni0=1e20, gfe_reltol=1e-10, gfe_maxiter=1000)

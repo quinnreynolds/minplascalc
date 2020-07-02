@@ -4,6 +4,9 @@ import pathlib
 from copy import deepcopy
 from scipy import constants
 
+__all__ = ['SPECIESPATH', 'to_file', 'from_file', 'from_name', 'Monatomic', 
+           'Diatomic', 'Electron']
+
 DATAPATH = pathlib.Path(__file__).parent / 'data'
 SPECIESPATH = DATAPATH / 'species'
 

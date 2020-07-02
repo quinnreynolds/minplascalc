@@ -4,6 +4,9 @@ import warnings
 from scipy import constants
 from . import species as _species
 
+__all__ = ['from_names', 'Mixture']
+
+
 def from_names(names, x0, T, P):
     """Create a mixture from a list of species names using the species database.
 
@@ -27,10 +30,10 @@ def from_names(names, x0, T, P):
         raise ValueError('Electrons are added automatically, please don\'t '
                          'include them in your species list.')
     species = [_species.from_name(nm) for nm in names]
-    return LTE(species, x0, T, P, 1e20, 1e-10, 1000)
+    return Mixture(species, x0, T, P, 1e20, 1e-10, 1000)
     
 
-class LTE:
+class Mixture:
     def __init__(self, species, x0, T, P, gfe_ni0, gfe_reltol, gfe_maxiter):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
