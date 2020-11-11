@@ -4,11 +4,12 @@ import warnings
 from scipy import constants
 from . import species as _species
 
-__all__ = ['from_names', 'Mixture']
+__all__ = ['lte_from_names', 'LTE']
 
 
-def from_names(names, x0, T, P):
-    """Create a mixture from a list of species names using the species database.
+def lte_from_names(names, x0, T, P):
+    """Create a LTE mixture from a list of species names using the species 
+    database.
 
     Parameters
     ----------
@@ -24,16 +25,16 @@ def from_names(names, x0, T, P):
         
     Returns
     -------
-    A Mixture object instance.
+    An LTE object instance.
     """
     if 'e' in names:
         raise ValueError('Electrons are added automatically, please don\'t '
                          'include them in your species list.')
     species = [_species.from_name(nm) for nm in names]
-    return Mixture(species, x0, T, P, 1e20, 1e-10, 1000)
+    return LTE(species, x0, T, P, 1e20, 1e-10, 1000)
     
 
-class Mixture:
+class LTE:
     def __init__(self, species, x0, T, P, gfe_ni0, gfe_reltol, gfe_maxiter):
         """Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
@@ -119,7 +120,7 @@ class Mixture:
         self.__P = P
     
     def __repr__(self):
-        return ('Mixture(species=' + str(self.species) + ','
+        return ('LTE(species=' + str(self.species) + ','
                 + 'x0=' + str(self.x0) + ','
                 + 'T=' + str(self.T) + ','
                 + 'P=' + str(self.P) + ','
@@ -128,7 +129,7 @@ class Mixture:
                 + 'gfe_maxiter=' + str(self.gfe_maxiter) + ')')
 
     def __str__(self):
-        return ('Mixture species: '
+        return ('LTE mixture species: '
                 + str(tuple([sp.name for sp in self.species[:-1]])) + '\n'
                 + 'Initial composition: ' + str(self.x0[:-1]) + '\n'
                 + 'Temperature: ' + str(self.T) + ' K\n'
