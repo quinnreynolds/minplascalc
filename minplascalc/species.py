@@ -142,7 +142,7 @@ class Monatomic(Species):
         self.sources = deepcopy(sources)
 
     def __repr__(self):
-        return ('MonatomicSpecies(name=' + self.name + ','
+        return (self.__class__.__name__ + '(name=' + self.name + ','
                 + 'stoichiometry=' + str(self.stoichiometry) + ','
                 + 'molarmass=' + str(self.molarmass) + ','
                 + 'chargenumber=' + str(self.chargenumber) + ','
@@ -228,7 +228,7 @@ class Diatomic(Species):
         self.sources = deepcopy(sources)
 
     def __repr__(self):
-        return ('DiatomicSpecies(name=' + self.name + ','
+        return (self.__class__.__name__ + '(name=' + self.name + ','
                 + 'stoichiometry=' + str(self.stoichiometry) + ','
                 + 'molarmass=' + str(self.molarmass) + ','
                 + 'chargenumber=' + str(self.chargenumber) + ','
@@ -286,7 +286,7 @@ class Electron(BaseSpecies):
         self.chargenumber = -1
 
     def __repr__(self):
-        return ('ElectronSpecies(name=' + self.name + ','
+        return (self.__class__.__name__ + '(name=' + self.name + ','
                 + 'molarmass=' + str(self.molarmass) + ','
                 + 'chargenumber=' + str(self.chargenumber) + ')')
 
