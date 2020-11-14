@@ -120,7 +120,7 @@ class LTE:
         self.__P = P
     
     def __repr__(self):
-        return ('LTE(species=' + str(self.species) + ','
+        return (self.__class_.__name__ + '(species=' + str(self.species) + ','
                 + 'x0=' + str(self.x0) + ','
                 + 'T=' + str(self.T) + ','
                 + 'P=' + str(self.P) + ','
