@@ -142,26 +142,23 @@ class Monatomic(Species):
         self.sources = deepcopy(sources)
 
     def __repr__(self):
-        return (self.__class__.__name__ + '(name=' + self.name + ','
-                + 'stoichiometry=' + str(self.stoichiometry) + ','
-                + 'molarmass=' + str(self.molarmass) + ','
-                + 'chargenumber=' + str(self.chargenumber) + ','
-                + 'ionisationenergy=' + str(self.ionisationenergy) + ','
-                + 'energylevels=' + str(self.energylevels) + ','
-                + 'sources=' + str(self.sources) + ')')
+        return (f'{self.__class__.__name__ }(name={self.name},'
+                f'stoichiometry={self.stoichiometry},'
+                f'molarmass={self.molarmass},chargenumber={self.chargenumber},'
+                f'ionisationenergy={self.ionisationenergy},'
+                f'energylevels={self.energylevels},sources={self.sources})')
 
     def __str__(self):
         if numpy.isclose(0, self.chargenumber):
             sptype = 'Monatomic atom'
         else:
             sptype = 'Monatomic ion'
-        return ('Species: ' + self.name + '\n'
-                + 'Type: ' + sptype + '\n'
-                + 'Stoichiometry: ' + str(self.stoichiometry) + '\n'
-                + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
-                + 'Charge number: ' + str(self.chargenumber) + '\n'
-                + 'Ionisation energy: ' + str(self.ionisationenergy) + ' J\n'
-                + 'Energy levels: ' + str(len(self.energylevels)))
+        return (f'Species: {self.name}\nType: {sptype}\n'
+                f'Stoichiometry: {self.stoichiometry}\n'
+                f'Molar mass: {self.molarmass} kg/mol\n'
+                f'Charge number: {self.chargenumber}\n'
+                f'Ionisation energy: {self.ionisationenergy} J\n'
+                f'Energy levels: {len(self.energylevels)}')
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T
@@ -228,35 +225,28 @@ class Diatomic(Species):
         self.sources = deepcopy(sources)
 
     def __repr__(self):
-        return (self.__class__.__name__ + '(name=' + self.name + ','
-                + 'stoichiometry=' + str(self.stoichiometry) + ','
-                + 'molarmass=' + str(self.molarmass) + ','
-                + 'chargenumber=' + str(self.chargenumber) + ','
-                + 'dissociationenergy=' + str(self.dissociationenergy) + ','
-                + 'ionisationenergy=' + str(self.ionisationenergy) + ','
-                + 'sigma_s=' + str(self.sigma_s) + ','
-                + 'g0=' + str(self.g0) + ','
-                + 'w_e=' + str(self.w_e) + ','
-                + 'b_e=' + str(self.b_e) + ','
-                + 'sources=' + str(self.sources) + ')')
+        return (f'{self.__class__.__name__}(name={self.name},'
+                f'stoichiometry={self.stoichiometry},'
+                f'molarmass={self.molarmass},'
+                f'chargenumber={self.chargenumber},'
+                f'dissociationenergy={self.dissociationenergy},'
+                f'ionisationenergy={self.ionisationenergy},'
+                f'sigma_s={self.sigma_s},g0={self.g0},w_e={self.w_e},'
+                f'b_e={self.b_e},sources={self.sources})')
 
     def __str__(self):
         if numpy.isclose(0, self.chargenumber):
             sptype = 'Diatomic molecule'
         else:
             sptype = 'Diatomic ion'
-        return ('Species: ' + self.name + '\n'
-                + 'Type: ' + sptype + '\n'
-                + 'Stoichiometry: ' + str(self.stoichiometry) + '\n'
-                + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
-                + 'Charge number: ' + str(self.chargenumber) + '\n'
-                + 'Dissociation energy: ' + str(self.dissociationenergy) 
-                + ' J\n'
-                + 'Ionisation energy: ' + str(self.ionisationenergy) + ' J\n'
-                + 'sigma_s: ' + str(self.sigma_s) + '\n'
-                + 'g0: ' + str(self.g0) + '\n'
-                + 'w_e: ' + str(self.w_e) + ' J\n'
-                + 'B_e: ' + str(self.b_e) + ' J')
+        return (f'Species: {self.name}\nType: {sptype}\n'
+                f'Stoichiometry: {self.stoichiometry}\n'
+                f'Molar mass: {self.molarmass} kg/mol\n'
+                f'Charge number: {self.chargenumber}\n'
+                f'Dissociation energy: {self.dissociationenergy} J\n'
+                f'Ionisation energy: {self.ionisationenergy} J\n'
+                f'sigma_s: {self.sigma_s}\ng0: {self.g0}\nw_e: {self.w_e} J\n'
+                f'B_e: {self.b_e} J')
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T
@@ -286,15 +276,13 @@ class Electron(BaseSpecies):
         self.chargenumber = -1
 
     def __repr__(self):
-        return (self.__class__.__name__ + '(name=' + self.name + ','
-                + 'molarmass=' + str(self.molarmass) + ','
-                + 'chargenumber=' + str(self.chargenumber) + ')')
+        return (f'{self.__class__.__name__}(name={self.name},'
+                f'molarmass={self.molarmass},chargenumber={self.chargenumber})')
 
     def __str__(self):
-        return ('Species: e\n'
-                + 'Type: Electron\n'
-                + 'Molar mass: ' + str(self.molarmass) + ' kg/mol\n'
-                + 'Charge number: ' + str(self.chargenumber))
+        return (f'Species: e\nType: Electron\n'
+                f'Molar mass: {self.molarmass} kg/mol\n'
+                f'Charge number: {self.chargenumber}')
 
     # noinspection PyUnusedLocal
     def partitionfunction_internal(self, T, dE):
