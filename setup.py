@@ -34,10 +34,10 @@ setup(
     ],
     keywords='plasma gibbs composition',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
-    install_requires=['numpy', 'scipy>=1.4'],
+    install_requires=['numpy','scipy>=1.4'],
     extras_require={
         'dev': ['matplotlib'],
-        'test': ['coverage', 'pytest', 'jupyter'],
+        'test': ['coverage','pytest','jupyter'],
     },
     package_data={
         'minplascalc': ['data/*/*.json'],
