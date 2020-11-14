@@ -120,20 +120,15 @@ class LTE:
         self.__P = P
     
     def __repr__(self):
-        return (self.__class_.__name__ + '(species=' + str(self.species) + ','
-                + 'x0=' + str(self.x0) + ','
-                + 'T=' + str(self.T) + ','
-                + 'P=' + str(self.P) + ','
-                + 'gfe_ni0=' + str(self.gfe_ni0) + ','
-                + 'gfe_reltol=' + str(self.gfe_reltol) + ','
-                + 'gfe_maxiter=' + str(self.gfe_maxiter) + ')')
+        return (f'{self.__class__.__name__}(species={self.species},'
+                f'x0={self.x0},T={self.T},P={self.P},gfe_ni0={self.gfe_ni0},'
+                f'gfe_reltol={self.gfe_reltol},gfe_maxiter={self.gfe_maxiter})')
 
     def __str__(self):
-        return ('LTE mixture species: '
-                + str(tuple([sp.name for sp in self.species[:-1]])) + '\n'
-                + 'Initial composition: ' + str(self.x0[:-1]) + '\n'
-                + 'Temperature: ' + str(self.T) + ' K\n'
-                + 'Pressure: ' + str(self.P) + ' Pa\n')
+        return (f'LTE mixture species: '
+                f'{tuple([sp.name for sp in self.species[:-1]])}\n'
+                f'Initial composition: {self.x0[:-1]}\n'
+                f'Temperature: {self.T} K\nPressure: {self.P} Pa')
         
     def __recalcE0i(self):
         """Calculate the ionisation energy lowering, using limitation theory of
