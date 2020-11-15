@@ -9,26 +9,6 @@ __all__ = ['SPECIESPATH', 'to_file', 'from_file', 'from_name', 'Monatomic',
 
 DATAPATH = pathlib.Path(__file__).parent / 'data'
 SPECIESPATH = DATAPATH / 'species'
-
-
-def to_file(sp, datafile=None):
-    """Save a Species object to a file for easy re-use.
-    
-    Parameters
-    ----------
-    sp : obj
-        A minplascalc Species object.
-    datafile : str or Path, optional
-        The file to which the output should be saved (full path). The default 
-        is None, in which case the Species' name attrubute will be used for the
-        file name.
-    """
-    if datafile:
-        with open(datafile, 'w') as f:
-            json.dump(sp.__dict__, f, indent=4)
-    else:
-        with open(sp.name + '.json', 'w') as f:
-            json.dump(sp.__dict__, f, indent=4)
         
 
 def from_file(datafile):
@@ -107,6 +87,23 @@ class Species(BaseSpecies):
         self.chargenumber = chargenumber
         if self.chargenumber < 0:
             raise ValueError('Negatively charged ions not implemented.')
+
+    def to_file(self, datafile=None):
+        """Save a Species object to a file for easy re-use.
+        
+        Parameters
+        ----------
+        datafile : str or Path, optional
+            The file to which the output should be saved (full path). The 
+            default is None in which case the Species' name attribute will be 
+            used for the file name, and it will be saved to the cwd.
+        """
+        if datafile:
+            with open(datafile, 'w') as f:
+                json.dump(self.__dict__, f, indent=4)
+        else:
+            with open(self.name + '.json', 'w') as f:
+                json.dump(self.__dict__, f, indent=4)
 
 
 class Monatomic(Species):
