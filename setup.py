@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
 from setuptools import setup, find_packages
-#import codecs
-import os
+from pathlib import Path
 
-here = os.path.abspath(os.path.dirname(__file__))
+here = Path(__file__).parent.resolve()
 
 def read(rel_path):
-    with open(os.path.join(here, rel_path), 'r') as fp:
+    with open(here / rel_path, 'r') as fp:
         return fp.read()
 
 def get_version(rel_path):
@@ -18,7 +17,7 @@ def get_version(rel_path):
     else:
         raise RuntimeError('Unable to find version string.')
 
-with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(here / 'README.rst', encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
