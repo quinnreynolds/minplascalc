@@ -4,12 +4,12 @@ import minplascalc as mpc
 
 @pytest.fixture
 def diatomic_sample_species():
-    return mpc.species_from_name('O2')
+    return mpc.species.from_name('O2')
 
 
 @pytest.fixture
 def monatomic_sample_species():
-    return mpc.species_from_name('O+')
+    return mpc.species.from_name('O+')
 
 
 def test_partitionfunction_translational(diatomic_sample_species):

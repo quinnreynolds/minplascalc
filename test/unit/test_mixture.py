@@ -4,21 +4,21 @@ import minplascalc as mpc
 
 @pytest.fixture
 def mixture_simple():
-    c = mpc.Mixture(species=[mpc.species_from_name(sp) for sp in 
-                             ['O2','O2+','O','O+','O++']],
-                    x0=[1,0,0,0,0],
-                    T=1000, P=101325,
-                    gfe_ni0=1e20, gfe_reltol=1e-10, gfe_maxiter=1000)
+    c = mpc.mixture.LTE(species=[mpc.species.from_name(sp) for sp in 
+                                 ['O2','O2+','O','O+','O++']],
+                        x0=[1,0,0,0,0],
+                        T=1000, P=101325,
+                        gfe_ni0=1e20, gfe_reltol=1e-10, gfe_maxiter=1000)
     return c
 
 @pytest.fixture
 def mixture_complex():
-    c = mpc.Mixture(species=[mpc.species_from_name(sp) for sp in 
-                             ['O2','O2+','O','O+','O++','CO','CO+','C','C+',
-                              'C++','SiO','SiO+','Si','Si+','Si++']],
-                    x0=[0,0,0,0,0,0.5,0,0,0,0,0.5,0,0,0,0],
-                    T=10000, P=101325,
-                    gfe_ni0=1e20, gfe_reltol=1e-10, gfe_maxiter=1000)
+    c = mpc.mixture.LTE(species=[mpc.species.from_name(sp) for sp in 
+                                 ['O2','O2+','O','O+','O++','CO','CO+','C',
+                                  'C+','C++','SiO','SiO+','Si','Si+', 'Si++']],
+                        x0=[0,0,0,0,0,0.5,0,0,0,0,0.5,0,0,0,0],
+                        T=10000, P=101325,
+                        gfe_ni0=1e20, gfe_reltol=1e-10, gfe_maxiter=1000)
     return c
 
 LOW_T, MID_T, HIGH_T = 1000, 10000, 25000
@@ -150,13 +150,13 @@ def test_calculate_total_emission_coefficient(mixture_simple):
 
 def test_species_setter_exception(mixture_simple):
     with pytest.raises(TypeError):
-        mixture_simple.species = [mpc.species_from_name(sp) 
+        mixture_simple.species = [mpc.species.from_name(sp) 
                                   for sp in ['O','O+']]
 
 
 def test_species_item_exception(mixture_simple):
     with pytest.raises(TypeError):
-        mixture_simple.species[0] = mpc.species_from_name('O')
+        mixture_simple.species[0] = mpc.species.from_name('O')
 
 
 def test_x0_item_exception(mixture_simple):
