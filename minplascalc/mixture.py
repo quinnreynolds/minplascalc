@@ -146,7 +146,7 @@ class LTE:
                    * ndi[-1] * constants.elementary_charge ** 2)) ** (3/2)
         for i, sp in enumerate(self.species):
             if sp.name != 'e':
-                ai3 = 3 * (sp.chargenumber + 1) / (4 * numpy.pi * ndi[-1])
+                ai3 = 3 * sp.chargenumber / (4 * numpy.pi * ndi[-1])
                 de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
                 self.__dE[i] = de
         for cn in range(1, max(sp.chargenumber for sp in self.species) + 1):
