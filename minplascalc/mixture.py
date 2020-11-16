@@ -142,8 +142,8 @@ class LTE:
                 weightedchargesum += nd * sp.chargenumber
                 weightedchargesumsqd += nd * sp.chargenumber ** 2
         zstar = weightedchargesumsqd / weightedchargesum
-        debyed3 = (kbt / (4 * numpy.pi * (zstar + 1) * ndi[-1] 
-                          * constants.elementary_charge ** 2)) ** (3/2)
+        debyed3 = (constants.epsilon_0 * kbt / (4 * numpy.pi * (zstar + 1) 
+                   * ndi[-1] * constants.elementary_charge ** 2)) ** (3/2)
         for i, sp in enumerate(self.species):
             if sp.name != 'e':
                 ai3 = 3 * (sp.chargenumber + 1) / (4 * numpy.pi * ndi[-1])
