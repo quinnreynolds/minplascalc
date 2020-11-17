@@ -1,17 +1,17 @@
 {
-    "name": "SiO",
+    "name": "O-",
     "stoichiometry": {
-        "Si": 1,
         "O": 1
     },
-    "molarmass": 0.0440849,
-    "chargenumber": 0,
-    "dissociationenergy": 1.3251107960342175e-18,
-    "ionisationenergy": 1.8409017647624347e-18,
-    "sigma_s": 1,
-    "g0": 1,
-    "w_e": 2.466272671803936e-20,
-    "b_e": 1.4436523891592904e-23,
+    "molarmass": 0.0159994,
+    "chargenumber": -1,
+    "ionisationenergy": 2.340780062274e-19,
+    "energylevels": [
+        [
+            0.5,
+            0
+        ]
+    ],
     "sources": [
         "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"
     ]
