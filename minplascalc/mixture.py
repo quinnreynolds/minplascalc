@@ -131,11 +131,18 @@ class LTE:
                 f'Temperature: {self.T} K\nPressure: {self.P} Pa')
         
     def __recalcE0i(self):
-        """Calculate the ionisation energy lowering, using limitation theory of
-        Stewart & Pyatt 1966. Lowering only applied to positive ions.
+        """Calculate the reference energy values for all species, including 
+        ionisation energy lowering from limitation theory of Stewart & 
+        Pyatt 1966 (lowering only applied to positive ions).
         """
+        nspecies = len(self.species)
         kbt = constants.Boltzmann * self.T
         ndi = self.__ni * self.P / (self.__ni.sum() * kbt) 
+        self.__E0, self.__dE = numpy.zeros(nspecies), numpy.zeros(nspecies)
+        
+        for i, sp in enumerate(self.species):
+            if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
+                self.__E0[i] = -sp.dissociationenergy
         weightedchargesumsqd, weightedchargesum = 0, 0
         for sp, nd in zip(self.species, ndi):
             if sp.chargenumber > 0:
@@ -179,10 +186,6 @@ class LTE:
         kbt = constants.Boltzmann*self.T
         
         if not self.__isLTE:
-            self.__E0, self.__dE = numpy.zeros(nspecies), numpy.zeros(nspecies)
-            for i, sp in enumerate(self.species):
-                if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
-                    self.__E0[i] = -sp.dissociationenergy
             elements = [{'name': nm, 'stoichcoeff': None, 'ntot': 0}
                         for nm in sorted(set(s for sp in self.species
                                              for s in sp.stoichiometry))]
