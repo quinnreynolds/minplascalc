@@ -134,15 +134,21 @@ class LTE:
         """Calculate the reference energy values for all species, including 
         ionisation energy lowering from limitation theory of Stewart & 
         Pyatt 1966 (lowering only applied to positive ions).
+
+        Returns
+        -------
+        tuple(ndarray, ndarray)
+            Reference energy and ionisation energy lowering of each species 
+            in the mixture, in J.
         """
         nspecies = len(self.species)
         kbt = constants.Boltzmann * self.T
         ndi = self.__ni * self.P / (self.__ni.sum() * kbt) 
-        self.__E0, self.__dE = numpy.zeros(nspecies), numpy.zeros(nspecies)
+        E0, dE = numpy.zeros(nspecies), numpy.zeros(nspecies)
         
         for i, sp in enumerate(self.species):
             if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
-                self.__E0[i] = -sp.dissociationenergy
+                E0[i] = -sp.dissociationenergy
         weightedchargesumsqd, weightedchargesum = 0, 0
         for sp, nd in zip(self.species, ndi):
             if sp.chargenumber > 0:
@@ -154,8 +160,7 @@ class LTE:
         for i, sp in enumerate(self.species):
             if sp.chargenumber > 0:
                 ai3 = 3 * sp.chargenumber / (4 * numpy.pi * ndi[-1])
-                de = kbt * ((ai3/debyed3 + 1) ** (2/3) - 1) / (2 * (zstar + 1))
-                self.__dE[i] = de        
+                dE[i] = kbt * ((ai3/debyed3 + 1)**(2/3) - 1) / (2 * (zstar + 1))
         neutralsp = [sp for sp in self.species if sp.chargenumber==0]
         for nsp in neutralsp:
             ncsp = [(i, sp) for i, sp in enumerate(self.species) 
@@ -167,11 +172,10 @@ class LTE:
                         and sp.chargenumber >= 0)]
             pcsp.sort(key=lambda sp: sp[1].chargenumber, reverse=False)             
             for (ifrom, spfrom), (ito, spto) in zip(pcsp[:-1], pcsp[1:]):
-                self.__E0[ito] = (self.__E0[ifrom] + spfrom.ionisationenergy
-                                  - self.__dE[ifrom])
+                E0[ito] = (E0[ifrom] + spfrom.ionisationenergy - dE[ifrom])
             for (ifrom, spfrom), (ito, spto) in zip(ncsp[:-1], ncsp[1:]):
-                self.__E0[ito] = (self.__E0[ifrom] - spto.ionisationenergy
-                                  + self.__dE[ito])
+                E0[ito] = (E0[ifrom] - spto.ionisationenergy + dE[ito])
+        return E0, dE
 
     def calculate_composition(self):
         """Calculate the LTE composition of the plasma in particles/m3.
@@ -218,7 +222,7 @@ class LTE:
                 reltol = self.gfe_reltol * 10
                 minimiseriters = 0
                 while reltol > self.gfe_reltol:
-                    self.__recalcE0i()
+                    self.__E0, self.__dE = self.__recalcE0i()
                     nisum = self.__ni.sum()
                     V = nisum * kbt / self.P
                     offdiag, ondiag = -kbt/nisum, numpy.diag(kbt/self.__ni)
