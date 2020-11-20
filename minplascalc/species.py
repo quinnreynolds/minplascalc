@@ -85,8 +85,6 @@ class Species(BaseSpecies):
         self.stoichiometry = deepcopy(stoichiometry)
         self.molarmass = molarmass
         self.chargenumber = chargenumber
-        if self.chargenumber < 0:
-            raise ValueError('Negatively charged ions not implemented.')
 
     def to_file(self, datafile=None):
         """Save a Species object to a file for easy re-use.
