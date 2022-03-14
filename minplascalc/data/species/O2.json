@@ -3,19 +3,15 @@
     "stoichiometry": {
         "O": 2
     },
-    "molarMass": 0.0319988,
-    "chargeNumber": 0,
-    "diatomicData": {
-        "ionisationEnergy": 97348.7,
-        "dissociationEnergy": 41537.55,
-        "sigmaS": 2,
-        "g0": 3,
-        "we": 1580.19,
-        "Be": 1.4376766
-    },
-    "energyUnit": "1/cm",
-    "molarMassUnit": "kg/mol",
+    "molarmass": 0.0319988,
+    "chargenumber": 0,
+    "dissociationenergy": 8.251212147613032e-19,
+    "ionisationenergy": 1.9337798594147625e-18,
+    "sigma_s": 2,
+    "g0": 3,
+    "w_e": 3.138962919945119e-20,
+    "b_e": 2.8558676730474e-23,
     "sources": [
-        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"    
+        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"
     ]
 }

@@ -1,16 +1,16 @@
 {
-    "name": "O2+",
+    "name": "O2-",
     "stoichiometry": {
         "O": 2
     },
     "molarmass": 0.0319988,
-    "chargenumber": 1,
+    "chargenumber": -1,
     "dissociationenergy": Infinity,
-    "ionisationenergy": Infinity,
+    "ionisationenergy": 7.22581661934e-20,
     "sigma_s": 2,
     "g0": 2,
-    "w_e": 3.7835846788167674e-20,
-    "b_e": 3.35967699232572e-23,
+    "w_e": 2.1652267023207205e-20,
+    "b_e": 2.8558676730474e-23,
     "sources": [
         "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"
     ]

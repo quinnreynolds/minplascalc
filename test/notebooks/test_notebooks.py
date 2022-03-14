@@ -1,21 +1,13 @@
 """This file is intended to be the target of a pytest run.
-
 It will find all .ipynb files in the current directory, ignoring directories
 which start with . and any files which match patterins found in the file
 .testignore
-
 Example .testignore pattern to ignore files in a directory:
-
     under_construction/*
-
 Sample invocations of pytest which make the output nicely readable:
-
     pytest --verbose --durations=5 test.py
-
 If you install pytest-xdist you can run tests in parallel with
-
     pytest --verbose --durations=5 -n 4 test.py
-
 """
 
 import pathlib
@@ -44,12 +36,9 @@ ids = [str(n) for n in notebooks]
 @pytest.mark.parametrize("notebook", notebooks, ids=ids)
 def test_run_notebook(notebook):
     """Read and execute notebook
-
     The method here is directly from the nbconvert docs
-
     Note that there is no error handling in this file as any errors will be
     caught by pytest
-
     """
     with notebook.open() as f:
         nb = nbformat.read(f, as_version=4)
