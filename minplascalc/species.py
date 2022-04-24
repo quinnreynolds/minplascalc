@@ -5,7 +5,7 @@ from copy import deepcopy
 from scipy import constants
 
 __all__ = ['SPECIESPATH', 'from_file', 'from_name', 'Monatomic', 
-           'Diatomic', 'Electron']
+           'Diatomic', 'Polyatomic', 'Electron']
 
 DATAPATH = pathlib.Path(__file__).parent / 'data'
 SPECIESPATH = DATAPATH / 'species'
@@ -28,13 +28,20 @@ def from_file(datafile):
                          spdata['molarmass'], spdata['chargenumber'], 
                          spdata['ionisationenergy'], spdata['energylevels'], 
                          spdata['sources'])
-    else:
+    elif atomcount == 2:
         return Diatomic(spdata['name'], spdata['stoichiometry'], 
                         spdata['molarmass'], spdata['chargenumber'], 
                         spdata['ionisationenergy'], 
                         spdata['dissociationenergy'], spdata['sigma_s'], 
                         spdata['g0'], spdata['w_e'], spdata['b_e'], 
                         spdata['sources'])
+    else:
+        return Polyatomic(spdata['name'], spdata['stoichiometry'], 
+                          spdata['molarmass'], spdata['chargenumber'], 
+                          spdata['ionisationenergy'], 
+                          spdata['dissociationenergy'], spdata['linear_yn'], 
+                          spdata['sigma_s'], spdata['g0'], spdata['wi_e'], 
+                          spdata['abc_e'], spdata['sources'])
 
 
 def from_name(name):
@@ -67,7 +74,7 @@ class BaseSpecies:
 
 class Species(BaseSpecies):
     def __init__(self, name, stoichiometry, molarmass, chargenumber):
-        """Base class for heavy particles. Either single monatomic or diatomic 
+        """Base class for heavy particles. Monatomic, diatomic, or polyatomic 
         chemical species in the plasma, eg O2 or Si+
 
         Parameters
@@ -257,6 +264,108 @@ class Diatomic(Species):
         rotationalenergy = kbt
         vibrationalenergy = self.w_e * (numpy.exp(-self.w_e / kbt)
                                         / (1 - numpy.exp(-self.w_e / kbt)))
+        return (translationalenergy + electronicenergy + rotationalenergy 
+                + vibrationalenergy)
+
+
+class Polyatomic(Species):
+    def __init__(self, name, stoichiometry, molarmass, chargenumber,
+                 ionisationenergy, dissociationenergy, linear_yn, sigma_s, g0, 
+                 wi_e, abc_e, sources):
+        """Class for polyatomic plasma species (bonded sets of atoms, as 
+        neutral particles or ions).
+    
+        Parameters
+        ----------
+        name : string
+            A unique identifier for the species.
+        stoichiometry : dictionary
+            Dictionary describing the elemental stoichiometry of the species 
+            (e.g. {'H': 2, 'O': 1} for H2O or H2O+).
+        molarmass : float
+            Molar mass of the species in kg/mol.
+        chargenumber : int
+            Charge on the species (in integer units of the fundamental charge).
+        ionisationenergy : float
+            Ionisation energy of the species in J.
+        dissociationenergy : float
+            Dissociation energy of the species in J.
+        linear_yn : boolean
+            For linear molecules, only the B rotation constant is used in 
+            calculation of the rotational partition function. For non-linear 
+            molecules, all three are used.
+        sigma_s : int
+            Rotational symmetry constant.
+        g0 : float
+            Ground state electronic energy level degeneracy.
+        wi_e : list of float
+            Vibrational energy level constants for each vibration mode, in J.
+        abc_e : list of float
+            A, B, and C rotational energy level constants in J.
+        sources : list of str
+            Each dictionary represents a reference source from which the data 
+            was obtained.
+        """
+        super().__init__(name, stoichiometry, molarmass, chargenumber)
+
+        self.dissociationenergy = dissociationenergy
+        self.ionisationenergy = ionisationenergy
+        self.linear_yn = linear_yn
+        self.sigma_s = sigma_s
+        self.g0 = g0
+        self.wi_e = wi_e
+        self.abc_e = abc_e
+        self.sources = deepcopy(sources)
+
+    def __repr__(self):
+        return (f'{self.__class__.__name__}(name={self.name},'
+                f'stoichiometry={self.stoichiometry},'
+                f'molarmass={self.molarmass},'
+                f'chargenumber={self.chargenumber},'
+                f'dissociationenergy={self.dissociationenergy},'
+                f'ionisationenergy={self.ionisationenergy},'
+                f'linear_yn={self.linear_yn},sigma_s={self.sigma_s},'
+                f'g0={self.g0},wi_e={self.wi_e},abc_e={self.abc_e},'
+                f'sources={self.sources})')
+
+    def __str__(self):
+        if numpy.isclose(0, self.chargenumber):
+            sptype = 'Polyatomic molecule'
+        else:
+            sptype = 'Polyatomic ion'
+        return (f'Species: {self.name}\nType: {sptype}\n'
+                f'Stoichiometry: {self.stoichiometry}\n'
+                f'Molar mass: {self.molarmass} kg/mol\n'
+                f'Charge number: {self.chargenumber}\n'
+                f'Dissociation energy: {self.dissociationenergy} J\n'
+                f'Ionisation energy: {self.ionisationenergy} J\n'
+                f'linear_yn: {self.linear_yn}\nsigma_s: {self.sigma_s}\n'
+                f'g0: {self.g0}\nwi_e: {self.wi_e} J\nABC_e: {self.abc_e} J')
+
+    def partitionfunction_internal(self, T, dE):
+        kbt = constants.Boltzmann * T
+        electronicpartition = self.g0
+        vibrationalpartition = numpy.prod([numpy.exp(-wi / (2*kbt)) 
+                                           / (1 - numpy.exp(-wi / kbt))
+                                           for wi in self.wi_e])
+        if self.linear_yn:
+            rotationalpartition = kbt / (self.sigma_s * self.abc_e[1])
+        else:
+            ABC = numpy.prod(self.abc_e)
+            rotationalpartition = (numpy.sqrt(constants.pi) / self.sigma_s 
+                                   * numpy.sqrt(kbt**3 / ABC))
+        return electronicpartition * vibrationalpartition * rotationalpartition
+
+    def internal_energy(self, T, dE):
+        kbt = constants.Boltzmann * T
+        translationalenergy = 1.5 * kbt
+        electronicenergy = 0
+        if self.linear_yn:
+            rotationalenergy = kbt
+        else:
+            rotationalenergy = 1.5*kbt
+        vibrationalenergy = numpy.sum([wi / (2 * numpy.tanh(wi / (2*kbt))) 
+                                       for wi in self.wi_e])
         return (translationalenergy + electronicenergy + rotationalenergy 
                 + vibrationalenergy)
 
