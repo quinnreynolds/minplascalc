@@ -44,9 +44,9 @@ def test_density_simple(mixture_simple, T, P, result, tol):
 
 
 @pytest.mark.parametrize("x0, result, tol", [
-    (LOW_X0, 0.02059347, 1e-7),
-    (MID_X0, 0.01872093, 1e-7),
-    (HIGH_X0, 0.01668609, 1e-7),
+    (LOW_X0, 0.02059268, 1e-7),
+    (MID_X0, 0.01871773, 1e-7),
+    (HIGH_X0, 0.01668042, 1e-7),
 ])
 def test_density_complex(mixture_complex, x0, result, tol):
     mixture_complex.x0 = x0
@@ -56,10 +56,10 @@ def test_density_complex(mixture_complex, x0, result, tol):
     assert thisresult == pytest.approx(result, abs=tol)
 
 @pytest.mark.parametrize("T, P, result, tol", [
-    (MID_T, MID_P, 15633716, 1e1),
-    (LOW_T, LOW_P, -14551464, 1e1),
+    (MID_T, MID_P, 15633838, 1e1),
+    (LOW_T, LOW_P, -14256097, 1e1),
     (HIGH_T, LOW_P, 200223180, 1e2),
-    (LOW_T, HIGH_P, -14551464, 1e1),
+    (LOW_T, HIGH_P, -14256097, 1e1),
     (HIGH_T, HIGH_P, 150794540, 1e2),
 ])
 def test_enthalpy_simple(mixture_simple, T, P, result, tol):
@@ -71,9 +71,9 @@ def test_enthalpy_simple(mixture_simple, T, P, result, tol):
     assert thisresult == pytest.approx(result, abs=tol)
 
 @pytest.mark.parametrize("x0, result, tol", [
-    (LOW_X0, 22594233, 1e1),
-    (MID_X0, 22133021, 1e1),
-    (HIGH_X0, 21375763, 1e1),
+    (LOW_X0, 22596860, 1e1),
+    (MID_X0, 22146645, 1e1),
+    (HIGH_X0, 21406432, 1e1),
 ])
 def test_enthalpy_complex(mixture_complex, x0, result, tol):
     mixture_complex.x0 = x0
@@ -84,7 +84,7 @@ def test_enthalpy_complex(mixture_complex, x0, result, tol):
 
 
 @pytest.mark.parametrize("T, P, result, tol", [
-    (MID_T, MID_P, 3249.192, 1e-2),
+    (MID_T, MID_P, 3249.103, 1e-2),
     (LOW_T, LOW_P, 1081.252, 1e-2),
     (HIGH_T, LOW_P, 27605.70, 1e-1),
     (LOW_T, HIGH_P, 1081.252, 1e-2),
@@ -100,9 +100,9 @@ def test_heat_capacity_simple(mixture_simple, T, P, result, tol):
 
 
 @pytest.mark.parametrize("x0, result, tol", [
-    (LOW_X0, 6032.180, 1e-2),
-    (MID_X0, 5529.287, 1e-2),
-    (HIGH_X0, 6118.795, 1e-2),
+    (LOW_X0, 6028.144, 1e-2),
+    (MID_X0, 5508.598, 1e-2),
+    (HIGH_X0, 6072.258, 1e-2),
 ])
 def test_heat_capacity_complex(mixture_complex, x0, result, tol):
     mixture_complex.x0 = x0
@@ -112,10 +112,10 @@ def test_heat_capacity_complex(mixture_complex, x0, result, tol):
     assert thisresult == pytest.approx(result, abs=tol)
 
 @pytest.mark.parametrize("T, P, result, tol", [
-    (MID_T, MID_P, 15633716, 1e1),
-    (LOW_T, LOW_P, -14551464, 1e1),
+    (MID_T, MID_P, 15633838, 1e1),
+    (LOW_T, LOW_P, -14256097, 1e1),
     (HIGH_T, LOW_P, 200223180, 1e2),
-    (LOW_T, HIGH_P, -14551464, 1e1),
+    (LOW_T, HIGH_P, -14256097, 1e1),
     (HIGH_T, HIGH_P, 150794540, 1e2),
 ])
 def test_LTE_fallthrough(mixture_simple, T, P, result, tol):
