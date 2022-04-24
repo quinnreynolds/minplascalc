@@ -147,7 +147,7 @@ class LTE:
         E0, dE = numpy.zeros(nspecies), numpy.zeros(nspecies)
         
         for i, sp in enumerate(self.species):
-            if sum(dv for kv, dv in sp.stoichiometry.items()) == 2:
+            if sum(dv for kv, dv in sp.stoichiometry.items()) >= 2:
                 E0[i] = -sp.dissociationenergy
         weightedchargesumsqd, weightedchargesum = 0, 0
         for sp, nd in zip(self.species, ndi):
