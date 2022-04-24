@@ -253,7 +253,8 @@ class Diatomic(Species):
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T
         electronicpartition = self.g0
-        vibrationalpartition = 1 / (1 - numpy.exp(-self.w_e / kbt))
+        vibrationalpartition = (numpy.exp(-self.w_e / (2*kbt)) 
+                                / (1 - numpy.exp(-self.w_e / kbt)))
         rotationalpartition = kbt / (self.sigma_s * self.b_e)
         return electronicpartition * vibrationalpartition * rotationalpartition
 
@@ -262,8 +263,7 @@ class Diatomic(Species):
         translationalenergy = 1.5 * kbt
         electronicenergy = 0
         rotationalenergy = kbt
-        vibrationalenergy = self.w_e * (numpy.exp(-self.w_e / kbt)
-                                        / (1 - numpy.exp(-self.w_e / kbt)))
+        vibrationalenergy = self.w_e / (2*numpy.tanh(self.w_e / (2*kbt)))
         return (translationalenergy + electronicenergy + rotationalenergy 
                 + vibrationalenergy)
 
