@@ -286,7 +286,8 @@ class LTE:
         enthalpies = [(sp.internal_energy(self.T, dE) + E0 
                        + constants.Boltzmann * self.T - minE0)
                       for sp, dE, E0 in zip(self.species, self.__dE, self.__E0)]
-        return enthalpies
+        molmasses = [sp.molarmass / constants.Avogadro for sp in self.species]
+        return numpy.array(enthalpies) / numpy.array(molmasses)
 
     def calculate_enthalpy(self):
         """Calculate the LTE enthalpy of the plasma. 
