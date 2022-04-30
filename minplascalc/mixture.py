@@ -282,19 +282,21 @@ class LTE:
         list of floats
             Enthalpies of each species, in J/kg.
         """
-        minE0 = min(self.__E0)
-        enthalpies = [(sp.internal_energy(self.T, dE) + E0 
-                       + constants.Boltzmann * self.T - minE0)
+        imin = numpy.argmin(self.__E0)
+        h0 = self.__E0[imin] / self.species[imin].molarmass
+        enthalpies = [(sp.internal_energy(self.T, dE) 
+                       + E0
+                       + constants.Boltzmann * self.T 
+                       - h0*sp.molarmass 
+                       )
                       for sp, dE, E0 in zip(self.species, self.__dE, self.__E0)]
         molmasses = [sp.molarmass / constants.Avogadro for sp in self.species]
         return numpy.array(enthalpies) / numpy.array(molmasses)
+        #return constants.Avogadro * numpy.array(enthalpies)
 
     def calculate_enthalpy(self):
-        """Calculate the LTE enthalpy of the plasma. 
-        
-        The value returned is relative to an arbitrary reference level which 
-        may be negative, zero, or positive depending on the reference energies 
-        of the plasma species present.
+        """Calculate the LTE enthalpy of the plasma. Referenced to zero at zero
+        Kelvin.
 
         Returns
         -------
@@ -302,9 +304,12 @@ class LTE:
             Enthalpy, in J/kg.
         """
         ndi = self.calculate_composition()
+        imin = numpy.argmin(self.__E0)
+        h0 = self.__E0[imin] / self.species[imin].molarmass
         weightedenthalpy = sum(constants.Avogadro * nd 
                                * (sp.internal_energy(self.T, dE) + E0 
-                                  + constants.Boltzmann * self.T) 
+                                  + constants.Boltzmann * self.T 
+                                  - h0*sp.molarmass) 
                                for sp, nd, dE, E0 in zip(self.species, ndi, 
                                                          self.__dE, self.__E0))
         weightedmolmass = sum(nd * sp.molarmass

@@ -179,7 +179,7 @@ class Monatomic(Species):
                 electronicenergy += (2*j+1) * eij * numpy.exp(-eij / kbt)
         electronicenergy /= self.partitionfunction_internal(T, dE)
         return translationalenergy + electronicenergy
-    
+
 
 class Diatomic(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber,
