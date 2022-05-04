@@ -1,8 +1,10 @@
 import json
+from matplotlib.pyplot import polar
 import numpy
 import pathlib
 from copy import deepcopy
 from scipy import constants
+from sympy import N
 
 __all__ = ['SPECIESPATH', 'from_file', 'from_name', 'Monatomic', 
            'Diatomic', 'Polyatomic', 'Electron']
@@ -27,21 +29,27 @@ def from_file(datafile):
         return Monatomic(spdata['name'], spdata['stoichiometry'], 
                          spdata['molarmass'], spdata['chargenumber'], 
                          spdata['ionisationenergy'], spdata['energylevels'], 
-                         spdata['sources'])
+                         spdata['polarisability'], spdata['multiplicity'],
+                         spdata['effectiveelectrons'], 
+                         spdata['electroncrosssection'], spdata['sources'])
     elif atomcount == 2:
         return Diatomic(spdata['name'], spdata['stoichiometry'], 
                         spdata['molarmass'], spdata['chargenumber'], 
                         spdata['ionisationenergy'], 
                         spdata['dissociationenergy'], spdata['sigma_s'], 
                         spdata['g0'], spdata['w_e'], spdata['b_e'], 
-                        spdata['sources'])
+                        spdata['polarisability'], spdata['multiplicity'],
+                        spdata['effectiveelectrons'], 
+                        spdata['electroncrosssection'], spdata['sources'])
     else:
         return Polyatomic(spdata['name'], spdata['stoichiometry'], 
                           spdata['molarmass'], spdata['chargenumber'], 
                           spdata['ionisationenergy'], 
                           spdata['dissociationenergy'], spdata['linear_yn'], 
                           spdata['sigma_s'], spdata['g0'], spdata['wi_e'], 
-                          spdata['abc_e'], spdata['sources'])
+                          spdata['abc_e'], spdata['polarisability'], 
+                          spdata['multiplicity'], spdata['effectiveelectrons'], 
+                          spdata['electroncrosssection'], spdata['sources'])
 
 
 def from_name(name):
@@ -73,7 +81,9 @@ class BaseSpecies:
 
 
 class Species(BaseSpecies):
-    def __init__(self, name, stoichiometry, molarmass, chargenumber):
+    def __init__(self, name, stoichiometry, molarmass, chargenumber, 
+                 polarisability, multiplicity, effectiveelectrons, 
+                 electroncrosssection):
         """Base class for heavy particles. Monatomic, diatomic, or polyatomic 
         chemical species in the plasma, eg O2 or Si+
 
@@ -87,11 +97,25 @@ class Species(BaseSpecies):
             Molar mass of the species in kg/mol.
         chargenumber : int
             Charge on the species (in integer units of the fundamental charge).
+        polarisability : float
+            Polarisability of the species in m^3
+        multiplicity : float
+            Spin multiplicity (2S + 1) of the ground state
+        effectiveelectrons : float
+            Effective number of electrons in valence shell, per Cambi 1991 
+            (only required for neutral species)
+        electroncrosssection : float
+            Cross section for elastic electron collisions in m^2 (only required 
+            for neutral species)
         """
         self.name = name
         self.stoichiometry = deepcopy(stoichiometry)
         self.molarmass = molarmass
         self.chargenumber = chargenumber
+        self.polarisability = polarisability
+        self.multiplicity = multiplicity
+        self.effectiveelectrons = effectiveelectrons
+        self.electroncrosssection = electroncrosssection
 
     def to_file(self, datafile=None):
         """Save a Species object to a file for easy re-use.
@@ -113,7 +137,8 @@ class Species(BaseSpecies):
 
 class Monatomic(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber, 
-                 ionisationenergy, energylevels, sources):
+                 ionisationenergy, energylevels, polarisability, multiplicity, 
+                 effectiveelectrons, electroncrosssection, sources):
         """Class for monatomic plasma species (single atoms and ions).
     
         Parameters
@@ -133,11 +158,23 @@ class Monatomic(Species):
             Atomic energy level data - each entry in the list contains a pair of
             values giving the level's quantum number and its energy
             respectively, with energy in J.
+        polarisability : float
+            Polarisability of the species in m^3
+        multiplicity : float
+            Spin multiplicity (2S + 1) of the ground state
+        effectiveelectrons : float
+            Effective number of electrons in valence shell, per Cambi 1991 
+            (only required for neutral species)
+        electroncrosssection : float
+            Cross section for elastic electron collisions in m^2 (only required 
+            for neutral species)
         sources : list of str
             Each entry represents a reference from which the data was
             obtained.
         """
-        super().__init__(name, stoichiometry, molarmass, chargenumber)
+        super().__init__(name, stoichiometry, molarmass, chargenumber, 
+                         polarisability, multiplicity, effectiveelectrons, 
+                         electroncrosssection)
         
         self.ionisationenergy = ionisationenergy
         self.energylevels = deepcopy(energylevels)
@@ -148,7 +185,11 @@ class Monatomic(Species):
                 f'stoichiometry={self.stoichiometry},'
                 f'molarmass={self.molarmass},chargenumber={self.chargenumber},'
                 f'ionisationenergy={self.ionisationenergy},'
-                f'energylevels={self.energylevels},sources={self.sources})')
+                f'energylevels={self.energylevels},'
+                f'polarisability={self.polarisability},'
+                f'multiplicity={self.multiplicity},'
+                f'effectiveelectrons={self.effectiveelectrons},'
+                f'electroncrosssection={self.electroncrosssection})')
 
     def __str__(self):
         if numpy.isclose(0, self.chargenumber):
@@ -160,7 +201,11 @@ class Monatomic(Species):
                 f'Molar mass: {self.molarmass} kg/mol\n'
                 f'Charge number: {self.chargenumber}\n'
                 f'Ionisation energy: {self.ionisationenergy} J\n'
-                f'Energy levels: {len(self.energylevels)}')
+                f'Energy levels: {len(self.energylevels)}\n'
+                f'Polarisability: {self.polarisability} m^3\n'
+                f'Multiplicity: {self.multiplicity}\n'
+                f'Effective valence electrons: {self.effectiveelectrons}\n'
+                f'Electron cross section: {self.electroncrosssection} m^2')
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T
@@ -184,7 +229,8 @@ class Monatomic(Species):
 class Diatomic(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber,
                  ionisationenergy, dissociationenergy, sigma_s, g0, w_e, b_e, 
-                 sources):
+                 polarisability, multiplicity, effectiveelectrons, 
+                 electroncrosssection, sources):
         """Class for diatomic plasma species (bonded pairs of atoms, as 
         neutral particles or ions).
     
@@ -212,11 +258,23 @@ class Diatomic(Species):
             Vibrational energy level constant in J.
         b_e : float
             Rotational energy level constant in J.
+        polarisability : float
+            Polarisability of the species in m^3
+        multiplicity : float
+            Spin multiplicity (2S + 1) of the ground state
+        effectiveelectrons : float
+            Effective number of electrons in valence shell, per Cambi 1991 
+            (only required for neutral species)
+        electroncrosssection : float
+            Cross section for elastic electron collisions in m^2 (only required 
+            for neutral species)
         sources : list of str
             Each dictionary represents a reference source from which the data 
             was obtained.
         """
-        super().__init__(name, stoichiometry, molarmass, chargenumber)
+        super().__init__(name, stoichiometry, molarmass, chargenumber, 
+                         polarisability, multiplicity, effectiveelectrons, 
+                         electroncrosssection)
 
         self.dissociationenergy = dissociationenergy
         self.ionisationenergy = ionisationenergy
@@ -234,7 +292,12 @@ class Diatomic(Species):
                 f'dissociationenergy={self.dissociationenergy},'
                 f'ionisationenergy={self.ionisationenergy},'
                 f'sigma_s={self.sigma_s},g0={self.g0},w_e={self.w_e},'
-                f'b_e={self.b_e},sources={self.sources})')
+                f'b_e={self.b_e},'
+                f'polarisability={self.polarisability},'
+                f'multiplicity={self.multiplicity},'
+                f'effectiveelectrons={self.effectiveelectrons},'
+                f'electroncrosssection={self.electroncrosssection},'
+                f'sources={self.sources})')
 
     def __str__(self):
         if numpy.isclose(0, self.chargenumber):
@@ -248,7 +311,11 @@ class Diatomic(Species):
                 f'Dissociation energy: {self.dissociationenergy} J\n'
                 f'Ionisation energy: {self.ionisationenergy} J\n'
                 f'sigma_s: {self.sigma_s}\ng0: {self.g0}\nw_e: {self.w_e} J\n'
-                f'B_e: {self.b_e} J')
+                f'B_e: {self.b_e} J\n'
+                f'Polarisability: {self.polarisability} m^3\n'
+                f'Multiplicity: {self.multiplicity}\n'
+                f'Effective valence electrons: {self.effectiveelectrons}\n'
+                f'Electron cross section: {self.electroncrosssection} m^2')
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T
@@ -271,7 +338,8 @@ class Diatomic(Species):
 class Polyatomic(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber,
                  ionisationenergy, dissociationenergy, linear_yn, sigma_s, g0, 
-                 wi_e, abc_e, sources):
+                 wi_e, abc_e, polarisability, multiplicity, effectiveelectrons, 
+                 electroncrosssection, sources):
         """Class for polyatomic plasma species (bonded sets of atoms, as 
         neutral particles or ions).
     
@@ -302,11 +370,23 @@ class Polyatomic(Species):
             Vibrational energy level constants for each vibration mode, in J.
         abc_e : list of float
             A, B, and C rotational energy level constants in J.
+        polarisability : float
+            Polarisability of the species in m^3
+        multiplicity : float
+            Spin multiplicity (2S + 1) of the ground state
+        effectiveelectrons : float
+            Effective number of electrons in valence shell, per Cambi 1991 
+            (only required for neutral species)
+        electroncrosssection : float
+            Cross section for elastic electron collisions in m^2 (only required 
+            for neutral species)
         sources : list of str
             Each dictionary represents a reference source from which the data 
             was obtained.
         """
-        super().__init__(name, stoichiometry, molarmass, chargenumber)
+        super().__init__(name, stoichiometry, molarmass, chargenumber, 
+                         polarisability, multiplicity, effectiveelectrons, 
+                         electroncrosssection)
 
         self.dissociationenergy = dissociationenergy
         self.ionisationenergy = ionisationenergy
@@ -326,6 +406,10 @@ class Polyatomic(Species):
                 f'ionisationenergy={self.ionisationenergy},'
                 f'linear_yn={self.linear_yn},sigma_s={self.sigma_s},'
                 f'g0={self.g0},wi_e={self.wi_e},abc_e={self.abc_e},'
+                f'polarisability={self.polarisability},'
+                f'multiplicity={self.multiplicity},'
+                f'effectiveelectrons={self.effectiveelectrons},'
+                f'electroncrosssection={self.electroncrosssection},'
                 f'sources={self.sources})')
 
     def __str__(self):
@@ -340,7 +424,11 @@ class Polyatomic(Species):
                 f'Dissociation energy: {self.dissociationenergy} J\n'
                 f'Ionisation energy: {self.ionisationenergy} J\n'
                 f'linear_yn: {self.linear_yn}\nsigma_s: {self.sigma_s}\n'
-                f'g0: {self.g0}\nwi_e: {self.wi_e} J\nABC_e: {self.abc_e} J')
+                f'g0: {self.g0}\nwi_e: {self.wi_e} J\nABC_e: {self.abc_e} J\n'
+                f'Polarisability: {self.polarisability} m^3\n'
+                f'Multiplicity: {self.multiplicity}\n'
+                f'Effective valence electrons: {self.effectiveelectrons}\n'
+                f'Electron cross section: {self.electroncrosssection} m^2')
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T
