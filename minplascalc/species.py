@@ -29,9 +29,10 @@ def from_file(datafile):
         return Monatomic(spdata['name'], spdata['stoichiometry'], 
                          spdata['molarmass'], spdata['chargenumber'], 
                          spdata['ionisationenergy'], spdata['energylevels'], 
-                         spdata['polarisability'], spdata['multiplicity'],
+                         spdata['polarisability'], spdata['multiplicity'], 
                          spdata['effectiveelectrons'], 
-                         spdata['electroncrosssection'], spdata['sources'])
+                         spdata['electroncrosssection'], 
+                         spdata['emissionlines'], spdata['sources'])
     elif atomcount == 2:
         return Diatomic(spdata['name'], spdata['stoichiometry'], 
                         spdata['molarmass'], spdata['chargenumber'], 
@@ -40,7 +41,8 @@ def from_file(datafile):
                         spdata['g0'], spdata['w_e'], spdata['b_e'], 
                         spdata['polarisability'], spdata['multiplicity'],
                         spdata['effectiveelectrons'], 
-                        spdata['electroncrosssection'], spdata['sources'])
+                        spdata['electroncrosssection'], spdata['emissionlines'], 
+                        spdata['sources'])
     else:
         return Polyatomic(spdata['name'], spdata['stoichiometry'], 
                           spdata['molarmass'], spdata['chargenumber'], 
@@ -49,7 +51,8 @@ def from_file(datafile):
                           spdata['sigma_s'], spdata['g0'], spdata['wi_e'], 
                           spdata['abc_e'], spdata['polarisability'], 
                           spdata['multiplicity'], spdata['effectiveelectrons'], 
-                          spdata['electroncrosssection'], spdata['sources'])
+                          spdata['electroncrosssection'], 
+                          spdata['emissionlines'], spdata['sources'])
 
 
 def from_name(name):
@@ -83,7 +86,7 @@ class BaseSpecies:
 class Species(BaseSpecies):
     def __init__(self, name, stoichiometry, molarmass, chargenumber, 
                  polarisability, multiplicity, effectiveelectrons, 
-                 electroncrosssection):
+                 electroncrosssection, emissionlines):
         """Base class for heavy particles. Monatomic, diatomic, or polyatomic 
         chemical species in the plasma, eg O2 or Si+
 
@@ -107,6 +110,10 @@ class Species(BaseSpecies):
         electroncrosssection : float
             Cross section for elastic electron collisions in m^2 (only required 
             for neutral species)
+        emissionlines : list of length-3 lists
+            Radiation emission line data - each entry in the list contains three
+            values giving the line's wavelength in m, its g x A constant in 1/s,
+            and its emission strength in J.
         """
         self.name = name
         self.stoichiometry = deepcopy(stoichiometry)
@@ -116,6 +123,7 @@ class Species(BaseSpecies):
         self.multiplicity = multiplicity
         self.effectiveelectrons = effectiveelectrons
         self.electroncrosssection = electroncrosssection
+        self.emissionlines = emissionlines
 
     def to_file(self, datafile=None):
         """Save a Species object to a file for easy re-use.
@@ -138,7 +146,8 @@ class Species(BaseSpecies):
 class Monatomic(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber, 
                  ionisationenergy, energylevels, polarisability, multiplicity, 
-                 effectiveelectrons, electroncrosssection, sources):
+                 effectiveelectrons, electroncrosssection, emissionlines, 
+                 sources):
         """Class for monatomic plasma species (single atoms and ions).
     
         Parameters
@@ -168,13 +177,17 @@ class Monatomic(Species):
         electroncrosssection : float
             Cross section for elastic electron collisions in m^2 (only required 
             for neutral species)
+        emissionlines : list of length-3 lists
+            Radiation emission line data - each entry in the list contains three
+            values giving the line's wavelength in m, its g x A constant in 1/s,
+            and its emission strength in J.
         sources : list of str
             Each entry represents a reference from which the data was
             obtained.
         """
         super().__init__(name, stoichiometry, molarmass, chargenumber, 
                          polarisability, multiplicity, effectiveelectrons, 
-                         electroncrosssection)
+                         electroncrosssection, emissionlines)
         
         self.ionisationenergy = ionisationenergy
         self.energylevels = deepcopy(energylevels)
@@ -189,7 +202,8 @@ class Monatomic(Species):
                 f'polarisability={self.polarisability},'
                 f'multiplicity={self.multiplicity},'
                 f'effectiveelectrons={self.effectiveelectrons},'
-                f'electroncrosssection={self.electroncrosssection})')
+                f'electroncrosssection={self.electroncrosssection},'
+                f'emissionlines={self.emissionlines},sources={self.sources})')
 
     def __str__(self):
         if numpy.isclose(0, self.chargenumber):
@@ -205,7 +219,8 @@ class Monatomic(Species):
                 f'Polarisability: {self.polarisability} m^3\n'
                 f'Multiplicity: {self.multiplicity}\n'
                 f'Effective valence electrons: {self.effectiveelectrons}\n'
-                f'Electron cross section: {self.electroncrosssection} m^2')
+                f'Electron cross section: {self.electroncrosssection} m^2\n'
+                f'Emission lines: {len(self.emissionlines)}')
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T
@@ -230,7 +245,7 @@ class Diatomic(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber,
                  ionisationenergy, dissociationenergy, sigma_s, g0, w_e, b_e, 
                  polarisability, multiplicity, effectiveelectrons, 
-                 electroncrosssection, sources):
+                 electroncrosssection, emissionlines, sources):
         """Class for diatomic plasma species (bonded pairs of atoms, as 
         neutral particles or ions).
     
@@ -268,13 +283,17 @@ class Diatomic(Species):
         electroncrosssection : float
             Cross section for elastic electron collisions in m^2 (only required 
             for neutral species)
+        emissionlines : list of length-3 lists
+            Radiation emission line data - each entry in the list contains three
+            values giving the line's wavelength in m, its g x A constant in 1/s,
+            and its emission strength in J.
         sources : list of str
             Each dictionary represents a reference source from which the data 
             was obtained.
         """
         super().__init__(name, stoichiometry, molarmass, chargenumber, 
                          polarisability, multiplicity, effectiveelectrons, 
-                         electroncrosssection)
+                         electroncrosssection, emissionlines)
 
         self.dissociationenergy = dissociationenergy
         self.ionisationenergy = ionisationenergy
@@ -297,7 +316,7 @@ class Diatomic(Species):
                 f'multiplicity={self.multiplicity},'
                 f'effectiveelectrons={self.effectiveelectrons},'
                 f'electroncrosssection={self.electroncrosssection},'
-                f'sources={self.sources})')
+                f'emissionlines={self.emissionlines},sources={self.sources})')
 
     def __str__(self):
         if numpy.isclose(0, self.chargenumber):
@@ -315,7 +334,8 @@ class Diatomic(Species):
                 f'Polarisability: {self.polarisability} m^3\n'
                 f'Multiplicity: {self.multiplicity}\n'
                 f'Effective valence electrons: {self.effectiveelectrons}\n'
-                f'Electron cross section: {self.electroncrosssection} m^2')
+                f'Electron cross section: {self.electroncrosssection} m^2\n'
+                f'Emission lines: {len(self.emissionlines)}')
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T
@@ -339,7 +359,7 @@ class Polyatomic(Species):
     def __init__(self, name, stoichiometry, molarmass, chargenumber,
                  ionisationenergy, dissociationenergy, linear_yn, sigma_s, g0, 
                  wi_e, abc_e, polarisability, multiplicity, effectiveelectrons, 
-                 electroncrosssection, sources):
+                 electroncrosssection, emissionlines, sources):
         """Class for polyatomic plasma species (bonded sets of atoms, as 
         neutral particles or ions).
     
@@ -380,13 +400,17 @@ class Polyatomic(Species):
         electroncrosssection : float
             Cross section for elastic electron collisions in m^2 (only required 
             for neutral species)
+        emissionlines : list of length-3 lists
+            Radiation emission line data - each entry in the list contains three
+            values giving the line's wavelength in m, its g x A constant in 1/s,
+            and its emission strength in J.
         sources : list of str
             Each dictionary represents a reference source from which the data 
             was obtained.
         """
         super().__init__(name, stoichiometry, molarmass, chargenumber, 
                          polarisability, multiplicity, effectiveelectrons, 
-                         electroncrosssection)
+                         electroncrosssection, emissionlines)
 
         self.dissociationenergy = dissociationenergy
         self.ionisationenergy = ionisationenergy
@@ -410,7 +434,7 @@ class Polyatomic(Species):
                 f'multiplicity={self.multiplicity},'
                 f'effectiveelectrons={self.effectiveelectrons},'
                 f'electroncrosssection={self.electroncrosssection},'
-                f'sources={self.sources})')
+                f'emissionlines={self.emissionlines},sources={self.sources})')
 
     def __str__(self):
         if numpy.isclose(0, self.chargenumber):
@@ -428,7 +452,8 @@ class Polyatomic(Species):
                 f'Polarisability: {self.polarisability} m^3\n'
                 f'Multiplicity: {self.multiplicity}\n'
                 f'Effective valence electrons: {self.effectiveelectrons}\n'
-                f'Electron cross section: {self.electroncrosssection} m^2')
+                f'Electron cross section: {self.electroncrosssection} m^2\n'
+                f'Emission lines: {len(self.emissionlines)}')
 
     def partitionfunction_internal(self, T, dE):
         kbt = constants.Boltzmann * T

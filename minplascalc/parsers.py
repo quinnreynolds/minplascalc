@@ -43,7 +43,7 @@ def nist_energylevels(data):
     Return
     ------
     list of length-2 lists
-         Energy levels. Each dict contains the energy of the level Ei and the 
+         Energy levels. Each entry contains the energy of the level Ei and the 
          associated quantum number J.
     """
     energylevels = []
