@@ -3,6 +3,7 @@ import logging
 import warnings
 from scipy import constants
 from . import species as _species
+from . import functions_transport, functions_radiation
 
 __all__ = ['lte_from_names', 'LTE']
 
@@ -343,24 +344,21 @@ class LTE:
         """Calculate the LTE viscosity of the plasma in Pa.s based on current
         conditions and species composition.
         """
-
-        raise NotImplementedError
+        return functions_transport.viscosity(self)
 
     def calculate_thermal_conductivity(self):
         """Calculate the LTE thermal conductivity of the plasma in W/m.K.
         """
-
-        raise NotImplementedError
+        return functions_transport.thermalconductivity(self)
 
     def calculate_electrical_conductivity(self):
         """Calculate the LTE electrical conductivity of the plasma in 1/ohm.m.
         """
-
-        raise NotImplementedError
+        return functions_transport.electricalconductivity(self)
 
     def calculate_total_emission_coefficient(self):
         """Calculate the LTE total radiation emission coefficient of the plasma 
         in W/m3.
         """
-
-        raise NotImplementedError
+        return functions_radiation.total_emission_coefficient(self)
+    
