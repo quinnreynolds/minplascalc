@@ -275,20 +275,14 @@ class LTE:
         """Calculate the LTE enthalpy for each component in the plasma. These
         are needed for calculation of the effective thermal conductivity.
         
-        The reference level is offset by the minimum E0 to avoid negative 
-        values.
-
         Returns
         -------
         list of floats
             Enthalpies of each species, in J/kg.
         """
-        imin = numpy.argmin(self.__E0)
-        h0 = self.__E0[imin] / self.species[imin].molarmass
         enthalpies = [(sp.internal_energy(self.T, dE) 
                        + E0
                        + constants.Boltzmann * self.T 
-                       - h0*sp.molarmass 
                        )
                       for sp, dE, E0 in zip(self.species, self.__dE, self.__E0)]
         molmasses = [sp.molarmass / constants.Avogadro for sp in self.species]
