@@ -340,10 +340,12 @@ class LTE:
         """
         return functions_transport.viscosity(self)
 
-    def calculate_thermal_conductivity(self):
+    def calculate_thermal_conductivity(self, rel_delta_T=0.001, DTterms_yn=True,
+                                       ni_limit=1e8):
         """Calculate the LTE thermal conductivity of the plasma in W/m.K.
         """
-        return functions_transport.thermalconductivity(self)
+        return functions_transport.thermalconductivity(self, rel_delta_T, 
+                                                       DTterms_yn, ni_limit)
 
     def calculate_electrical_conductivity(self):
         """Calculate the LTE electrical conductivity of the plasma in 1/ohm.m.

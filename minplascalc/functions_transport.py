@@ -716,11 +716,10 @@ def electricalconductivity(mix):
     
     return premult * sumval
 
-def thermalconductivity(mix, rel_delta_T=0.001, DTterms_yn=False):
+def thermalconductivity(mix, rel_delta_T, DTterms_yn, ni_limit):
     ''' Thermal conductivity, calculation per Devoto 1966 (eqn 2 and 19). 
     Numerical derivative performed to obtain dxi/dT for del(x) in the di 
-    expression. Electrons are currently excluded from the thermal diffusion and 
-    reactional component calculations due to inconsistencies in results.
+    expression.
     '''
     nsp = len(mix.species)
     nv = mix.calculate_composition()
@@ -741,11 +740,11 @@ def thermalconductivity(mix, rel_delta_T=0.001, DTterms_yn=False):
     ### thermal diffusion tk components ###
     if DTterms_yn:
         locDTi = DTi(mix)
-        kdt = numpy.sum(hv[:-1]*locDTi[:-1] / mix.T)
+        kdt = numpy.sum(hv * locDTi / mix.T)
     else:
         kdt = 0
 
-    ### reactional tk components ###
+    ### reactional tk components - normal diffusion term ###
     locDij = Dij(mix)
     Tval = mix.T
     mix.T = Tval * (1 + rel_delta_T)
@@ -757,15 +756,15 @@ def thermalconductivity(mix, rel_delta_T=0.001, DTterms_yn=False):
     xvneg = nvneg / numpy.sum(nvneg)
     dxdT = (xvpos - xvneg) / (2 * rel_delta_T * mix.T)
     krxn_enth = 0
-    for j in range(nsp-1):
-        sumi = 0
-        for i in range(nsp-1):
-            sumi += hv[i]*mv[i]*locDij[i,j]
-        krxn_enth += -ntot**2 / rho * mv[j] * sumi * dxdT[j]
-
+    for j in range(nsp):
+        for i in range(nsp):
+            krxn_enth += mv[j] * mv[i] * hv[i] * locDij[i,j] * dxdT[j]
+    krxn_enth *= -ntot**2 / rho
+    
+    ### reactional tk components - thermal diffusion term ###
     if DTterms_yn:
-        krxn_therm = ntot * kb * Tval * numpy.sum(locDTi[:-1] * dxdT[:-1] 
-                                                  / (nv[:-1] * mv[:-1]))
+        dxdTfilt = numpy.where(nv<ni_limit, numpy.zeros(nsp), dxdT)
+        krxn_therm = ntot * kb * Tval * numpy.sum(locDTi * dxdTfilt / (nv * mv))
     else:
         krxn_therm = 0
     
