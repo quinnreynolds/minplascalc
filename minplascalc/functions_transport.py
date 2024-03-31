@@ -727,6 +727,9 @@ def thermalconductivity(mix, rel_delta_T, DTterms_yn, ni_limit):
     ntot = numpy.sum(nv)
     hv = mix.calculate_species_enthalpies()
     rho = mix.calculate_density()
+    # rescale species enthalpies relative to average mole mass
+    avgmolmass = rho / ntot
+    hv = hv*mv / avgmolmass
     
     ### translational tk components ###
     qq = q(mix)
