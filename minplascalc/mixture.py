@@ -354,7 +354,7 @@ class LTE:
 
     def calculate_total_emission_coefficient(self):
         """Calculate the LTE total radiation emission coefficient of the plasma 
-        in W/m3.
+        in W/m3.sr.
         """
         return functions_radiation.total_emission_coefficient(self)
     
