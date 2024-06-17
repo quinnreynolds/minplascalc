@@ -179,15 +179,17 @@ def cl_charged(spi, spj, ni, nj, T):
                 - (1e-5 + (numpy.log(T_eV)-2)**2 / 16)**(1/2))
     elif spi.name == 'e':
         ne_cgs = ni * 1e-6
-        return 23 - numpy.log(ne_cgs**(1/2) * spj.chargenumber * T_eV**(-3/2))
+        return 23 - numpy.log(ne_cgs**(1/2) * abs(spj.chargenumber) 
+                              * T_eV**(-3/2))
     elif spj.name == 'e':
         ne_cgs = nj * 1e-6
-        return 23 - numpy.log(ne_cgs**(1/2) * spi.chargenumber * T_eV**(-3/2))
+        return 23 - numpy.log(ne_cgs**(1/2) * abs(spi.chargenumber) 
+                              * T_eV**(-3/2))
     else:
         ni_cgs, nj_cgs = ni * 1e-6, nj * 1e-6
-        return 23 - numpy.log(spi.chargenumber*spj.chargenumber/T_eV 
-                              * (ni_cgs*spi.chargenumber**2/T_eV 
-                              + nj_cgs*spj.chargenumber**2/T_eV)**(1/2))
+        return 23 - numpy.log(abs(spi.chargenumber*spj.chargenumber)/T_eV 
+                              * (ni_cgs*abs(spi.chargenumber)**2/T_eV 
+                              + nj_cgs*abs(spj.chargenumber)**2/T_eV)**(1/2))
 
 def psiconst(s):
     if s == 1:
