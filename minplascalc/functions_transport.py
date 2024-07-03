@@ -268,7 +268,7 @@ def Qin(spi, spj, l, s, T):
 def Qtr(spi, spj, s, T):
     ''' Ion-neutral resonant charge transfer cross section.
     '''
-    if spi.chargenumber == 0:     
+    if spi.chargenumber < spj.chargenumber:     
         a, b = A(spi.ionisationenergy), B(spi.ionisationenergy)
         mm = spi.molarmass
     else:
@@ -303,7 +303,8 @@ def Qij(spi, ni, spj, nj, l, s, T):
         return Qe(spj)
     elif spi.chargenumber == 0 and spj.chargenumber == 0:
         return Qnn(spi, spj, l, s, T)
-    elif abs(spi.chargenumber-spj.chargenumber)==1 and l % 2 == 1:
+    elif (spi.stoichiometry==spj.stoichiometry 
+          and abs(spi.chargenumber-spj.chargenumber)==1 and l % 2 == 1):
         return Qtr(spi, spj, s, T)
     elif spi.chargenumber == 0:
         return Qin(spj, spi, l, s, T)
