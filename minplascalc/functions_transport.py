@@ -264,7 +264,6 @@ def Qin(spi, spj, l, s, T):
             / (numpy.exp((x-a[5])/a[6]) + numpy.exp((a[5]-x)/a[6])))
     return numpy.exp(lnS1+lnS2) * pi * sigma**2 * 1e-20
 
-# Ion-neutral resonant charge transfer cross section
 def Qtr(spi, spj, s, T):
     ''' Ion-neutral resonant charge transfer cross section.
     '''
