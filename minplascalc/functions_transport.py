@@ -6,6 +6,9 @@ ke = 1/(4*pi*constants.epsilon_0)
 kb = constants.Boltzmann
 kav = constants.Avogadro
 qe = constants.elementary_charge
+me = constants.electron_mass
+hbar = constants.hbar
+a0 = constants.physical_constants['Bohr radius'][0]
 k2e = 1/constants.physical_constants['electron volt-kelvin relationship'][0]
 kR = constants.gas_constant
 gamma = numpy.euler_gamma
@@ -142,6 +145,22 @@ c_in = numpy.array([[c_in_11, c_in_12, c_in_13, c_in_14, c_in_15],
                     [fillnan, fillnan, c_in_33, fillnan, fillnan],
                     [fillnan, fillnan, fillnan, c_in_44, fillnan]])
 
+bls_Qe = [[3/4, 7/8, 63/64, 693/640, 3003/2560, 1287/1024, 21879/16384],
+          [numpy.nan, 3/4, 27/32, 297/320, 1287/1280, 3861/3584, 65637/57344],
+          [numpy.nan, numpy.nan, 59/64, 649/650, 8437/7680, 8437/7168, 
+           143429/114688],
+          [numpy.nan, numpy.nan, numpy.nan, 59/64, 767/768, 3835/3584, 
+           65195/57344],
+          [numpy.nan, numpy.nan, numpy.nan, numpy.nan, 1637/1536, 8185/7168, 
+           139145/114688],
+          [numpy.nan, numpy.nan, numpy.nan, numpy.nan, numpy.nan, 1637/1536, 
+           27829/24576],
+          [numpy.nan, numpy.nan, numpy.nan, numpy.nan, numpy.nan, numpy.nan, 
+           19531/16384]]
+bls_Qe = numpy.sqrt(pi)*numpy.array(bls_Qe)
+cs_Qe = [11/4, 25/6, 137/24, 147/20, 363/40, 761/70, 7129/560]
+cs_Qe = numpy.array(cs_Qe)
+
 def n_effective_electrons(nint, nout):
     return nout * (1 + (1 - nout/nint) * (nint/(nout+nint))**2)
 
@@ -219,13 +238,23 @@ def delta(i, j):
 
 ### Collision cross section calculations #######################################
 
-def Qe(spi):
-    ''' Electron-neutral collision cross section.
+def Qe(spi, l, s, T):
+    ''' Electron-neutral collision integrals.
     '''
-    return spi.electroncrosssection
-
+    Ae, Be, Ce, Temin, Temax = spi.ecxparameters
+    if T < Temin:
+        Tloc = Temin
+    elif T > Temax:
+        Tloc = Temax
+    else:
+        Tloc = T
+    tau = numpy.sqrt(2*me*kb*Tloc)/hbar
+    term1 = Ae + bls_Qe[l,s]*Be*tau + (cs_Qe[s] - gamma*(s+2)/2 
+                                       + (s+2)*numpy.log(a0*tau))*Ce*tau**2
+    return 4*pi*term1
+    
 def Qnn(spi, spj, l, s, T):
-    ''' Neutral-neutral elastic collision cross section.
+    ''' Neutral-neutral elastic collision integrals.
     '''
     if ((l == 1 and s >= 6) or (l == 2 and s >= 5) or (l == 3 and s >= 4) 
         or (l == 4 and s >= 5)):
@@ -245,7 +274,7 @@ def Qnn(spi, spj, l, s, T):
     return numpy.exp(lnS1+lnS2) * pi * sigma**2 * 1e-20
 
 def Qin(spi, spj, l, s, T):
-    ''' Ion-neutral elastic collision cross section.
+    ''' Ion-neutral elastic collision integrals.
     '''
     if ((l == 1 and s >= 6) or (l == 2 and s >= 5) or (l == 3 and s >= 4) 
         or (l == 4 and s >= 5)):
@@ -265,7 +294,7 @@ def Qin(spi, spj, l, s, T):
     return numpy.exp(lnS1+lnS2) * pi * sigma**2 * 1e-20
 
 def Qtr(spi, spj, s, T):
-    ''' Ion-neutral resonant charge transfer cross section.
+    ''' Ion-neutral resonant charge transfer collision integral.
     '''
     if spi.chargenumber < spj.chargenumber:     
         a, b = A(spi.ionisationenergy), B(spi.ionisationenergy)
@@ -280,7 +309,7 @@ def Qtr(spi, spj, s, T):
             + (s1*b**2/2 - a*b)*lnterm)
 
 def Qc(spi, ni, spj, nj, l, s, T):
-    ''' Coulomb collision cross section. 
+    ''' Coulomb collision integral. 
     '''
     preconst = [4, 12, 12, 16]
     addconst = [1/2, 1, 7/6, 4/3]
