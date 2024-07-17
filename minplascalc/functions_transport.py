@@ -1,5 +1,6 @@
 import numpy
 from scipy import constants
+from scipy.special import gamma
 
 pi = constants.pi
 ke = 1/(4*pi*constants.epsilon_0)
@@ -11,7 +12,7 @@ hbar = constants.hbar
 a0 = constants.physical_constants['Bohr radius'][0]
 k2e = 1/constants.physical_constants['electron volt-kelvin relationship'][0]
 kR = constants.gas_constant
-gamma = numpy.euler_gamma
+egamma = numpy.euler_gamma
 
 c0_nn_11 = [7.884756e-1, -2.952759e-1, 5.020892e-1, -9.042460e-1, -3.373058, 
             4.161981, 2.462523]
@@ -145,21 +146,6 @@ c_in = numpy.array([[c_in_11, c_in_12, c_in_13, c_in_14, c_in_15],
                     [fillnan, fillnan, c_in_33, fillnan, fillnan],
                     [fillnan, fillnan, fillnan, c_in_44, fillnan]])
 
-bls_Qe = [[3/4, 7/8, 63/64, 693/640, 3003/2560, 1287/1024, 21879/16384],
-          [numpy.nan, 3/4, 27/32, 297/320, 1287/1280, 3861/3584, 65637/57344],
-          [numpy.nan, numpy.nan, 59/64, 649/650, 8437/7680, 8437/7168, 
-           143429/114688],
-          [numpy.nan, numpy.nan, numpy.nan, 59/64, 767/768, 3835/3584, 
-           65195/57344],
-          [numpy.nan, numpy.nan, numpy.nan, numpy.nan, 1637/1536, 8185/7168, 
-           139145/114688],
-          [numpy.nan, numpy.nan, numpy.nan, numpy.nan, numpy.nan, 1637/1536, 
-           27829/24576],
-          [numpy.nan, numpy.nan, numpy.nan, numpy.nan, numpy.nan, numpy.nan, 
-           19531/16384]]
-bls_Qe = numpy.sqrt(pi)*numpy.array(bls_Qe)
-cs_Qe = [11/4, 25/6, 137/24, 147/20, 363/40, 761/70, 7129/560]
-cs_Qe = numpy.array(cs_Qe)
 
 def n_effective_electrons(nint, nout):
     return nout * (1 + (1 - nout/nint) * (nint/(nout+nint))**2)
@@ -225,7 +211,7 @@ def B(ie):
     return numpy.sqrt(pi) * 4.78257679e-10 / ie_eV**0.657012657
 
 def sum1(s):
-    return numpy.sum(1/numpy.array(range(1,s+2))) - gamma
+    return numpy.sum(1/numpy.array(range(1,s+2))) - egamma
 
 def sum2(s):
     return numpy.sum(1/numpy.array(range(1,s+2))**2)
@@ -241,17 +227,13 @@ def delta(i, j):
 def Qe(spi, l, s, T):
     ''' Electron-neutral collision integrals.
     '''
-    Ae, Be, Ce, Temin, Temax = spi.ecxparameters
-    if T < Temin:
-        Tloc = Temin
-    elif T > Temax:
-        Tloc = Temax
-    else:
-        Tloc = T
-    tau = numpy.sqrt(2*me*kb*Tloc)/hbar
-    term1 = Ae + bls_Qe[l,s]*Be*tau + (cs_Qe[s] - gamma*(s+2)/2 
-                                       + (s+2)*numpy.log(a0*tau))*Ce*tau**2
-    return 4*pi*term1
+    try:
+        Ae, Be, Ce = spi.ecxparameters
+    except AttributeError:
+        Ae, Be, Ce = spi.electroncrosssection, 0, 0
+    barg = Be/2 + s + 2
+    tau = numpy.sqrt(2 * me * kb * T) / hbar
+    return Ae * tau**Be * gamma(barg) / (gamma(s+2) * (Ce*tau**2+1)**barg)
     
 def Qnn(spi, spj, l, s, T):
     ''' Neutral-neutral elastic collision integrals.
@@ -317,7 +299,7 @@ def Qc(spi, ni, spj, nj, l, s, T):
     term2 = (ke * spi.chargenumber * spj.chargenumber * qe**2 
              / (2 * kb * T)) ** 2
     term3 = (cl_charged(spi, spj, ni, nj, T) + numpy.log(2) - addconst[l-1] 
-             - 2*gamma + psiconst(s))
+             - 2*egamma + psiconst(s))
     return term1 * term2 * term3
 
 ### Unified cross section calculations #########################################
@@ -326,9 +308,9 @@ def Qij(spi, ni, spj, nj, l, s, T):
     if spi.chargenumber != 0 and spj.chargenumber != 0:
         return Qc(spi, ni, spj, nj, l, s, T)
     elif spj.name == 'e':
-        return Qe(spi)
+        return Qe(spi, l, s, T)
     elif spi.name == 'e':
-        return Qe(spj)
+        return Qe(spj, l, s, T)
     elif spi.chargenumber == 0 and spj.chargenumber == 0:
         return Qnn(spi, spj, l, s, T)
     elif (spi.stoichiometry==spj.stoichiometry 
