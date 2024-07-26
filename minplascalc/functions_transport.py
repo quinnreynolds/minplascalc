@@ -224,13 +224,17 @@ def delta(i, j):
 
 ### Collision cross section calculations #######################################
 
-def Qe(spi, l, s, T):
+def Qe(spi, s, T):
     ''' Electron-neutral collision integrals.
     '''
     try:
         Ae, Be, Ce = spi.ecxparameters
     except AttributeError:
-        Ae, Be, Ce = spi.electroncrosssection, 0, 0
+        try:
+            Ae, Be, Ce = spi.electroncrosssection, 0, 0
+        except:
+            raise AttributeError('Unrecognised data format in electron-neutral '
+                                 f'collision integral for {spi.name}.')
     barg = Be/2 + s + 2
     tau = numpy.sqrt(2 * me * kb * T) / hbar
     return Ae * tau**Be * gamma(barg) / (gamma(s+2) * (Ce*tau**2+1)**barg)
