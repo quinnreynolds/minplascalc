@@ -1,14 +1,18 @@
 import numpy
 from scipy import constants
+from scipy.special import gamma
 
 pi = constants.pi
 ke = 1/(4*pi*constants.epsilon_0)
 kb = constants.Boltzmann
 kav = constants.Avogadro
 qe = constants.elementary_charge
+me = constants.electron_mass
+hbar = constants.hbar
+a0 = constants.physical_constants['Bohr radius'][0]
 k2e = 1/constants.physical_constants['electron volt-kelvin relationship'][0]
 kR = constants.gas_constant
-gamma = numpy.euler_gamma
+egamma = numpy.euler_gamma
 
 c0_nn_11 = [7.884756e-1, -2.952759e-1, 5.020892e-1, -9.042460e-1, -3.373058, 
             4.161981, 2.462523]
@@ -142,6 +146,7 @@ c_in = numpy.array([[c_in_11, c_in_12, c_in_13, c_in_14, c_in_15],
                     [fillnan, fillnan, c_in_33, fillnan, fillnan],
                     [fillnan, fillnan, fillnan, c_in_44, fillnan]])
 
+
 def n_effective_electrons(nint, nout):
     return nout * (1 + (1 - nout/nint) * (nint/(nout+nint))**2)
 
@@ -206,7 +211,7 @@ def B(ie):
     return numpy.sqrt(pi) * 4.78257679e-10 / ie_eV**0.657012657
 
 def sum1(s):
-    return numpy.sum(1/numpy.array(range(1,s+2))) - gamma
+    return numpy.sum(1/numpy.array(range(1,s+2))) - egamma
 
 def sum2(s):
     return numpy.sum(1/numpy.array(range(1,s+2))**2)
@@ -219,13 +224,23 @@ def delta(i, j):
 
 ### Collision cross section calculations #######################################
 
-def Qe(spi):
-    ''' Electron-neutral collision cross section.
+def Qe(spi, s, T):
+    ''' Electron-neutral collision integrals.
     '''
-    return spi.electroncrosssection
-
+    try:
+        Ae, Be, Ce = spi.ecxparameters
+    except AttributeError:
+        try:
+            Ae, Be, Ce = spi.electroncrosssection, 0, 0
+        except:
+            raise AttributeError('Unrecognised data format in electron-neutral '
+                                 f'collision integral for {spi.name}.')
+    barg = Be/2 + s + 2
+    tau = numpy.sqrt(2 * me * kb * T) / hbar
+    return Ae * tau**Be * gamma(barg) / (gamma(s+2) * (Ce*tau**2+1)**barg)
+    
 def Qnn(spi, spj, l, s, T):
-    ''' Neutral-neutral elastic collision cross section.
+    ''' Neutral-neutral elastic collision integrals.
     '''
     if ((l == 1 and s >= 6) or (l == 2 and s >= 5) or (l == 3 and s >= 4) 
         or (l == 4 and s >= 5)):
@@ -245,7 +260,7 @@ def Qnn(spi, spj, l, s, T):
     return numpy.exp(lnS1+lnS2) * pi * sigma**2 * 1e-20
 
 def Qin(spi, spj, l, s, T):
-    ''' Ion-neutral elastic collision cross section.
+    ''' Ion-neutral elastic collision integrals.
     '''
     if ((l == 1 and s >= 6) or (l == 2 and s >= 5) or (l == 3 and s >= 4) 
         or (l == 4 and s >= 5)):
@@ -265,7 +280,7 @@ def Qin(spi, spj, l, s, T):
     return numpy.exp(lnS1+lnS2) * pi * sigma**2 * 1e-20
 
 def Qtr(spi, spj, s, T):
-    ''' Ion-neutral resonant charge transfer cross section.
+    ''' Ion-neutral resonant charge transfer collision integral.
     '''
     if spi.chargenumber < spj.chargenumber:     
         a, b = A(spi.ionisationenergy), B(spi.ionisationenergy)
@@ -280,7 +295,7 @@ def Qtr(spi, spj, s, T):
             + (s1*b**2/2 - a*b)*lnterm)
 
 def Qc(spi, ni, spj, nj, l, s, T):
-    ''' Coulomb collision cross section. 
+    ''' Coulomb collision integral. 
     '''
     preconst = [4, 12, 12, 16]
     addconst = [1/2, 1, 7/6, 4/3]
@@ -288,7 +303,7 @@ def Qc(spi, ni, spj, nj, l, s, T):
     term2 = (ke * spi.chargenumber * spj.chargenumber * qe**2 
              / (2 * kb * T)) ** 2
     term3 = (cl_charged(spi, spj, ni, nj, T) + numpy.log(2) - addconst[l-1] 
-             - 2*gamma + psiconst(s))
+             - 2*egamma + psiconst(s))
     return term1 * term2 * term3
 
 ### Unified cross section calculations #########################################
@@ -297,9 +312,9 @@ def Qij(spi, ni, spj, nj, l, s, T):
     if spi.chargenumber != 0 and spj.chargenumber != 0:
         return Qc(spi, ni, spj, nj, l, s, T)
     elif spj.name == 'e':
-        return Qe(spi)
+        return Qe(spi, l, s, T)
     elif spi.name == 'e':
-        return Qe(spj)
+        return Qe(spj, l, s, T)
     elif spi.chargenumber == 0 and spj.chargenumber == 0:
         return Qnn(spi, spj, l, s, T)
     elif (spi.stoichiometry==spj.stoichiometry 
