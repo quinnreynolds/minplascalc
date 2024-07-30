@@ -224,7 +224,7 @@ def delta(i, j):
 
 ### Collision cross section calculations #######################################
 
-def Qe(spi, s, T):
+def Qe(spi, l, s, T):
     ''' Electron-neutral collision integrals.
     '''
     try:
