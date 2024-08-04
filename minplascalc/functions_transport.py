@@ -235,7 +235,7 @@ def Qe(spi, l, s, T):
         except:
             raise AttributeError('Unrecognised data format in electron-neutral '
                                  f'collision integral for {spi.name}.')
-    barg = Be/2 + s + 2
+    barg = Ce/2 + s + 2
     tau = numpy.sqrt(2 * me * kb * T) / hbar
     return Ae + Be * tau**Ce * gamma(barg) / (gamma(s+2) * (De*tau**2+1)**barg)
     
