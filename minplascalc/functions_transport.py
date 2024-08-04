@@ -228,13 +228,9 @@ def Qe(spi, l, s, T):
     ''' Electron-neutral collision integrals.
     '''
     try:
-        Ae, Be, Ce, De = spi.ecxparameters
-    except AttributeError:
-        try:
-            Ae, Be, Ce, De = spi.electroncrosssection, 0, 0, 0
-        except:
-            raise AttributeError('Unrecognised data format in electron-neutral '
-                                 f'collision integral for {spi.name}.')
+        Ae, Be, Ce, De = spi.electroncrosssection
+    except TypeError:
+        Ae, Be, Ce, De = spi.electroncrosssection, 0, 0, 0
     barg = Ce/2 + s + 2
     tau = numpy.sqrt(2 * me * kb * T) / hbar
     return Ae + Be * tau**Ce * gamma(barg) / (gamma(s+2) * (De*tau**2+1)**barg)

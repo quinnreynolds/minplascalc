@@ -109,7 +109,8 @@ class Species(BaseSpecies):
             (only required for neutral species)
         electroncrosssection : float
             Cross section for elastic electron collisions in m^2 (only required 
-            for neutral species)
+            for neutral species). Either a single constant value, or a 4-tuple 
+            of empirical fitting parameters.
         emissionlines : list of length-3 lists
             Radiation emission line data - each entry in the list contains three
             values giving the line's wavelength in m, its g x A constant in 1/s,
@@ -176,7 +177,8 @@ class Monatomic(Species):
             (only required for neutral species)
         electroncrosssection : float
             Cross section for elastic electron collisions in m^2 (only required 
-            for neutral species)
+            for neutral species). Either a single constant value, or a 4-tuple 
+            of empirical fitting parameters.
         emissionlines : list of length-3 lists
             Radiation emission line data - each entry in the list contains three
             values giving the line's wavelength in m, its g x A constant in 1/s,
@@ -282,7 +284,8 @@ class Diatomic(Species):
             (only required for neutral species)
         electroncrosssection : float
             Cross section for elastic electron collisions in m^2 (only required 
-            for neutral species)
+            for neutral species). Either a single constant value, or a 4-tuple 
+            of empirical fitting parameters.
         emissionlines : list of length-3 lists
             Radiation emission line data - each entry in the list contains three
             values giving the line's wavelength in m, its g x A constant in 1/s,
@@ -399,7 +402,8 @@ class Polyatomic(Species):
             (only required for neutral species)
         electroncrosssection : float
             Cross section for elastic electron collisions in m^2 (only required 
-            for neutral species)
+            for neutral species). Either a single constant value, or a 4-tuple 
+            of empirical fitting parameters.
         emissionlines : list of length-3 lists
             Radiation emission line data - each entry in the list contains three
             values giving the line's wavelength in m, its g x A constant in 1/s,
