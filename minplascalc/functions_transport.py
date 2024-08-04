@@ -228,16 +228,16 @@ def Qe(spi, l, s, T):
     ''' Electron-neutral collision integrals.
     '''
     try:
-        Ae, Be, Ce = spi.ecxparameters
+        Ae, Be, Ce, De = spi.ecxparameters
     except AttributeError:
         try:
-            Ae, Be, Ce = spi.electroncrosssection, 0, 0
+            Ae, Be, Ce, De = spi.electroncrosssection, 0, 0, 0
         except:
             raise AttributeError('Unrecognised data format in electron-neutral '
                                  f'collision integral for {spi.name}.')
     barg = Be/2 + s + 2
     tau = numpy.sqrt(2 * me * kb * T) / hbar
-    return Ae * tau**Be * gamma(barg) / (gamma(s+2) * (Ce*tau**2+1)**barg)
+    return Ae + Be * tau**Ce * gamma(barg) / (gamma(s+2) * (De*tau**2+1)**barg)
     
 def Qnn(spi, spj, l, s, T):
     ''' Neutral-neutral elastic collision integrals.
