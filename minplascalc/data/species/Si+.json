@@ -3,8 +3,13 @@
     "stoichiometry": {
         "Si": 1
     },
-    "molarmass": 0.0280855,
+    "molarmass": 0.028084951420090935,
     "chargenumber": 1,
+    "polarisability": 2.831e-30,
+    "multiplicity": 2,
+    "effectiveelectrons": null,
+    "electroncrosssection": null,
+    "emissionlines": [],
     "ionisationenergy": 2.6188941386449313e-18,
     "energylevels": [
         [
@@ -196,11 +201,11 @@
             2.370055956492351e-18
         ],
         [
-            3.5,
+            4.5,
             2.375357583598611e-18
         ],
         [
-            4.5,
+            3.5,
             2.375357583598611e-18
         ],
         [
@@ -272,11 +277,11 @@
             2.472122756793234e-18
         ],
         [
-            1.5,
+            2.5,
             2.4730404950835755e-18
         ],
         [
-            2.5,
+            1.5,
             2.4730404950835755e-18
         ],
         [
@@ -300,11 +305,11 @@
             2.4795250510900487e-18
         ],
         [
-            3.5,
+            4.5,
             2.4820331384610117e-18
         ],
         [
-            4.5,
+            3.5,
             2.4820331384610117e-18
         ],
         [
@@ -348,16 +353,12 @@
             2.513756689319784e-18
         ],
         [
+            3.5,
+            2.530007808266285e-18
+        ],
+        [
             2.5,
             2.530007808266285e-18
-        ],
-        [
-            3.5,
-            2.530007808266285e-18
-        ],
-        [
-            3.5,
-            2.5313689214189733e-18
         ],
         [
             4.5,
@@ -365,6 +366,10 @@
         ],
         [
             3.5,
+            2.5313689214189733e-18
+        ],
+        [
+            3.5,
             2.5455388403507755e-18
         ],
         [
@@ -372,11 +377,11 @@
             2.5455388403507755e-18
         ],
         [
-            3.5,
+            4.5,
             2.546582717994876e-18
         ],
         [
-            4.5,
+            3.5,
             2.546582717994876e-18
         ],
         [
@@ -540,11 +545,11 @@
             3.1124239944928206e-18
         ],
         [
-            4.5,
+            3.5,
             3.1149666460331606e-18
         ],
         [
-            3.5,
+            4.5,
             3.1149666460331606e-18
         ],
         [
@@ -593,6 +598,7 @@
         ]
     ],
     "sources": [
-        "NIST Atomic Spectra Database (ver. 5.3), [Online]. A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team, National Institute of Standards and Technology, Gaithersburg MD., http://physics.nist.gov/asd"
+        "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team (2023). NIST Atomic Spectra Database (version 5.11), [Online]. Available: https://physics.nist.gov/asd. National Institute of Standards and Technology, Gaithersburg, MD. DOI: https://doi.org/10.18434/T4W30F",
+        "G Venter, University of Cape Town, private communications 2024"
     ]
 }

@@ -5,6 +5,27 @@
     },
     "molarmass": 0.0280855,
     "chargenumber": 0,
+    "polarisability": 5.878e-30,
+    "multiplicity": 3,
+    "effectiveelectrons": 5.224489795918368,
+    "electroncrosssection": [
+        2.9532060765769007e-19,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "emissionlines": [
+        [
+            1.095605e-05,
+            0.601,
+            9.587443468532507e-19
+        ],
+        [
+            2.65246e-05,
+            0.429,
+            1.0044744314178932e-18
+        ]
+    ],
     "ionisationenergy": 1.3060440877960931e-18,
     "energylevels": [
         [
@@ -1544,11 +1565,11 @@
             1.3036710787882105e-18
         ],
         [
-            2.0,
+            3.0,
             1.3037227263976235e-18
         ],
         [
-            3.0,
+            2.0,
             1.3037227263976235e-18
         ],
         [
@@ -2136,11 +2157,11 @@
             1.8340860681217626e-18
         ],
         [
-            1.0,
+            2.0,
             1.8340860681217626e-18
         ],
         [
-            2.0,
+            1.0,
             1.8340860681217626e-18
         ],
         [
@@ -2160,15 +2181,16 @@
             1.9949882359088986e-18
         ],
         [
-            1.0,
+            2.0,
             1.9949882359088986e-18
         ],
         [
-            2.0,
+            1.0,
             1.9949882359088986e-18
         ]
     ],
     "sources": [
-        "NIST Atomic Spectra Database (ver. 5.3), [Online]. A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team, National Institute of Standards and Technology, Gaithersburg MD., http://physics.nist.gov/asd"
+        "A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team (2023). NIST Atomic Spectra Database (version 5.11), [Online]. Available: https://physics.nist.gov/asd. National Institute of Standards and Technology, Gaithersburg, MD. DOI: https://doi.org/10.18434/T4W30F",
+        "G Venter, University of Cape Town, private communications 2024"
     ]
 }
