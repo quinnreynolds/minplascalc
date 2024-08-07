@@ -1,7 +1,7 @@
 README
 ======
 
-.. image:: https://travis-ci.org/kittychunk/minplascalc.svg?branch=develop
+.. image:: https://travis-ci.org/kittychunk/minplascalc.svg?branch=transport-testing
     :target: https://travis-ci.org/kittychunk/minplascalc
 
 .. image:: https://readthedocs.org/projects/minplascalc/badge/?version=latest
@@ -54,17 +54,27 @@ References
    3\ :sup:`ed`\, *Cambridge University Press*, Cambridge, United Kingdom, 
    1970
 -  JC Stewart and KD Pyatt Jr. Lowering of Ionization Potentials in Plasmas, 
-   *The Astrophysical Journal*, 144, 1966, p 1203
+   *The Astrophysical Journal*, 144, 1966, 1203-1211
 -  GJ Dunn and TW Eagar. Calculation of Electrical and Thermal 
    Conductivities of Metallurgical Plasmas, 
    *Welding Research Council*, Bulletin 357, 1990
 -  RS Devoto. Transport Properties of Ionized Monatomic Gases, 
-   *The Physics of Fluids*, 9(6), 1966, p 1230
--  A Kramida, Y Ralchenko, J Reader, and NIST ASD Team. NIST Atomic Spectra 
+   *The Physics of Fluids*, 9(6), 1966, 1230-1240
+-  RS Devoto. Transport Coefficients of Partially Ionized Argon, 
+   *The Physics of Fluids*, 10(2), 1967, 354-364
+-  A Laricchiuta, G Colonna, D Bruno, R Celiberto, C Gorse, F Pirani, and 
+   M Capitelli. Classical transport collision integrals for a Lennard-Jones
+   like phenomenological model potential, *Chemical Physical Letters*, 445, 
+   2007, 133-139
+-  A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team. NIST Atomic Spectra 
    Database (ver. 5.3) [Online], 
    *National Institute of Standards and Technology*, Gaithersburg MD, 
    http://physics.nist.gov/asd
--  Linstrom, P.J. and Mallard, W.G. (ed). NIST Chemistry WebBook, NIST 
+-  PJ Linstrom and WG Mallard (ed). NIST Chemistry WebBook, NIST 
    Standard Reference Database Number 69. 
    *National Institute of Standards and Technology*, Gaithersburg MD, 
    http://webbook.nist.gov/chemistry/
+-  RD Johnson III (ed). NIST Chemistry WebBook, NIST Computational 
+   Chemistry Comparison and Benchmark Database Release 22. 
+   *National Institute of Standards and Technology*, Gaithersburg MD, 
+   http://cccbdb.nist.gov/
