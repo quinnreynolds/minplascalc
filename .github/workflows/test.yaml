@@ -3,7 +3,7 @@ name: Run tests
 on: push
 
 jobs:
-  check:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -14,5 +14,5 @@ jobs:
           python-version: '3.10'
       - name: Install package
         run: pip install -e .[dev,test]
-      - name: Check formatting
+      - name: Run pytest
         run: pytest test --verbose --durations=5
