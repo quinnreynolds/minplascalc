@@ -1,7 +1,8 @@
-pytest
 matplotlib
-numpy
-scipy>=1.4
-requests
-sphinx>=1.4
 nbsphinx
+numpy
+pytest
+requests
+scipy>=1.4
+sphinx>=1.4
+sympy
