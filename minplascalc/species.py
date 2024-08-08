@@ -221,7 +221,7 @@ class Monatomic(Species):
                 f'Polarisability: {self.polarisability} m^3\n'
                 f'Multiplicity: {self.multiplicity}\n'
                 f'Effective valence electrons: {self.effectiveelectrons}\n'
-                f'Electron cross section: {self.electroncrosssection} m^2\n'
+                f'Electron cross section data: {self.electroncrosssection}\n'
                 f'Emission lines: {len(self.emissionlines)}')
 
     def partitionfunction_internal(self, T, dE):
@@ -456,7 +456,7 @@ class Polyatomic(Species):
                 f'Polarisability: {self.polarisability} m^3\n'
                 f'Multiplicity: {self.multiplicity}\n'
                 f'Effective valence electrons: {self.effectiveelectrons}\n'
-                f'Electron cross section: {self.electroncrosssection} m^2\n'
+                f'Electron cross section data: {self.electroncrosssection}\n'
                 f'Emission lines: {len(self.emissionlines)}')
 
     def partitionfunction_internal(self, T, dE):
