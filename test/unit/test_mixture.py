@@ -80,24 +80,114 @@ def test_heat_capacity_complex(mixture_complex, x0, result, tol):
     assert thisresult == pytest.approx(result, abs=tol)
 
 
-# def test_calculate_viscosity(mixture_simple):
-#     with pytest.raises(NotImplementedError):
-#         mixture_simple.calculate_viscosity()
+@pytest.mark.parametrize("T, P, result, tol", [
+    (MID_T, MID_P, 2.580513973152628e-4, 1e-8),
+    (LOW_T, LOW_P, 5.329099749413684e-5, 1e-9),
+    (HIGH_T, LOW_P, 9.853170387856331e-6, 1e-10),
+    (LOW_T, HIGH_P, 5.329099749499351e-5, 1e-9),
+    (HIGH_T, HIGH_P, 3.957994907973272e-5, 1e-9),
+])
+def test_viscosity_simple(mixture_simple, T, P, result, tol):
+    mixture_simple.T = T
+    mixture_simple.P = P
+
+    thisresult = mixture_simple.calculate_viscosity()
+
+    assert thisresult == pytest.approx(result, abs=tol)
 
 
-# def test_calculate_thermal_conductivity(mixture_simple):
-#     with pytest.raises(NotImplementedError):
-#         mixture_simple.calculate_thermal_conductivity()
+@pytest.mark.parametrize("x0, result, tol", [
+    (LOW_X0, 0.0001227742503457986, 1e-8),
+    (MID_X0, 0.0001550136650783175, 1e-8),
+    (HIGH_X0, 0.00018530280198633887, 1e-8),
+])
+def test_viscosity_complex(mixture_complex, x0, result, tol):
+    mixture_complex.x0 = x0
+
+    thisresult = mixture_complex.calculate_viscosity()
+
+    assert thisresult == pytest.approx(result, abs=tol)
 
 
-# def test_calculate_electrical_conductivity(mixture_simple):
-#     with pytest.raises(NotImplementedError):
-#         mixture_simple.calculate_electrical_conductivity()
+@pytest.mark.parametrize("T, P, result, tol", [
+    (MID_T, MID_P, 1.7038033238833492, 1e-5),
+    (LOW_T, LOW_P, 0.051617047811510164, 1e-7),
+    (HIGH_T, LOW_P, 4.257229924810307, 1e-5),
+    (LOW_T, HIGH_P, 0.05161701653293017, 1e-7),
+    (HIGH_T, HIGH_P, 6.373892451140973, 1e-5),
+])
+def test_thermal_conductivity_simple(mixture_simple, T, P, result, tol):
+    mixture_simple.T = T
+    mixture_simple.P = P
+
+    thisresult = mixture_simple.calculate_thermal_conductivity()
+
+    assert thisresult == pytest.approx(result, abs=tol)
 
 
-# def test_calculate_total_emission_coefficient(mixture_simple):
-#     with pytest.raises(NotImplementedError):
-#         mixture_simple.calculate_total_emission_coefficient()
+@pytest.mark.parametrize("x0, result, tol", [
+    (LOW_X0, 1.9503810612834145, 1e-5),
+    (MID_X0, 2.1760215186744123, 1e-5),
+    (HIGH_X0, 2.380028284022421, 1e-5),
+])
+def test_thermal_conductivity_complex(mixture_complex, x0, result, tol):
+    mixture_complex.x0 = x0
+
+    thisresult = mixture_complex.calculate_thermal_conductivity()
+
+    assert thisresult == pytest.approx(result, abs=tol)
+
+
+@pytest.mark.parametrize("T, P, result, tol", [
+    (MID_T, MID_P, 2446.877304276451, 1e-2),
+    (HIGH_T, LOW_P, 9117.83598817722, 1e-2),
+    (HIGH_T, HIGH_P, 18137.20165962461, 1e-2),
+])
+def test_electrical_conductivity_simple(mixture_simple, T, P, result, tol):
+    mixture_simple.T = T
+    mixture_simple.P = P
+
+    thisresult = mixture_simple.calculate_electrical_conductivity()
+
+    assert thisresult == pytest.approx(result, abs=tol)
+
+
+@pytest.mark.parametrize("x0, result, tol", [
+    (LOW_X0, 4722.0506826184555, 1e-2),
+    (MID_X0, 4462.590178394154, 1e-2),
+    (HIGH_X0, 3917.946170773339, 1e-2),
+])
+def test_electrical_conductivity_complex(mixture_complex, x0, result, tol):
+    mixture_complex.x0 = x0
+
+    thisresult = mixture_complex.calculate_electrical_conductivity()
+    assert thisresult == pytest.approx(result, abs=tol)
+
+
+@pytest.mark.parametrize("T, P, result, tol", [
+    (MID_T, MID_P, 317190580.7314827, 1e3),
+    (HIGH_T, LOW_P, 5182366407.523125, 1e3),
+    (HIGH_T, HIGH_P, 634064080595.6323, 1e3),
+])
+def test_emission_coefficient_simple(mixture_simple, T, P, result, tol):
+    mixture_simple.T = T
+    mixture_simple.P = P
+
+    thisresult = mixture_simple.calculate_total_emission_coefficient()
+    assert thisresult == pytest.approx(result, abs=tol)
+
+
+@pytest.mark.parametrize("x0, result, tol", [
+    (LOW_X0, 13523591436.19605, 1e3),
+    (MID_X0, 8487547948.348428, 1e3),
+    (HIGH_X0, 4110365558.1960716, 1e3),
+])
+def test_emission_coefficient_complex(mixture_complex, x0, result, tol):
+    mixture_complex.x0 = x0
+
+    thisresult = mixture_complex.calculate_total_emission_coefficient()
+
+    assert thisresult == pytest.approx(result, abs=tol)
 
 
 def test_species_setter_exception(mixture_simple):
