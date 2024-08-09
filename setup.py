@@ -47,7 +47,7 @@ setup(
     install_requires=['numpy','scipy>=1.4'],
     extras_require={
         'dev': ['matplotlib'],
-        'test': ['coverage','pytest','jupyter'],
+        'test': ['coverage','pytest','jupyter','sympy'],
     },
     package_data={
         'minplascalc': ['data/*/*.json'],
