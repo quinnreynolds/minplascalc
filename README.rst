@@ -1,8 +1,8 @@
 README
 ======
 
-.. image:: https://travis-ci.org/kittychunk/minplascalc.svg?branch=transport-testing
-    :target: https://travis-ci.org/kittychunk/minplascalc
+.. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/test.yaml/badge.svg
+    :target: https://github.com/quinnreynolds/minplascalc/actions
 
 .. image:: https://readthedocs.org/projects/minplascalc/badge/?version=latest
     :target: https://minplascalc.readthedocs.io/en/latest/?badge=latest
