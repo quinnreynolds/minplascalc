@@ -4,19 +4,22 @@
         "O": 1,
         "Si": 1
     },
-    "molarMass": 0.044084899999999996,
-    "chargeNumber": 1,
-    "diatomicData": {
-        "ionisationEnergy": -1,
-        "dissociationEnergy": -1,
-        "sigmaS": 1,
-        "g0": 2,
-        "we": 1241.55,
-        "Be": 0.7178
-    },
-    "energyUnit": "1/cm",
-    "molarMassUnit": "kg/mol",
+    "molarmass": 0.04408435642009093,
+    "chargenumber": 1,
+    "polarisability": 4.149e-30,
+    "multiplicity": 2,
+    "effectiveelectrons": null,
+    "electroncrosssection": null,
+    "emissionlines": [],
+    "dissociationenergy": Infinity,
+    "ionisationenergy": Infinity,
+    "sigma_s": 1,
+    "g0": 2,
+    "w_e": 2.1791318279319545e-20,
+    "b_e": 1.3726345424803833e-23,
     "sources": [
-        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303"    
+        "RD Johnson III (ed). NIST Computational Chemistry Comparison and Benchmark Database, NIST Standard Reference Database Number 101 Release 22, May 2022, http://cccbdb.nist.gov/, DOI: http://doi.org/10.18434/T47C7Z",
+        "PJ Linstrom and WG Mallard (eds). NIST Chemistry WebBook, NIST Standard Reference Database Number 69, DOI: https://doi.org/10.18434/T4D303",
+        "G Venter, University of Cape Town, private communications 2024"
     ]
 }
