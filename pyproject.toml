@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["matplotlib"]
+dev = ["matplotlib", "pre-commit"]
 test = ["coverage", "pytest", "jupyter", "sympy"]
 
 [tool.hatch.metadata]
