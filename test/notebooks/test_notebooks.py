@@ -15,7 +15,7 @@ import pathlib
 import pytest
 
 import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor, CellExecutionError
+from nbconvert.preprocessors import ExecutePreprocessor
 
 # Default search path is the current directory
 searchpath = pathlib.Path('.')

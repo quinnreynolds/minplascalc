@@ -1,10 +1,8 @@
 import json
-from matplotlib.pyplot import polar
 import numpy
 import pathlib
 from copy import deepcopy
 from scipy import constants
-from sympy import N
 
 __all__ = ['SPECIESPATH', 'from_file', 'from_name', 'Monatomic', 
            'Diatomic', 'Polyatomic', 'Electron']

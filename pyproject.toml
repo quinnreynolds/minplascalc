@@ -55,3 +55,10 @@ features=["dev", "test"]
 [tool.hatch.envs.default.scripts]
 test = ["pytest {args:.}"]
 
+[tool.ruff]
+lint.extend-ignore = [
+    "E741",  # ambiguous variable name - the math-heavy modules are full of these
+]
+lint.exclude = [
+    ".venv",
+]
