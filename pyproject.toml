@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "minplascalc"
+dynamic = ["version"]
+description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
+readme = "README.rst"
+requires-python = ">=3.5"
+license = {text = "GPLv3"}
+authors = [
+    {name = "Quinn Reynolds", email = "quinnr@mintek.co.za"}
+]
+urls = { "Homepage" = "https://github.com/quinnreynolds/minplascalc" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6"
+]
+keywords = ["plasma", "gibbs", "composition"]
+
+dependencies = [
+    "numpy",
+    "scipy>=1.4"
+]
+
+[project.optional-dependencies]
+dev = ["matplotlib", "pre-commit"]
+test = ["coverage", "pytest", "jupyter", "sympy"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.sdist]
+include = ["minplascalc/data/*/*.json"]
+
+[tool.hatch.version]
+path = "minplascalc/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "minplascalc",
+]
+
+[tool.hatch.envs.default]
+type = "virtual"
+path = ".venv"
+features=["dev", "test"]
+
+[tool.hatch.envs.default.scripts]
+test = ["pytest {args:.}"]
+
+[tool.ruff]
+lint.extend-ignore = [
+    "E741",  # ambiguous variable name - the math-heavy modules are full of these
+]
+lint.exclude = [
+    ".venv",
+]
