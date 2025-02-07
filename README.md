@@ -1,5 +1,4 @@
-README
-======
+# Minplascalc 🍚⚡
 
 .. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/test.yaml/badge.svg
     :target: https://github.com/quinnreynolds/minplascalc/actions
@@ -13,38 +12,78 @@ compositions relevant to metallurgical problems.
 
 *Quinn Reynolds, MINTEK Pyrometallurgy Division, 2018-present*
 
-What is this repository for?
-----------------------------
+
+## What is this repository for?
 
 * You're here because you want to calculate plasma compositions,
   thermodynamics, and physical and radiative properties. This package will
   do most of those things for LTE plasmas, to varying degrees of fidelity.
 * Version 0.x alpha
 
-How do I get set up?
---------------------
 
-* Getting started: Clone the repo. You'll get the package and some 
-  test drivers.
-* We use `hatch <http://hatch.pypa.io>`_. You will need to install it before proceeding.
-* Run ``hatch env create`` to create a virtual environment at ``.venv`` with the necessary
-  dependencies.
-* How to run tests: simply run ``hatch run test`` in the root directory.
+## Quick Start
 
-Contribution guidelines
------------------------
+This project used [conda](https://anaconda.org/) to install all dependencies.
+
+Clone the repository and create an isolated environment :
+
+```
+git clone https://github.com/pag1pag/minplascalc
+cd minplascalc
+conda env create -n minplascalc-env -f environment.yml
+conda activate minplascalc-env
+pip install -e .         # install in editable mode
+```
+
+Run in Python:
+
+```python
+>>> import minplascalc
+```
+
+## Workflow for developers/contributors
+
+Clone the repository :
+
+```
+git clone https://github.com/pag1pag/minplascalc
+cd minplascalc
+```
+
+For best experience create a new conda environment (e.g. minplascalc-env) with Python 3.11:
+
+```
+conda create -n minplascalc-env -c conda-forge python=3.11 -y
+conda activate minplascalc-env
+```
+
+Before pushing to GitHub, run the following commands:
+
+1. Update conda environment: `make conda-env-update`
+1. Install this package in editable mode: `pip install -e .`
+1. (optional) Run quality assurance checks (code linting): `make qa`
+1. (optional) Run tests: `make unit-tests`
+1. (optional) Run the static type checker: `make type-check`
+1. (optional) Build the documentation (see [Sphinx tutorial](https://www.sphinx-doc.org/en/master/tutorial/)): `make docs-build`
+
+If using Windows, `make` is not available by default. Either install it
+([for instance with Chocolatey](https://stackoverflow.com/questions/32127524/how-to-install-and-use-make-in-windows)),
+or open the [Makefile](./Makefile) and execute the lines therein manually.
+
+
+## Contribution guidelines
 
 * Writing tests: TBC
 * Code review: TBC
 * Other guidelines: TBC
 
-Who do I talk to?
------------------
+
+## Who do I talk to?
 
 * quinnr@mintek.co.za
 
-References
-----------
+
+## References
 
 * MI Boulos, P Fauchais, and E Pfender. Thermal Plasmas: Fundamentals and 
   Applications Volume 1, *Plenum Press*, New York NY, 1994
