@@ -1,20 +1,28 @@
-# Minimal makefile for Sphinx documentation
-#
+PROJECT := minplascalc
+CONDA := conda
+CONDAFLAGS :=
+COV_REPORT := html
 
-# You can set these variables from the command line.
-SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = minplascalc
-SOURCEDIR     = .
-BUILDDIR      = _build
+default: qa unit-tests type-check
 
-# Put it first so that "make" without argument is like "make help".
-help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+qa:
+	pre-commit run --all-files
 
-.PHONY: help Makefile
+unit-tests:
+	python -m pytest tests docs -vv --cov=. --cov-report=xml --doctest-glob="*.md" --doctest-glob="*.rst"
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+type-check:
+	python -m mypy .  --exclude docs
+
+conda-env-update:
+	$(CONDA) install -y -c conda-forge conda-merge
+	$(CONDA) run conda-merge environment.yml ci/environment-ci.yml > ci/combined-environment-ci.yml
+	$(CONDA) env update $(CONDAFLAGS) -f ci/combined-environment-ci.yml
+
+template-update:
+	pre-commit run --all-files cruft -c .pre-commit-config-cruft.yaml
+
+docs-build:
+	cd docs && rm -fr _api && make clean && make html
+
+# DO NOT EDIT ABOVE THIS LINE, ADD COMMANDS BELOW
