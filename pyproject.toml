@@ -1,64 +1,78 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
 
 [project]
-name = "minplascalc"
-dynamic = ["version"]
-description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
-readme = "README.rst"
-requires-python = ">=3.5"
-license = {text = "GPLv3"}
 authors = [
-    {name = "Quinn Reynolds", email = "quinnr@mintek.co.za"}
+  {name = "Quinn Reynolds", email = "quinnr@mintek.co.za"},
+  {name = "Pierre-Antoine Goutier", email = "pierre-antoine.goutier@centralesupelec.fr"}
 ]
-urls = { "Homepage" = "https://github.com/quinnreynolds/minplascalc" }
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering :: Chemistry",
-    "Topic :: Scientific/Engineering :: Physics",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3.5",
-    "Programming Language :: Python :: 3.6"
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Physics",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
 ]
-keywords = ["plasma", "gibbs", "composition"]
-
 dependencies = [
-    "numpy",
-    "scipy>=1.4"
+  "numpy",
+  "scipy>=1.4"
 ]
+description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
+dynamic = ["version"]
+keywords = ["plasma", "gibbs", "composition"]
+license = {text = "GPLv3"}
+name = "minplascalc"
+readme = "README.md"
+requires-python = ">=3.11"
+urls = {"Homepage" = "https://github.com/quinnreynolds/minplascalc"}
 
 [project.optional-dependencies]
 dev = ["matplotlib", "pre-commit"]
 test = ["coverage", "pytest", "jupyter", "sympy"]
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.coverage.run]
+branch = true
 
-[tool.hatch.build.targets.sdist]
-include = ["minplascalc/data/*/*.json"]
-
-[tool.hatch.version]
-path = "minplascalc/__init__.py"
-
-[tool.hatch.build.targets.wheel]
-packages = [
-    "minplascalc",
-]
-
-[tool.hatch.envs.default]
-type = "virtual"
-path = ".venv"
-features=["dev", "test"]
-
-[tool.hatch.envs.default.scripts]
-test = ["pytest {args:.}"]
+[tool.mypy]
+ignore_missing_imports = true
+strict = false
 
 [tool.ruff]
-lint.extend-ignore = [
-    "E741",  # ambiguous variable name - the math-heavy modules are full of these
+# Same as Black.
+indent-width = 4
+line-length = 88
+
+[tool.ruff.lint]
+ignore = [
+  # pydocstyle: Missing Docstrings
+  "D1"
 ]
-lint.exclude = [
-    ".venv",
+select = [
+  # pyflakes
+  "F",
+  # pycodestyle
+  "E",
+  "W",
+  # isort
+  "I",
+  # pydocstyle
+  "D"
 ]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 88
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.setuptools]
+packages = ["minplascalc", "tests"]
+
+[tool.setuptools_scm]
+write_to = "minplascalc/version.py"
+write_to_template = '''
+# Do not change! Do not track in version control!
+__version__ = "{version}"
+'''
