@@ -62,7 +62,7 @@ select = [
 ]
 
 [tool.ruff.lint.pycodestyle]
-max-line-length = 88
+max-line-length = 110
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"

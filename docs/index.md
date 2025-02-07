@@ -1,6 +1,5 @@
 # Welcome to Minplascalc's documentation!
 
-
 ![image](minplascalc_logo_small.png)
 
 ```{toctree}
