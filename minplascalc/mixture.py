@@ -1,59 +1,44 @@
 import logging
 import warnings
 
-import numpy
-from scipy import constants
+import numpy as np
 
-from . import functions_radiation, functions_transport
-from . import species as _species
+from minplascalc import functions_radiation, functions_transport
+from minplascalc import species as _species
+from minplascalc.units import Units
+
+u = Units()
 
 __all__ = ["lte_from_names", "LTE"]
 
 
-def lte_from_names(names, x0, T, P):
-    """Create a LTE mixture from a list of species names using the species
-    database.
-
-    Parameters
-    ----------
-    names : list of str
-        Names of the species.
-    x0 : list of float
-        Initial value of mole fractions for each species, typically the
-        room-temperature composition of the plasma-generating gas.
-    T : float
-        LTE plasma temperature, in K.
-    P : float
-        LTE plasma pressure, in Pa.
-
-    Returns
-    -------
-    An LTE object instance.
-    """
-    if "e" in names:
-        raise ValueError(
-            "Electrons are added automatically, please don't "
-            "include them in your species list."
-        )
-    species = [_species.from_name(nm) for nm in names]
-    return LTE(species, x0, T, P, 1e20, 1e-10, 1000)
-
-
 class LTE:
-    def __init__(self, species, x0, T, P, gfe_ni0, gfe_reltol, gfe_maxiter):
-        """Class representing a thermal plasma specification with multiple
+    def __init__(
+        self,
+        species: list[_species.Monatomic | _species.Diatomic | _species.Polyatomic],
+        x0: list[float],
+        T: float,
+        P: float,
+        gfe_ni0: float,
+        gfe_reltol: float,
+        gfe_maxiter: int,
+    ):
+        """Local Thermodynamic Equilibrium (LTE) plasma mixture object.
+
+        Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
         at different temperatures and pressures using the principle of Gibbs
         free energy minimisation.
 
         Parameters
         ----------
-        species : list or tuple of obj
+        species : list[_species.Monatomic | _species.Diatomic | _species.Polyatomic]
             All species participating in the mixture (excluding electrons which
             are added automatically), as minplascalc Species objects.
-        x0 : list or tuple of float
+        x0 : list[float]
             Constraint mole fractions for each species, typically the
             room-temperature composition of the plasma-generating gas.
+            It should be the same length as species.
         T : float
             LTE plasma temperature, in K.
         P : float
@@ -61,6 +46,8 @@ class LTE:
         gfe_ni0 : float
             Gibbs Free Energy minimiser solution control: Starting estimate for
             number of particles of each species. Typically O(1e20).
+            NOTE: This is the the number of particles, not the number density.
+            TODO: change gfe_ni0 to gfe_Ni0
         gfe_reltol : float
             Gibbs Free Energy minimiser solution control: Relative tolerance at
             which solution for particle numbers is considered converged.
@@ -68,14 +55,26 @@ class LTE:
         gfe_maxiter : int
             Gibbs Free Energy minimiser solution control: Bailout loop count
             value for iterative solver. Typically O(1e3).
+
+        Raises
+        ------
+        ValueError
+            If the species list includes an electron species.
+        ValueError
+            If the species list and constraint mole fractions list are not the
+            same length.
         """
+        # Check for electron species in the species list.
         if "e" in [sp.name for sp in species]:
             raise ValueError(
                 "Electrons are added automatically, please don't "
                 "include them in your species list."
             )
+        # Check for equal length of species and constraint mole fractions lists.
         if len(species) != len(x0):
             raise ValueError("Lists species and x0 must be the same length.")
+
+        # Add electron species to the species list.
         self.__species = tuple(list(species) + [_species.Electron()])
         self.x0 = x0
         self.T = T
@@ -83,7 +82,8 @@ class LTE:
         self.gfe_ni0 = gfe_ni0
         self.gfe_reltol = gfe_reltol
         self.gfe_maxiter = gfe_maxiter
-        self.__isLTE = False
+
+        self.__isLTE = False  # Flag to indicate if LTE composition has been calculated.
 
     @property
     def species(self):
@@ -104,8 +104,10 @@ class LTE:
     @x0.setter
     def x0(self, x0):
         if len(x0) == len(self.species) - 1:
-            self.__isLTE = False
-            self.__x0 = tuple(list(x0) + [0])
+            self.__isLTE = False  # Reset LTE composition flag.
+            self.__x0 = tuple(
+                list(x0) + [0]
+            )  # Add electron mole fraction, set to zero.
         else:
             raise ValueError(
                 "Please specify constraint mole fractions for all "
@@ -118,7 +120,7 @@ class LTE:
 
     @T.setter
     def T(self, T):
-        self.__isLTE = False
+        self.__isLTE = False  # Reset LTE composition flag.
         self.__T = T
 
     @property
@@ -127,7 +129,7 @@ class LTE:
 
     @P.setter
     def P(self, P):
-        self.__isLTE = False
+        self.__isLTE = False  # Reset LTE composition flag.
         self.__P = P
 
     def __repr__(self):
@@ -145,207 +147,539 @@ class LTE:
             f"Temperature: {self.T} K\nPressure: {self.P} Pa"
         )
 
-    def __recalcE0i(self):
-        """Calculate the reference energy values for all species, including
+    def __recalcE0i(self) -> tuple[np.ndarray, np.ndarray]:
+        r"""Calculate the reference energy values for all species.
+
+        Calculate the reference energy values for all species, including
         ionisation energy lowering from limitation theory of Stewart &
         Pyatt 1966 (lowering only applied to positive ions).
 
         Returns
         -------
-        tuple(ndarray, ndarray)
+        tuple[np.ndarray, np.ndarray]
             Reference energy and ionisation energy lowering of each species
             in the mixture, in J.
-        """
-        nspecies = len(self.species)
-        kbt = constants.Boltzmann * self.T
-        ndi = self.__ni * self.P / (self.__ni.sum() * kbt)
-        E0, dE = numpy.zeros(nspecies), numpy.zeros(nspecies)
 
+        Notes
+        -----
+        The reference energy :math:`E_i^0` of each species is calculated as:
+
+        * For uncharged monatomic species and electrons, :math:`E_i^0 = 0`,
+        * For uncharged polyatomic species, :math:`E_i^0` is the negative of the dissociation energy,
+        * For charged species, :math:`E_i^0` is :math:`E_i^0` of the species with one fewer charge number
+          plus the lowered ionisation energy of that species.
+
+        The lowered ionisation energy :math:`\Delta E_i` of each species is using the formula
+        of Stewart & Pyatt 1966:
+
+        .. math::
+
+            \frac{\delta E_i}{k_B T} = \frac{
+                \left [ \left (\frac{a_i}{l_D} \right )^3 + 1 \right ]^\frac{2}{3} -1
+                }{2 \left( z^*+1 \right)}
+
+        where:
+
+        .. math::
+
+            z^* = \left ( \frac{\sum z_j^2 n_j}{\sum z_j n_j} \right )_{j \neq e}, \quad
+            a_i = \left ( \frac{3 z_i}{4 \pi n_e} \right )^\frac{1}{3}, \quad
+            l_D = \left ( \frac{\epsilon_0 k_B T}{4 \pi e^2 \left ( z^* + 1 \right ) n_e} \right )^\frac{1}{2}
+
+        Here,
+
+        * :math:`\delta E_i` is the amount the ionisation energy of species i is lowered by (in J),
+        * :math:`a_i` is the ion-sphere radius of species i,
+        * :math:`l_D` is the Debye sphere radius,
+        * :math:`z^*` is the effective charge number in a plasma consisting of a mixture of species
+          of different charges,
+        * :math:`z_j` is the charge number of species j,
+        * :math:`n_j` is the number density (particles per cubic meter) of species j,
+        * :math:`e` is the electron charge.
+        """
+        nb_species = len(self.species)
+        kbt = u.k_b * self.T
+
+        # Array of number densities of each species in the plasma.
+        N_i = self.__Ni  # Number of particles of each species.
+        N_tot = N_i.sum()  # Total number of particles in the plasma.
+        V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
+        number_densities = N_i / V  # Number density of each species, in particles/m3.
+
+        # Initialise arrays for reference energy and ionisation energy lowering.
+        E0, dE = np.zeros(nb_species), np.zeros(nb_species)
+
+        # For (uncharged) polyatomic species, the reference energy is the
+        # negative of the dissociation energy.
         for i, sp in enumerate(self.species):
-            if sum(dv for kv, dv in sp.stoichiometry.items()) >= 2:
+            if sum(sp.stoichiometry.values()) >= 2:
                 E0[i] = -sp.dissociationenergy
-        weightedchargesumsqd, weightedchargesum = 0, 0
-        for sp, nd in zip(self.species, ndi):
-            if sp.chargenumber > 0:
-                weightedchargesum += nd * sp.chargenumber
-                weightedchargesumsqd += nd * sp.chargenumber**2
-        zstar = weightedchargesumsqd / weightedchargesum
-        debyed3 = (
-            constants.epsilon_0
-            * kbt
-            / (4 * numpy.pi * (zstar + 1) * ndi[-1] * constants.elementary_charge**2)
+
+        # Calculate the effective charge number z*.
+        # The effective charge number is the sum of the square of the charge
+        # number of each species multiplied by the number density of that species.
+        weighted_charge_sum_squared, weighted_charge_sum = 0.0, 0.0
+        for sp, nd in zip(self.species, number_densities):
+            if sp.chargenumber > 0:  # Only consider positively charged species.
+                # Electron are discarded, but so are every negatively charged species.
+                # TODO: Check if negative ions should be considered.
+                weighted_charge_sum += nd * sp.chargenumber
+                weighted_charge_sum_squared += nd * sp.chargenumber**2
+        z_star = weighted_charge_sum_squared / weighted_charge_sum
+
+        # Get the electron number density.
+        n_e = number_densities[-1]  # m^-3
+
+        # Calculate the Debye sphere radius, to the power 3.
+        debye_pow3 = (
+            u.epsilon_0 * kbt / (4 * np.pi * (z_star + 1) * n_e * u.e**2)
         ) ** (3 / 2)
+
+        # Calculate the ionisation energy lowering for each (positively) charged species.
         for i, sp in enumerate(self.species):
             if sp.chargenumber > 0:
-                ai3 = 3 * sp.chargenumber / (4 * numpy.pi * ndi[-1])
-                dE[i] = kbt * ((ai3 / debyed3 + 1) ** (2 / 3) - 1) / (2 * (zstar + 1))
-        neutralsp = [sp for sp in self.species if sp.chargenumber == 0]
-        for nsp in neutralsp:
-            ncsp = [
+                # Electron are discarded, but so are every negatively charged species.
+                # TODO: Check if negative ions should be considered.
+
+                # Calculate the ion-sphere radius, to the power 3.
+                ai_pow3 = 3 * sp.chargenumber / (4 * np.pi * n_e)
+                # Calculate the ionisation energy lowering.
+                dE[i] = (
+                    kbt
+                    * ((ai_pow3 / debye_pow3 + 1) ** (2 / 3) - 1)
+                    / (2 * (z_star + 1))
+                )
+
+        # Get the neutral species.
+        neutral_species = [sp for sp in self.species if sp.chargenumber == 0]
+
+        # Calculate the reference energy for each species.
+        for neutral_sp in neutral_species:
+            # Get the negatively charged species with the same stoichiometry.
+            negatively_charged_sp = [
                 (i, sp)
                 for i, sp in enumerate(self.species)
-                if (sp.stoichiometry == nsp.stoichiometry and sp.chargenumber <= 0)
+                if (
+                    sp.stoichiometry == neutral_sp.stoichiometry
+                    and sp.chargenumber <= 0
+                )
             ]
-            ncsp.sort(key=lambda sp: sp[1].chargenumber, reverse=True)
-            pcsp = [
+            # Sort the negatively charged species by charge number in descending order.
+            # Example: -2, -1, 0.
+            negatively_charged_sp.sort(key=lambda sp: sp[1].chargenumber, reverse=True)
+
+            # Get the positively charged species with the same stoichiometry.
+            positively_charged_sp = [
                 (i, sp)
                 for i, sp in enumerate(self.species)
-                if (sp.stoichiometry == nsp.stoichiometry and sp.chargenumber >= 0)
+                if (
+                    sp.stoichiometry == neutral_sp.stoichiometry
+                    and sp.chargenumber >= 0
+                )
             ]
-            pcsp.sort(key=lambda sp: sp[1].chargenumber, reverse=False)
-            for (ifrom, spfrom), (ito, spto) in zip(pcsp[:-1], pcsp[1:]):
+            # Sort the positively charged species by charge number in ascending order.
+            # Example: 0, 1, 2.
+            positively_charged_sp.sort(key=lambda sp: sp[1].chargenumber, reverse=False)
+
+            # Calculate the reference energy for non-neutral species.
+            # .. Positive ions.
+            for (ifrom, spfrom), (ito, spto) in zip(
+                positively_charged_sp[:-1], positively_charged_sp[1:]
+            ):
+                # The reference energy is the reference energy of the species with one fewer
+                # charge number, plus the lowered ionisation energy of that species.
                 E0[ito] = E0[ifrom] + spfrom.ionisationenergy - dE[ifrom]
-            for (ifrom, spfrom), (ito, spto) in zip(ncsp[:-1], ncsp[1:]):
+
+                # Code example:
+                # positively_charged_sp = [(index_H, H), (index_H+, H+), (index_H2+, H2+)]
+                # positively_charged_sp[:-1] = [(index_H, H), (index_H+, H+)]
+                # positively_charged_sp[1:] = [(index_H+, H+), (index_H2+, H2+)]
+                #
+                # 1st iteration:
+                #   (ifrom, spfrom) = (index_H, H)
+                #   (ito, spto) = (index_H+, H+)
+                #   E0[index_H+] = E0[index_H] + H.ionisationenergy - dE[index_H]
+                #                = 0 + H.ionisationenergy - 0
+                # 2nd iteration:
+                #   (ifrom, spfrom) = (index_H+, H+)
+                #   (ito, spto) = (index_H2+, H2+)
+                #   E0[index_H2+] = E0[index_H+] + H+.ionisationenergy - dE[index_H+]
+            # .. Negative ions.
+            for (ifrom, spfrom), (ito, spto) in zip(
+                negatively_charged_sp[:-1], negatively_charged_sp[1:]
+            ):
                 E0[ito] = E0[ifrom] - spto.ionisationenergy + dE[ito]
+                # NOTE: Check if dE is well computed for negatively charged species.
+
+        # Return the reference energy and ionisation energy lowering.
         return E0, dE
 
-    def calculate_composition(self):
-        """Calculate the LTE composition of the plasma in particles/m3.
+    def calculate_composition(self) -> np.ndarray:
+        r"""Calculate the LTE composition of the plasma in particles/m3.
+
+        An iterative Lagrange multiplier approach is used to minimise the Gibbs
+        free energy of the plasma, subject to the constraints of constant
+        temperature, pressure, species mole fractions and charge neutrality.
 
         Returns
         -------
-        ndarray
+        np.ndarray
             Number density of each species in the plasma as listed in
             Mixture.species, in particles/m3.
+
+        Notes
+        -----
+        The Gibbs free energy minimisation problem is solved iteratively by
+        solving a linear system of equations. The system is defined by the
+        following equations:
+
+        .. math::
+
+            \frac{\partial G}{\partial N_i} = \mu_i = 0, \quad i = 1, 2, \ldots, n
+
+        where :math:`G` is the Gibbs free energy of the plasma, :math:`N_i` is
+        the number of particles of species :math:`i`, and :math:`\mu_i` is the
+        chemical potential of species :math:`i`.
+
+        The Gibbs free energy of the plasma is given by:
+
+        .. math::
+
+            G = G^0 + \sum_i \mu_i N_i
+              = \sum_i \left ( E_i^0 - k_B T \log \left ( \frac{Z_{\text{tot}, i}}{N_i} \right ) \right ) N_i
+
+        where:
+
+        * :math:`G^0` is the Gibbs free energy at zero temperature,
+        * :math:`E_i^0` is the reference energy of species :math:`i`,
+        * :math:`Z_{\text{tot}, i}` is the total partition function of species :math:`i`,
+        * :math:`k_B` is the Boltzmann constant,
+        * :math:`T` is the temperature,
+        * :math:`N_i` is the number of particles of species :math:`i`.
+
+        The total partition function of each species is given by:
+
+        .. math::
+
+            Z_{\text{tot}, i} = Z_{tr, i} Z_{rot, i} Z_{vib, i} Z_{el, i}
+
+        TODO: write how the minimisation is done.
         """
-        nspecies = len(self.species)
-        kbt = constants.Boltzmann * self.T
+        nb_species = len(self.species)  # It includes the electron species.
+        kbt = u.k_b * self.T
 
-        if not self.__isLTE:
-            elements = [
-                {"name": nm, "stoichcoeff": None, "ntot": 0}
-                for nm in sorted(
-                    set(s for sp in self.species for s in sp.stoichiometry)
-                )
+        # If the composition has already been calculated, return it.
+        # Otherwise, calculate it.
+        if self.__isLTE:
+            N_i = self.__Ni  # Number of particles of each species.
+            N_tot = N_i.sum()  # Total number of particles in the plasma.
+            V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
+            return N_i / V  # Number density of each species, in particles/m3.
+
+        # Get the set of unique elements in the species.
+        # Electrons are discarded.
+        # Example: if species = {N2, O2, NO}, then unique_elements = {N, O}.
+        unique_elements = set(s for sp in self.species for s in sp.stoichiometry)
+        # For each unique element, create a dictionary with the element name,
+        # stoichiometric coefficient in each species, and total number of that
+        # element in the plasma.
+        elements = [
+            {"name": name, "stoich_coeff": None, "N_tot": 0}
+            for name in sorted(unique_elements)
+        ]
+        # Fill in the stoichiometric coefficients.
+        # Example: if species = {N2, O2, NO}, then elements = [{N, [2, 0, 1], 0}, {O, [0, 2, 1], 0}].
+        for element in elements:
+            element["stoich_coeff"] = [
+                sp.stoichiometry.get(element["name"], 0) for sp in self.species
             ]
-            for elm in elements:
-                elm["stoichcoeff"] = [
-                    sp.stoichiometry.get(elm["name"], 0) for sp in self.species
+        # Calculate the total number density of each element in the plasma.
+        # Example: if species = {N2, O2, NO}, and x0 = [0.7, 0.2, 0.1], then
+        # elements = [{N, [2, 0, 1], 1.5e24}, {O, [0, 2, 1], 0.5e24}].
+        # TODO: Check if the factor 1e24 is arbitrary.
+        for element in elements:
+            element["N_tot"] = sum(
+                1e24 * c * x0 for c, x0 in zip(element["stoich_coeff"], self.x0)
+            )
+
+        # Create the Gibbs free energy minimisation matrix and vector.
+        # Example:
+        #   if species = {N2, O2, NO, N2+, e-}, and x0 = [0.7, 0.2, 0.1, 0],
+        #   then nb_species = 5, elements = [{N, [2, 0, 1, 2], 1.5e24}, {O, [0, 2, 1, 0], 0.5e24}],
+        #   and minimiser_dof = 5 + 2 + 1 = 8.
+        #
+        #  gfe_matrix = [     N2  O2  NO  N2+  e-  N  O  charge
+        #           ┌ N2    [  0,  0,  0,  0,  0,  2,  0,  0],
+        #           │ O2    [  0,  0,  0,  0,  0,  0,  2,  0],
+        #   species ┥ NO    [  0,  0,  0,  0,  0,  1,  1,  0],
+        #           │ N2+   [  0,  0,  0,  0,  0,  2,  0,  1],
+        #           └ e-    [  0,  0,  0,  0,  0,  0,  0, -1],
+        #   element ┌  N    [  2,  0,  1,  2,  0,  0,  0,  0],
+        #           └  O    [  0,  2,  1,  0,  0,  0,  0,  0],
+        #   charge          [  0,  0,  0,  1, -1,  0,  0,  0],
+        # ]
+        # gfe_vector = [
+        #           ┌ N2     0,
+        #           │ O2     0,
+        #   species ┥ NO     0,
+        #           │ N2+    0,
+        #           └ e-     0,
+        #   element ┌  N     1.5e24,
+        #           └  O     0.5e24,
+        #   charge           0,
+        # ]
+        minimiser_dof = nb_species + len(elements) + 1  # Number of degrees of freedom.
+        gfe_matrix = np.zeros((minimiser_dof, minimiser_dof))
+        gfe_vector = np.zeros(minimiser_dof)
+        for i, element in enumerate(elements):
+            gfe_vector[nb_species + i] = element["N_tot"]
+            for j, sc in enumerate(element["stoich_coeff"]):
+                gfe_matrix[nb_species + i, j] = sc
+                gfe_matrix[j, nb_species + i] = sc
+        for j, qc in enumerate(sp.chargenumber for sp in self.species):
+            gfe_matrix[-1, j] = qc
+            gfe_matrix[j, -1] = qc
+
+        # Initialise the number of particles of each species.
+        # The estimate is the same for all species, and is given by the user.
+        # It is typically O(1e20).
+        self.__Ni = np.full(nb_species, self.gfe_ni0)
+
+        # Minimise the Gibbs free energy.
+        # The minimisation is done iteratively, with a relaxation factor to
+        # prevent large changes in the number of particles of each species.
+
+        minimiser_success = False  # Flag to indicate if the minimiser has converged.
+        # Factors to control the relaxation.
+        # The relaxation factor is decreased at each failed iteration.
+        governor_factors = np.linspace(0.9, 0.1, 9)
+        governor_iters = 0  # Iteration counter for the relaxation factor.
+
+        while not minimiser_success and governor_iters < len(governor_factors):
+            minimiser_success = True  # Assume the minimiser will converge.
+            governor_factor = governor_factors[governor_iters]  # Relaxation factor.
+            relative_tolerance = self.gfe_reltol * 10  # Initial relative tolerance.
+            minimiser_iters = 0  # Iteration counter for the minimiser.
+
+            while relative_tolerance > self.gfe_reltol:
+                # Calculate the reference energy and ionisation energy lowering.
+                self.__E0, self.__dE = self.__recalcE0i()
+                N_tot = self.__Ni.sum()  # Total number of particles in the plasma.
+                V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
+
+                #  gfe_matrix[:nb_species, :nb_species] = [
+                #               N2                         O2                  NO               N2+  e-
+                #   N2    [  -kbt/N_tot + kbt/N_N2, -kbt/N_tot           , -kbt/N_tot           , ...],
+                #   O2    [  -kbt/N_tot           , -kbt/N_tot + kbt/N_O2, -kbt/N_tot           , ...],
+                #   NO    [  -kbt/N_tot           , -kbt/N_tot           , -kbt/N_tot + kbt/N_NO, ...],
+                #   N2+   [  ...                  ,                                                  ],
+                #   e-    [  ...                  ,                                                  ],
+                # ]
+                off_diag = -kbt / N_tot * np.ones(nb_species)
+                on_diag = np.diag(kbt / self.__Ni)
+                gfe_matrix[:nb_species, :nb_species] = off_diag + on_diag
+
+                # Calculate the total partition function of each species.
+                total = [
+                    species.partitionfunction_total(V, self.T, dE)
+                    for species, dE in zip(self.species, self.__dE)
                 ]
-            for elm in elements:
-                elm["ntot"] = sum(
-                    1e24 * c * x0loc for c, x0loc in zip(elm["stoichcoeff"], self.x0)
-                )
-            minimiser_dof = nspecies + len(elements) + 1
-            gfematrix = numpy.zeros((minimiser_dof, minimiser_dof))
-            gfevector = numpy.zeros(minimiser_dof)
-            for i, elm in enumerate(elements):
-                gfevector[nspecies + i] = elm["ntot"]
-                for j, sc in enumerate(elm["stoichcoeff"]):
-                    gfematrix[nspecies + i, j] = sc
-                    gfematrix[j, nspecies + i] = sc
-            for j, qc in enumerate(sp.chargenumber for sp in self.species):
-                gfematrix[-1, j] = qc
-                gfematrix[j, -1] = qc
 
-            self.__ni = numpy.full(nspecies, self.gfe_ni0)
-            governorfactors = numpy.linspace(0.9, 0.1, 9)
-            successyn = False
-            governoriters = 0
-            while not successyn and governoriters < len(governorfactors):
-                successyn = True
-                governorfactor = governorfactors[governoriters]
-                reltol = self.gfe_reltol * 10
-                minimiseriters = 0
-                while reltol > self.gfe_reltol:
-                    self.__E0, self.__dE = self.__recalcE0i()
-                    nisum = self.__ni.sum()
-                    V = nisum * kbt / self.P
-                    offdiag, ondiag = -kbt / nisum, numpy.diag(kbt / self.__ni)
-                    gfematrix[:nspecies, :nspecies] = offdiag + ondiag
-                    total = [
-                        sp.partitionfunction_total(V, self.T, dE)
-                        for sp, dE in zip(self.species, self.__dE)
-                    ]
-                    mu = -kbt * numpy.log(total / self.__ni) + self.__E0
-                    gfevector[:nspecies] = -mu
-                    solution = numpy.linalg.solve(gfematrix, gfevector)
-                    newni = solution[0:nspecies]
-                    deltani = abs(newni - self.__ni)
-                    maxniindex = newni.argmax()
-                    reltol = deltani[maxniindex] / solution[maxniindex]
+                # Calculate the chemical potential of each species.
+                mu = -kbt * np.log(total / self.__Ni) + self.__E0
 
-                    maxalloweddeltani = governorfactor * self.__ni
-                    deltani = deltani.clip(min=maxalloweddeltani)
-                    newrelaxfactors = maxalloweddeltani / deltani
-                    relaxfactor = newrelaxfactors.min()
-                    self.__ni = (1 - relaxfactor) * self.__ni + relaxfactor * newni
+                # gfe_vector[:nb_species] = [
+                #     -( E_0_N2 - kbt * log(Z_tot / N_N2) ),
+                #     -( E_0_O2 - kbt * log(Z_tot / N_O2) ),
+                #     ...,
+                #     ...,
+                #     ...,
+                # ]
+                gfe_vector[:nb_species] = -mu
 
-                    minimiseriters += 1
-                    if minimiseriters > self.gfe_maxiter:
-                        successyn = False
-                        break
-                governoriters += 1
-            if not successyn:
-                warnings.warn(
-                    "Minimiser could not find a converged solution, "
-                    "results may be inaccurate."
-                )
-            # noinspection PyUnboundLocalVariable
-            logging.debug(governoriters, relaxfactor, reltol)
-            logging.debug(self.__ni)
+                # Solve the linear system of equations.
+                # The solution is the estimated number of particles of each species.
+                solution = np.linalg.solve(gfe_matrix, gfe_vector)
+
+                # New number of particles of each species.
+                new_Ni = solution[0:nb_species]
+                # Absolute change in the number of particles.
+                delta_Ni = abs(new_Ni - self.__Ni)
+                max_Ni_index = new_Ni.argmax()
+                relative_tolerance = delta_Ni[max_Ni_index] / solution[max_Ni_index]
+                # TODO: Why not take the maximume relative tolerance of all species, instead of
+                # the relative tolerance of the species with the maximum number of particles?
+
+                # .. Apply the relaxation factor to the new number of particles.
+                # Maximum allowed change.
+                max_allowed_delta_Ni = governor_factor * self.__Ni
+                # Clip the change to the maximum allowed change.
+                delta_Ni = delta_Ni.clip(min=max_allowed_delta_Ni)
+                # Calculate the relaxation factor.
+                new_relaxation_factors = max_allowed_delta_Ni / delta_Ni
+                relaxation_factor = new_relaxation_factors.min()
+                # Apply the relaxation factor to the new number of particles.
+                self.__Ni = (
+                    1 - relaxation_factor
+                ) * self.__Ni + relaxation_factor * new_Ni
+
+                minimiser_iters += 1
+                if minimiser_iters > self.gfe_maxiter:
+                    minimiser_success = False
+                    break
+            governor_iters += 1
+        if not minimiser_success:
+            warnings.warn(
+                "Minimiser could not find a converged solution, "
+                "results may be inaccurate."
+            )
+        logging.debug(governor_iters, relaxation_factor, relative_tolerance)
+        logging.debug(self.__Ni)
 
         self.__isLTE = True
-        return self.__ni * self.P / (self.__ni.sum() * kbt)
 
-    def calculate_density(self):
-        """Calculate the LTE density of the plasma.
+        N_i = self.__Ni  # Number of particles of each species.
+        N_tot = N_i.sum()  # Total number of particles in the plasma.
+        V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
+        return N_i / V  # Number density of each species, in particles/m3.
+
+    def calculate_density(self) -> float:
+        r"""Calculate the LTE density of the plasma.
 
         Returns
         -------
         float
-            Fluid density, in kg/m3.
-        """
-        ndi = self.calculate_composition()
-        return sum(
-            nd * sp.molarmass / constants.Avogadro for sp, nd in zip(self.species, ndi)
-        )
+            Plasma density, in kg/m3.
 
-    def calculate_species_enthalpies(self):
-        """Calculate the LTE enthalpy for each component in the plasma. These
-        are needed for calculation of the effective thermal conductivity.
+        Notes
+        -----
+        The plasma density is calculated as:
+
+        .. math::
+
+            \rho = \frac{1}{N_A} \sum_i n_i M_i
+
+        where:
+
+        * :math:`\rho` is the plasma density, in kg/m3,
+        * :math:`N_A` is Avogadro's number, in mol^-1,
+        * :math:`n_i` is the number density of species :math:`i`, in particles/m3,
+        * :math:`M_i` is the molar mass of species :math:`i`, in kg/mol.
+        """
+        number_densities = self.calculate_composition()  # particules/m^3
+        molar_masses = [sp.molarmass for sp in self.species]  # kg/mol
+        return (
+            sum(n_i * M_i for n_i, M_i in zip(number_densities, molar_masses)) / u.N_a
+        )  # kg/m3 = (particules/m^3 * kg/mol) / (particules/mol)
+
+    def calculate_species_enthalpies(self) -> np.ndarray:
+        r"""Calculate the LTE enthalpy for each component in the plasma.
+
+        These are needed for calculation of the effective thermal conductivity.
 
         Returns
         -------
-        list of floats
+        np.ndarray
             Enthalpies of each species, in J/kg.
-        """
-        enthalpies = [
-            (sp.internal_energy(self.T, dE) + E0 + constants.Boltzmann * self.T)
-            for sp, dE, E0 in zip(self.species, self.__dE, self.__E0)
-        ]
-        molmasses = [sp.molarmass / constants.Avogadro for sp in self.species]
-        return numpy.array(enthalpies) / numpy.array(molmasses)
-        # return constants.Avogadro * numpy.array(enthalpies)
 
-    def calculate_enthalpy(self):
-        """Calculate the LTE enthalpy of the plasma. Referenced to zero at zero
-        Kelvin.
+        Notes
+        -----
+        The enthalpy of each species is calculated as:
+
+        .. math::
+
+            H_i = \left ( U_i + E_i^0 + k_B T \right)
+
+        where:
+
+        * :math:`H_i` is the enthalpy of species :math:`i`, in J/particle,
+        * :math:`U_i` is the internal energy of species :math:`i`, in J/particle,
+        * :math:`E_i^0` is the reference energy of species :math:`i`, in J,
+        * :math:`k_B` is the Boltzmann constant, in J/K,
+        * :math:`T` is the temperature, in K.
+
+        The enthalpy is then divided by the mass of the species to obtain
+        the enthalpy per unit mass.
+
+        .. math::
+
+            h_i = \frac{H_i}{m_i} = \frac{H_i}{M_i / N_A}
+
+        where:
+
+        * :math:`h_i` is the enthalpy of species :math:`i`, in J/kg,
+        * :math:`m_i` is the mass of species :math:`i`, in kg/particle,
+        * :math:`M_i` is the molar mass of species :math:`i`, in kg/mol.
+        """
+        internal_energies = [
+            sp.internal_energy(self.T, dE) for sp, dE in zip(self.species, self.__dE)
+        ]  # J/particle
+
+        enthalpies = [
+            (u_i + E0_i + u.k_b * self.T)
+            for u_i, E0_i in zip(internal_energies, self.__E0)
+        ]  # J/particle
+
+        masses = [
+            sp.molarmass / u.N_a for sp in self.species
+        ]  # (kg/mol) / (particle/mol) = kg/particle
+
+        return np.array(enthalpies) / np.array(masses)  # J/kg
+
+    def calculate_enthalpy(self) -> float:
+        r"""Calculate the LTE enthalpy of the plasma.
+
+        Referenced to zero at zero Kelvin.
 
         Returns
         -------
         float
             Enthalpy, in J/kg.
-        """
-        ndi = self.calculate_composition()
-        imin = numpy.argmin(self.__E0)
-        h0 = self.__E0[imin] / self.species[imin].molarmass
-        weightedenthalpy = sum(
-            constants.Avogadro
-            * nd
-            * (
-                sp.internal_energy(self.T, dE)
-                + E0
-                + constants.Boltzmann * self.T
-                - h0 * sp.molarmass
-            )
-            for sp, nd, dE, E0 in zip(self.species, ndi, self.__dE, self.__E0)
-        )
-        weightedmolmass = sum(nd * sp.molarmass for sp, nd in zip(self.species, ndi))
-        return weightedenthalpy / weightedmolmass
 
-    def calculate_heat_capacity(self, rel_delta_T=0.001):
-        """Calculate the LTE heat capacity at constant pressure of the plasma
+        Notes
+        -----
+        The enthalpy of the plasma is calculated as:
+
+        .. math::
+
+            H = \frac{1}{\rho} \sum_i n_i \left ( H_i - \frac{E_{i=min}^0 M_{i=min}}{M_i} \right)
+
+        where:
+
+        * :math:`H` is the enthalpy of the plasma, in J/kg,
+        * :math:`\rho` is the plasma density, in kg/m3,
+        * :math:`n_i` is the number density of species :math:`i`, in particles/m3,
+        * :math:`H_i` is the enthalpy of species :math:`i`, in J/particle,
+        * :math:`E_{i=min}^0` is the reference energy of the species with the lowest reference energy, in J,
+        * :math:`M_{i=min}` is the molar mass of the species with the lowest reference energy, in kg/mol,
+        * :math:`M_i` is the molar mass of species :math:`i`, in kg/mol.
+        """
+        number_densities = self.calculate_composition()  # m^-3
+        molar_masses = [sp.molarmass for sp in self.species]  # kg/mol
+
+        density = self.calculate_density()  # kg/m3
+
+        mass_enthalpies = self.calculate_species_enthalpies()  # J/kg
+        masses = np.array([sp.molarmass / u.N_a for sp in self.species])  # kg/particle
+        enthalpies = mass_enthalpies * masses  # J/particle
+
+        # Get the species with the lowest reference energy.
+        i_min = np.argmin(
+            self.__E0
+        )  # Index of the species with the lowest reference energy.
+        h_mol_0 = self.__E0[i_min] / self.species[i_min].molarmass  # J/(kg/mol)
+
+        weighted_enthalpy = sum(
+            n_i * (h_i - h_mol_0 * M_i)
+            for n_i, h_i, M_i in zip(number_densities, enthalpies, molar_masses)
+        )
+
+        return weighted_enthalpy / density
+
+    def calculate_heat_capacity(self, rel_delta_T=0.001) -> float:
+        r"""Calculate the LTE heat capacity at constant pressure of the plasma.
+
+        Calculate the LTE heat capacity at constant pressure of the plasma
         based on current conditions and species composition.
 
         This is done by performing multiple LTE composition recalculations and
@@ -354,39 +688,123 @@ class LTE:
         calculate enthalpies and perform a numerical derivative external to
         minplascalc.
 
+        Parameters
+        ----------
+        rel_delta_T : float, optional
+            Relative change in temperature to calculate the numerical
+            derivative, by default 0.001.
+
         Returns
         -------
         float
             Heat capacity, in J/kg.K.
-        """
-        startT = self.T
-        self.T = startT * (1 - rel_delta_T)
-        enthalpylow = self.calculate_enthalpy()
-        self.T = startT * (1 + rel_delta_T)
-        enthalpyhigh = self.calculate_enthalpy()
-        self.T = startT
-        return (enthalpyhigh - enthalpylow) / (2 * rel_delta_T * self.T)
 
-    def calculate_viscosity(self):
-        """Calculate the LTE viscosity of the plasma in Pa.s based on current
-        conditions and species composition.
+        Notes
+        -----
+        The heat capacity at constant pressure of the plasma is calculated as:
+
+        .. math::
+
+            C_p = \frac{dH}{dT}
+                \approx \frac{H(T + \Delta T) - H(T - \Delta T)}{2 \Delta T}
+
+        where:
+
+        * :math:`C_p` is the heat capacity at constant pressure, in J/kg.K,
+        * :math:`H` is the enthalpy of the plasma, in J/kg,
+        * :math:`T` is the temperature, in K,
+        * :math:`\Delta T` is the relative change in temperature.
+        """
+        start_temperature = self.T
+        self.T = start_temperature * (1 - rel_delta_T)
+        enthalpy_low = self.calculate_enthalpy()
+        self.T = start_temperature * (1 + rel_delta_T)
+        enthalpy_high = self.calculate_enthalpy()
+        self.T = start_temperature
+        return (enthalpy_high - enthalpy_low) / (2 * rel_delta_T * self.T)
+
+    def calculate_viscosity(self) -> float:
+        """Calculate the LTE viscosity of the plasma in Pa.s.
+
+        Calculate the LTE viscosity of the plasma in Pa.s based on current conditions and species composition.
+
+        Returns
+        -------
+        float
+            Viscosity, in Pa.s.
         """
         return functions_transport.viscosity(self)
 
     def calculate_thermal_conductivity(
         self, rel_delta_T=0.001, DTterms_yn=True, ni_limit=1e8
-    ):
-        """Calculate the LTE thermal conductivity of the plasma in W/m.K."""
+    ) -> float:
+        """Calculate the LTE thermal conductivity of the plasma in W/m.K.
+
+        Parameters
+        ----------
+        rel_delta_T : float, optional
+            TODO:Relative change in temperature to calculate the numerical
+            derivative, by default 0.001.
+        DTterms_yn : bool, optional
+            TODO:Flag to include the temperature-dependent terms in the
+            calculation, by default True.
+        ni_limit : float, optional
+            TODO:Number density limit for the calculation of the thermal
+            conductivity, by default 1e8.
+
+        Returns
+        -------
+        float
+            Thermal conductivity, in W/m.K.
+        """
         return functions_transport.thermalconductivity(
             self, rel_delta_T, DTterms_yn, ni_limit
         )
 
-    def calculate_electrical_conductivity(self):
-        """Calculate the LTE electrical conductivity of the plasma in 1/ohm.m."""
+    def calculate_electrical_conductivity(self) -> float:
+        """Calculate the LTE electrical conductivity of the plasma in 1/(ohm.m).
+
+        Returns
+        -------
+        float
+            Electrical conductivity, in 1/(ohm.m).
+        """
         return functions_transport.electricalconductivity(self)
 
-    def calculate_total_emission_coefficient(self):
-        """Calculate the LTE total radiation emission coefficient of the plasma
-        in W/m3.sr.
+    def calculate_total_emission_coefficient(self) -> float:
+        """Calculate the LTE total radiation emission coefficient of the plasma in W/m3.sr.
+
+        Returns
+        -------
+        float
+            Total radiation emission coefficient, in W/m3.sr.
         """
         return functions_radiation.total_emission_coefficient(self)
+
+
+def lte_from_names(names: list[str], x0: list[float], T: float, P: float) -> LTE:
+    """Create a LTE mixture from a list of species names using the species database.
+
+    Parameters
+    ----------
+    names : list[str]
+        Names of the species.
+    x0 : list[float]
+        Initial value of mole fractions for each species, typically the
+        room-temperature composition of the plasma-generating gas.
+    T : float
+        LTE plasma temperature, in K.
+    P : float
+        LTE plasma pressure, in Pa.
+
+    Returns
+    -------
+    An LTE object instance.
+    """
+    if "e" in names:
+        raise ValueError(
+            "Electrons are added automatically, please don't "
+            "include them in your species list."
+        )
+    species = [_species.from_name(name) for name in names]
+    return LTE(species, x0, T, P, 1e20, 1e-10, 1000)
