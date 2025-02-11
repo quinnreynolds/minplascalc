@@ -63,6 +63,9 @@ class Units:
         self.h = constants.Planck
         """Planck constant [J s]."""
 
+        self.hbar = constants.hbar
+        """Reduced Planck constant [J s]."""
+
         self.c = constants.speed_of_light
         """Speed of light [m/s]."""
 
