@@ -372,7 +372,7 @@ class Monatomic(Species):
         translational_energy = 3 / 2 * u.k_b * T
 
         # Calculate the electronic energy.
-        electronic_energy = 0
+        electronic_energy = 0.0
         for J_i, E_i in self.energylevels:
             if E_i < (self.ionisationenergy - dE):
                 # Only include energy levels below the ionisation energy.

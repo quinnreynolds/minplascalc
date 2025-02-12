@@ -86,7 +86,7 @@ def nist_energy_levels(data: list[str]) -> list[tuple[float, float]]:
             # - the quantum number J,
             # - the energy Ei.
             j, ei = nist_string(line)
-            energy_levels.append([j, ei])
+            energy_levels.append((j, ei))
         except ValueError as exception:
             raise ValueError(
                 f"Error parsing NIST energy level data at line {i}: {line}"

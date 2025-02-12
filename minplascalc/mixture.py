@@ -85,6 +85,8 @@ class LTE:
 
         self.__isLTE = False  # Flag to indicate if LTE composition has been calculated.
 
+        self.__Ni = np.zeros(len(self.species))  # Number of particles of each species.
+
     @property
     def species(self):
         return self.__species
@@ -201,7 +203,7 @@ class LTE:
         kbt = u.k_b * self.T
 
         # Array of number densities of each species in the plasma.
-        N_i = self.__Ni  # Number of particles of each species.
+        N_i: np.ndarray = self.__Ni  # Number of particles of each species.
         N_tot = N_i.sum()  # Total number of particles in the plasma.
         V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
         number_densities = N_i / V  # Number density of each species, in particles/m3.

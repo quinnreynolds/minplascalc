@@ -47,7 +47,8 @@ line-length = 88
 [tool.ruff.lint]
 ignore = [
   # pydocstyle: Missing Docstrings
-  "D1"
+  "D1",
+  "E741"  # Ambiguous variable name: `l`
 ]
 select = [
   # pyflakes

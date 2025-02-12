@@ -8,8 +8,8 @@ from minplascalc.data_transport import c_in, c_nn
 from minplascalc.units import Units
 
 if TYPE_CHECKING:
-    from minplascalc.species import Species
     from minplascalc.mixture import LTE
+    from minplascalc.species import Species
 
 u = Units()
 
@@ -530,10 +530,12 @@ def Qe(species_i: "Species", l: int, s: int, T: float) -> float:
     --------
     - LXCat Database: http://www.lxcat.net/
     """
-    try:
+    if isinstance(species_i.electroncrosssection, tuple):
         D1, D2, D3, D4 = species_i.electroncrosssection
-    except TypeError:
+    elif isinstance(species_i.electroncrosssection, float):
         D1, D2, D3, D4 = species_i.electroncrosssection, 0, 0, 0
+    else:
+        raise ValueError("Invalid electron cross section data.")
     barg = D3 / 2 + s + 2
     tau = np.sqrt(2 * u.m_e * u.k_b * T) / u.hbar
     return D1 + D2 * tau**D3 * gamma(barg) / (gamma(s + 2) * (D4 * tau**2 + 1) ** barg)
@@ -1962,7 +1964,7 @@ def thermalconductivity(
 
     .. math::
 
-        \lambda^{\prime} = -\frac{5 k_b}{4} 
+        \lambda^{\prime} = -\frac{5 k_b}{4}
             \sum_{j=1}^\nu n_j\left(\frac{2 k_b T}{m_j}\right)^{\frac{1}{2}} a_{j 1}
     """
     nb_species = len(mixture.species)
