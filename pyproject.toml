@@ -28,10 +28,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 urls = {"Homepage" = "https://github.com/quinnreynolds/minplascalc"}
 
-[project.optional-dependencies]
-dev = ["matplotlib", "pre-commit"]
-test = ["coverage", "pytest", "jupyter", "sympy"]
-
 [tool.coverage.run]
 branch = true
 
