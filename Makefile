@@ -9,7 +9,9 @@ qa:
 	pre-commit run --all-files
 
 unit-tests:
-	python -m pytest tests docs -vv --cov=. --cov-report=xml --doctest-glob="*.md" --doctest-glob="*.rst"
+	python -m pytest tests docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"
+# Coverage bugging for now in CI --> comment
+# python -m pytest tests docs -vv --cov=. --cov-report=xml --doctest-glob="*.md" --doctest-glob="*.rst"
 
 type-check:
 	python -m mypy .  --exclude docs
