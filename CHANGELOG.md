@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Added support for Conda for package management.
-- Added pre-commit (with ruff, black, check files, ...).
-- Added documentation setup.
-- Added unit-tests easy run.
+- Add support for Conda for package management.
+- Add pre-commit (with ruff, black, check files, ...).
+- Add documentation setup.
+- Add tests config file for vscode (Tests are NOT changed).
+- Add docstring for a lot of function.
+- Add multiple comments to explain what is going on.
+- Change variable names to avoid ambiguity.
+- IMPORTANT: Find some bugs in `q` function (some bad copy), but did not change them now.
