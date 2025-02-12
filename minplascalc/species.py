@@ -23,6 +23,10 @@ SPECIES_PATH = DATAPATH / "species"
 
 
 class BaseSpecies:
+    def __init__(self):
+        self.molarmass: float
+        """Molar mass of the species in kg/mol."""
+
     def partitionfunction_total(self, V: float, T: float, dE: float) -> float:
         """Calculate the total partition function for the species.
 
@@ -144,6 +148,9 @@ class Species(BaseSpecies):
         self.effectiveelectrons = effectiveelectrons
         self.electroncrosssection = electroncrosssection
         self.emissionlines = emissionlines
+
+        self.ionisationenergy: float
+        """Ionisation energy of the species in J."""
 
     def to_file(self, datafile: str | Path | None = None) -> None:
         """Save a Species object to a file for easy re-use.
