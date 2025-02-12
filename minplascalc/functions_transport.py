@@ -530,7 +530,7 @@ def Qe(species_i: "Species", l: int, s: int, T: float) -> float:
     --------
     - LXCat Database: http://www.lxcat.net/
     """
-    if isinstance(species_i.electroncrosssection, tuple):
+    if isinstance(species_i.electroncrosssection, (tuple, list)):
         D1, D2, D3, D4 = species_i.electroncrosssection
     elif isinstance(species_i.electroncrosssection, float):
         D1, D2, D3, D4 = species_i.electroncrosssection, 0, 0, 0
