@@ -26,6 +26,10 @@ Articles
 Books
 -----
 
+.. [Boulos2023] Boulos, Maher I. and Fauchais, Pierre L. and Pfender, Emil. Handbook of
+  Thermal Plasmas, Springer International Publishing, Cham, 2023, ISBN 978-3-030-84934-4,
+  978-3-030-84936-8, DOI 10.1007/978-3-030-84936-8
+
 .. [NRL2019] NRL Plasma Formulary, 2019, A. S. Richardson, Pulsed Power Physics Branch, 
   Plasma Physics Division, Naval Research Laboratory,  Washington, DC 20375
 

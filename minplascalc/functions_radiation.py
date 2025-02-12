@@ -11,9 +11,6 @@ if TYPE_CHECKING:
 u = Units()
 
 
-line_preconst = u.h * u.c / (4 * u.pi)
-
-
 def total_emission_coefficient(mix: "LTE") -> float:
     r"""
     Compute the LTE total radiation emission coefficient of the plasma in W/m3.sr.
@@ -30,8 +27,32 @@ def total_emission_coefficient(mix: "LTE") -> float:
 
     Notes
     -----
-    The total emission coefficient is calculated by summing the contributions of each
-    emission line of each species in the mixture.
+    The explicit expression for the emission coefficient of a spectral line emitted by an atom
+    or an ion as a function of temperature is given by equation 5 of chapter 20 of [Boulos2023]_:
+
+    .. math::
+
+        \varepsilon_L=\frac{1}{4 \pi} A_{u \ell}^r n_r \frac{g_{r u}}{Q_r}
+                \exp \left(- \frac{ E_{r u} }{k_b T} \right) h \nu_{u \ell}
+
+    where:
+
+    * :math:`\varepsilon_L` is the emission coefficient of the spectral line in W/m^3/sr,
+    * :math:`A_{u \ell}^r` is the Einstein coefficient (or transition probability) for spontaneous
+      emission in s^-1,
+    * :math:`n_r` is the number density of the species in m^-3,
+    * :math:`g_{r u}` is the statistical weight of the upper state,
+    * :math:`Q_r` is the internal partition function of the species,
+    * :math:`E_{r u}` is the energy difference between the upper and lower states in J,
+    * :math:`k_b` is Boltzmann's constant in J/K,
+    * :math:`T` is the temperature in K,
+    * :math:`h` is Planck's constant in J.s,
+    * :math:`\nu_{u \ell}` is the frequency of the transition in Hz,
+    * :math:`\frac{1}{4 \pi}` is the solid angle in steradians.
+
+
+    Then, the total emission coefficient is calculated by summing the contributions of each
+    emission line of each species in the mixture, using equation 6 of chapter 20 of [Boulos2023]_.
 
     The number densities of the species are calculated by the mixture object,
     and the internal partition functions are calculated using the species object.
@@ -39,7 +60,8 @@ def total_emission_coefficient(mix: "LTE") -> float:
     The formula used is derived from the Einstein coefficients for spontaneous emission
     and the Boltzmann distribution for the population of excited states.
 
-    The emission coefficient is given by:
+    The total emission coefficient is finally given by the following expression,
+    expressing :math:`\nu_{u \ell}=\frac{c}{\lambda_{u \ell}}`:
 
     .. math::
 
@@ -60,16 +82,15 @@ def total_emission_coefficient(mix: "LTE") -> float:
     * :math:`T` is the temperature, in K,
     * :math:`Q_i` is the internal partition function of species :math:`i`,
     * :math:`\lambda_{ij}` is the wavelength of the transition, in m.
-
-    References
-    ----------
-    TODO: Add references.
     """
     # Calculate the number densities of species in the mixture.
     nd = mix.calculate_composition()
 
     # Initialize the total emission coefficient.
     total_emission_coefficient = 0.0
+
+    # Calculate the pre-constant of the emission line.
+    line_preconst = u.h * u.c / (4 * u.pi)
 
     # Iterate over species and their number densities
     for nv, species in zip(nd[:-1], mix.species[:-1]):
