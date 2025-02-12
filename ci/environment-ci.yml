@@ -1,0 +1,20 @@
+# environment-ci.yml: Additional dependencies to install in the CI environment.
+channels:
+- conda-forge
+- nodefaults
+dependencies:
+- make
+- mypy
+- myst-parser
+- nbconvert
+- nbformat
+- pip
+- pre-commit
+- pydata-sphinx-theme
+- pytest
+- pytest-cov
+- ruff
+- sphinx
+- sphinx-autoapi
+- sphinx-gallery
+# DO NOT EDIT ABOVE THIS LINE, ADD DEPENDENCIES BELOW

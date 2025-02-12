@@ -1,0 +1,30 @@
+{
+    "name": "SiO",
+    "stoichiometry": {
+        "O": 1,
+        "Si": 1
+    },
+    "molarmass": 0.044084905,
+    "chargenumber": 0,
+    "polarisability": 3.962e-30,
+    "multiplicity": 1,
+    "effectiveelectrons": 10.495867768595042,
+    "electroncrosssection": [
+        2.4197353805530404e-19,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "emissionlines": [],
+    "dissociationenergy": 1.3251101756047297e-18,
+    "ionisationenergy": 1.840900952466e-18,
+    "sigma_s": 1,
+    "g0": 1,
+    "w_e": 2.466272671803936e-20,
+    "b_e": 1.4436523891592904e-23,
+    "sources": [
+        "RD Johnson III (ed). NIST Computational Chemistry Comparison and Benchmark Database, NIST Standard Reference Database Number 101 Release 22, May 2022, http://cccbdb.nist.gov/, DOI: http://doi.org/10.18434/T47C7Z",
+        "PJ Linstrom and WG Mallard (eds). NIST Chemistry WebBook, NIST Standard Reference Database Number 69, DOI: https://doi.org/10.18434/T4D303",
+        "G Venter, University of Cape Town, private communications 2024"
+    ]
+}

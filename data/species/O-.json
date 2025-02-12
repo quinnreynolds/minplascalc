@@ -1,0 +1,24 @@
+{
+    "name": "O-",
+    "stoichiometry": {
+        "O": 1
+    },
+    "molarmass": 0.015999953579909066,
+    "chargenumber": -1,
+    "polarisability": 1.275e-30,
+    "multiplicity": 2,
+    "effectiveelectrons": null,
+    "electroncrosssection": null,
+    "emissionlines": [],
+    "ionisationenergy": 2.340780062274e-19,
+    "energylevels": [
+        [
+            0.5,
+            0
+        ]
+    ],
+    "sources": [
+        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303",
+        "TE Horton (1970). The Computation of Partition Functions and Thermochemistry Data for Atomic, Ionic, Diatomic, and Polyatomic Species, Technical Report 32-7425, NASA Jet Propulsion Laboratory, California Institute of Technology, 1970"
+    ]
+}

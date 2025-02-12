@@ -1,0 +1,23 @@
+{
+    "name": "O2+",
+    "stoichiometry": {
+        "O": 2
+    },
+    "molarmass": 0.031998261420090934,
+    "chargenumber": 1,
+    "polarisability": 8.67e-31,
+    "multiplicity": 2,
+    "effectiveelectrons": null,
+    "electroncrosssection": null,
+    "emissionlines": [],
+    "dissociationenergy": Infinity,
+    "ionisationenergy": Infinity,
+    "sigma_s": 2,
+    "g0": 4,
+    "w_e": 3.7835846788167674e-20,
+    "b_e": 3.35967699232572e-23,
+    "sources": [
+        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303",
+        "TE Horton (1970). The Computation of Partition Functions and Thermochemistry Data for Atomic, Ionic, Diatomic, and Polyatomic Species, Technical Report 32-7425, NASA Jet Propulsion Laboratory, California Institute of Technology, 1970"
+    ]
+}
