@@ -1773,7 +1773,7 @@ def viscosity(mixture: "LTE") -> float:
 
     The elements of :math:`b_{j 0}` are given by equation 20 of [Devoto1966]_:
 
-        .. math::
+    .. math::
 
         \begin{aligned}
             & \sum_{j=1}^\nu \sum_{p=0}^1 \hat{q}_{i j}^{m p} b_{j p}

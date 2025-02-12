@@ -249,14 +249,14 @@ c_nn_23 = np.array([c0_nn_23, c1_nn_23, c2_nn_23]).transpose()
 c_nn_24 = np.array([c0_nn_24, c1_nn_24, c2_nn_24]).transpose()
 c_nn_33 = np.array([c0_nn_33, c1_nn_33, c2_nn_33]).transpose()
 c_nn_44 = np.array([c0_nn_44, c1_nn_44, c2_nn_44]).transpose()
-fillnan = np.full(c_nn_11.shape, np.nan)
+fill_nan_c_nn = np.full(c_nn_11.shape, np.nan)
 
 c_nn = np.array(
     [
         [c_nn_11, c_nn_12, c_nn_13, c_nn_14, c_nn_15],
-        [fillnan, c_nn_22, c_nn_23, c_nn_24, fillnan],
-        [fillnan, fillnan, c_nn_33, fillnan, fillnan],
-        [fillnan, fillnan, fillnan, c_nn_44, fillnan],
+        [fill_nan_c_nn, c_nn_22, c_nn_23, c_nn_24, fill_nan_c_nn],
+        [fill_nan_c_nn, fill_nan_c_nn, c_nn_33, fill_nan_c_nn, fill_nan_c_nn],
+        [fill_nan_c_nn, fill_nan_c_nn, fill_nan_c_nn, c_nn_44, fill_nan_c_nn],
     ]
 )
 """Parameters for the classical transport collision integrals for neutral-neutral interactions."""
@@ -469,13 +469,13 @@ c_in_23 = np.array([c0_in_23, c1_in_23, c2_in_23]).transpose()
 c_in_24 = np.array([c0_in_24, c1_in_24, c2_in_24]).transpose()
 c_in_33 = np.array([c0_in_33, c1_in_33, c2_in_33]).transpose()
 c_in_44 = np.array([c0_in_44, c1_in_44, c2_in_44]).transpose()
-fillnan = np.full(c_in_11.shape, np.nan)
+fill_nan_c_in = np.full(c_in_11.shape, np.nan)
 c_in = np.array(
     [
         [c_in_11, c_in_12, c_in_13, c_in_14, c_in_15],
-        [fillnan, c_in_22, c_in_23, c_in_24, fillnan],
-        [fillnan, fillnan, c_in_33, fillnan, fillnan],
-        [fillnan, fillnan, fillnan, c_in_44, fillnan],
+        [fill_nan_c_in, c_in_22, c_in_23, c_in_24, fill_nan_c_in],
+        [fill_nan_c_in, fill_nan_c_in, c_in_33, fill_nan_c_in, fill_nan_c_in],
+        [fill_nan_c_in, fill_nan_c_in, fill_nan_c_in, c_in_44, fill_nan_c_in],
     ]
 )
 """Parameters for the classical transport collision integrals for neutral-ion interactions."""
