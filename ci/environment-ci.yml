@@ -6,8 +6,6 @@ dependencies:
 - make
 - mypy
 - myst-parser
-- nbconvert
-- nbformat
 - pip
 - pre-commit
 - pydata-sphinx-theme
