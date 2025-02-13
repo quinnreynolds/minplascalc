@@ -90,6 +90,11 @@ sphinx_gallery.gen_rst.EXAMPLE_HEADER = """
 .. TO MAKE CHANGES, EDIT THE SOURCE PYTHON FILE:
 .. "{0}"
 .. LINE NUMBERS ARE GIVEN BELOW.
+
+.. rst-class:: sphx-glr-example-title
+
+.. _sphx_glr_{1}:
+
 """
 
 sphinx_gallery_conf = {

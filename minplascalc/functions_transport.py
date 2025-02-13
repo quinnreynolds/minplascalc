@@ -70,6 +70,10 @@ def pot_parameters_neut_neut(
     alpha_i = species_i.polarisability * 1e30
     alpha_j = species_j.polarisability * 1e30
     # Effective long-range London coefficient, as defined in eq. 8 of [Laricchiuta2007]_.
+    if species_i.effectiveelectrons is None or species_j.effectiveelectrons is None:
+        raise ValueError(
+            "Effective number of electrons must be provided for neutral species."
+        )
     C_d = (
         15.7
         * alpha_i
