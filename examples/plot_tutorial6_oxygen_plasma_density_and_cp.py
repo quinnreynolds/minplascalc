@@ -7,7 +7,7 @@ In this example we'll look at the thermodynamic properties :math:`\rho` and :mat
 
 
 The relatively simple case of a pure oxygen plasma is useful for demonstration and validation purposes.
-As in :ref:`sphx_glr_auto_examples_plot_tutorial5_oygen_plasma_lte_compositions.py`,
+As in :ref:`sphx_glr_auto_examples_plot_tutorial5_oygen_plasma_lte_composition.py`,
 a Mixture object must be created by the user to specify the plasma species present and
 the relative proportions of elements. We'll use a system identical to the previous example.
 """  # noqa: D205
