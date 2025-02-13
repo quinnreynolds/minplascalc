@@ -1,6 +1,6 @@
 r"""
-Tutorial 5: Calculating equilibrium compositions for an :math:`O_2` plasma.
-===========================================================================
+Tutorial 05: Calculating equilibrium compositions for an :math:`O_2` plasma.
+============================================================================
 
 Calculations for plasmas consisting of species of a single element are a useful starting point
 because they are simple examples to illustrate the functionality of minplascalc, and their

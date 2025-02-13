@@ -1,13 +1,13 @@
 r"""
-Tutorial 6: Calculating the density and heat capacity of an :math:`O_2` plasma.
-===============================================================================
+Tutorial 06: Calculating the density and heat capacity of an :math:`O_2` plasma.
+================================================================================
 
 The most common use of minplascalc is the calculation of thermophysical properties of plasmas in LTE.
 In this example we'll look at the thermodynamic properties :math:`\rho` and :math:`c_p`.
 
 
 The relatively simple case of a pure oxygen plasma is useful for demonstration and validation purposes.
-As in :ref:`sphx_glr_auto_examples_plot_tutorial5_oygen_plasma_lte_composition.py`,
+As in :ref:`sphx_glr_auto_examples_plot_tutorial_05_oygen_plasma_lte_composition.py`,
 a Mixture object must be created by the user to specify the plasma species present and
 the relative proportions of elements. We'll use a system identical to the previous example.
 """  # noqa: D205

@@ -1,6 +1,6 @@
 r"""
-Tutorial 4: Calculating partition functions for individual species.
-===================================================================
+Tutorial 04: Calculating partition functions for individual species.
+====================================================================
 
 Let's use minplascalc to calculate and graph the internal and translational partition
 functions of various oxygen plasma species over a range of temperatures.

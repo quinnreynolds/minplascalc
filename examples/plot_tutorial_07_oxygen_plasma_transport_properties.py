@@ -1,6 +1,6 @@
 r"""
-Tutorial 6: Calculating transport and radiation properties of an :math:`O_2` plasma.
-====================================================================================
+Tutorial 07: Calculating transport and radiation properties of an :math:`O_2` plasma.
+=====================================================================================
 
 The most common use of minplascalc is the calculation of thermophysical properties of plasmas
 in LTE. In this example we'll look at the transport and radiation properties viscosity :math:`\mu`,
@@ -8,7 +8,7 @@ electrical conductivity :math:`\sigma`, thermal conductivity :math:`\kappa`, and
 emission coefficient :math:`\epsilon_{tot}`.
 
 Again, we will use here the relatively simple case of a pure oxygen plasma
-As in :ref:`sphx_glr_auto_examples_plot_tutorial5_oygen_plasma_lte_composition.py`,
+As in :ref:`sphx_glr_auto_examples_plot_tutorial_05_oygen_plasma_lte_composition.py`,
 a Mixture object must be created by the user to specify the plasma species present and the relative
 proportions of elements. We'll use a system identical to the previous example.
 """  # noqa: D205

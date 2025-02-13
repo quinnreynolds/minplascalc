@@ -1,6 +1,6 @@
 r"""
-Tutorial 8: Calculating equilibrium compositions of an SiO-CO plasma.
-=====================================================================
+Tutorial 08: Calculating equilibrium compositions of an SiO-CO plasma.
+======================================================================
 
 Calculations of plasmas arising from metallurgical processes are typically a lot more
 complicated than single-element systems. For example the plasma in an electric arc
@@ -172,7 +172,7 @@ ax.legend(loc=(1.025, 0.25))
 #
 # That's a bit better. Now we can see that the general behaviour of SiO in this mixture is quite
 # similar to that of :math:`O_2`
-# (see :ref:`sphx_glr_auto_examples_plot_tutorial5_oygen_plasma_lte_composition.py`),
+# (see :ref:`sphx_glr_auto_examples_plot_tutorial_05_oygen_plasma_lte_composition.py`),
 # with the difference that Si species are easier to ionise - this leads to higher
 # concentrations of charged ions, particularly at lower temperatures.
 #
