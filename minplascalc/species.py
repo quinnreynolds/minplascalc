@@ -104,8 +104,8 @@ class Species(BaseSpecies):
         chargenumber: int,
         polarisability: float,
         multiplicity: float,
-        effectiveelectrons: float,
-        electroncrosssection: float | tuple[float, float, float, float],
+        effectiveelectrons: float | None,
+        electroncrosssection: float | tuple[float, float, float, float] | None,
         emissionlines: list[tuple[float, float, float]],
     ):
         """Heavy particle base class.
@@ -124,16 +124,17 @@ class Species(BaseSpecies):
         chargenumber : int
             Charge on the species (in integer units of the fundamental charge).
         polarisability : float
-            Polarisability of the species in m^3
+            Polarisability of the species in m^3.
         multiplicity : float
-            Spin multiplicity (2S + 1) of the ground state
-        effectiveelectrons : float
+            Spin multiplicity (2S + 1) of the ground state.
+        effectiveelectrons : float | None
             Effective number of electrons in valence shell, per Cambi 1991
-            (only required for neutral species)
-        electroncrosssection : float | tuple[float, float, float, float]
+            (only required for neutral species).
+        electroncrosssection : float | tuple[float, float, float, float] | None
             Cross section for elastic electron collisions in m^2 (only required
             for neutral species). Either a single constant value, or a 4-tuple
             of empirical fitting parameters.
+            Could be None if not available.
         emissionlines : list[tuple[float, float, float]]
             Radiation emission line data - each entry in the list contains three
             values giving the line's wavelength in m, its g x A constant in 1/s,
@@ -181,8 +182,8 @@ class Monatomic(Species):
         energylevels: list[tuple[float, float]],
         polarisability: float,
         multiplicity: float,
-        effectiveelectrons: float,
-        electroncrosssection: float | tuple[float, float, float, float],
+        effectiveelectrons: float | None,
+        electroncrosssection: float | tuple[float, float, float, float] | None,
         emissionlines: list[tuple[float, float, float]],
         sources: list[str],
     ):
@@ -206,23 +207,24 @@ class Monatomic(Species):
             values giving the level's quantum number and its energy
             respectively, with energy in J.
         polarisability : float
-            Polarisability of the species in m^3
+            Polarisability of the species in m^3.
         multiplicity : float
-            Spin multiplicity (2S + 1) of the ground state
-        effectiveelectrons : float
+            Spin multiplicity (2S + 1) of the ground state.
+        effectiveelectrons : float | None
             Effective number of electrons in valence shell, per Cambi 1991
-            (only required for neutral species)
-        electroncrosssection : float | tuple[float, float, float, float]
+            (only required for neutral species).
+            Could be None if not available.
+        electroncrosssection : float | tuple[float, float, float, float] | None
             Cross section for elastic electron collisions in m^2 (only required
             for neutral species). Either a single constant value, or a 4-tuple
             of empirical fitting parameters.
+            Could be None if not available.
         emissionlines : list[tuple[float, float, float]]
             Radiation emission line data - each entry in the list contains three
             values giving the line's wavelength in m, its g x A constant in 1/s,
             and its emission strength in J.
         sources : list of str
-            Each entry represents a reference from which the data was
-            obtained.
+            Each entry represents a reference from which the data was obtained.
         """
         super().__init__(
             name,
@@ -408,8 +410,8 @@ class Diatomic(Species):
         b_e: float,
         polarisability: float,
         multiplicity: float,
-        effectiveelectrons: float,
-        electroncrosssection: float | tuple[float, float, float, float],
+        effectiveelectrons: float | None,
+        electroncrosssection: float | tuple[float, float, float, float] | None,
         emissionlines: list[tuple[float, float, float]],
         sources: list[str],
     ):
@@ -442,21 +444,22 @@ class Diatomic(Species):
         b_e : float
             Rotational energy level constant in J.
         polarisability : float
-            Polarisability of the species in m^3
+            Polarisability of the species in m^3.
         multiplicity : float
-            Spin multiplicity (2S + 1) of the ground state
-        effectiveelectrons : float
+            Spin multiplicity (2S + 1) of the ground state.
+        effectiveelectrons : float | None
             Effective number of electrons in valence shell, per Cambi 1991
             (only required for neutral species)
-        electroncrosssection : float | tuple[float, float, float, float]
+        electroncrosssection : float | tuple[float, float, float, float] | None
             Cross section for elastic electron collisions in m^2 (only required
             for neutral species). Either a single constant value, or a 4-tuple
             of empirical fitting parameters.
+            Could be None if not available.
         emissionlines : list[tuple[float, float, float]]
             Radiation emission line data - each entry in the list contains three
             values giving the line's wavelength in m, its g x A constant in 1/s,
             and its emission strength in J.
-        sources : list of str
+        sources : list[str]
             Each dictionary represents a reference source from which the data
             was obtained.
         """
@@ -697,8 +700,8 @@ class Polyatomic(Species):
         abc_e: list[float],
         polarisability: float,
         multiplicity: float,
-        effectiveelectrons: float,
-        electroncrosssection: float | tuple[float, float, float, float],
+        effectiveelectrons: float | None,
+        electroncrosssection: float | tuple[float, float, float, float] | None,
         emissionlines: list[tuple[float, float, float]],
         sources: list[str],
     ):
@@ -734,16 +737,17 @@ class Polyatomic(Species):
         abc_e : list[float]
             A, B, and C rotational energy level constants in J.
         polarisability : float
-            Polarisability of the species in m^3
+            Polarisability of the species in m^3.
         multiplicity : float
-            Spin multiplicity (2S + 1) of the ground state
-        effectiveelectrons : float
+            Spin multiplicity (2S + 1) of the ground state.
+        effectiveelectrons : float | None
             Effective number of electrons in valence shell, per Cambi 1991
             (only required for neutral species)
-        electroncrosssection : float | tuple[float, float, float, float]
+        electroncrosssection : float | tuple[float, float, float, float] | None
             Cross section for elastic electron collisions in m^2 (only required
             for neutral species). Either a single constant value, or a 4-tuple
             of empirical fitting parameters.
+            Could be None if not available.
         emissionlines : list[tuple[float, float, float]]
             Radiation emission line data - each entry in the list contains three
             values giving the line's wavelength in m, its g x A constant in 1/s,

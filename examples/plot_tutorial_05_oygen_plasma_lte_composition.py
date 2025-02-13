@@ -49,7 +49,7 @@ import minplascalc as mpc
 # as well as a list of the initial mole fractions.
 
 species = [mpc.species.from_name(sp) for sp in ["O2", "O2+", "O", "O-", "O+", "O++"]]
-x0 = [1, 0, 0, 0, 0, 0]
+x0 = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 # %%
 # Create a Mixture object for the species and mole fractions.
@@ -58,7 +58,7 @@ x0 = [1, 0, 0, 0, 0, 0]
 # Next, we create a minplascalc LTE mixture object from the data above.
 # The temperature in K and pressure in Pa are given to the constructor too,
 # and attributes T and P will be initialised to those values.
-# 
+#
 # When using the raw Mixture constructor we must also provide some control information for
 # the Gibbs free energy solver.
 
@@ -76,7 +76,7 @@ oxygen_mixture = mpc.mixture.LTE(
 
 temperatures = np.linspace(1000, 25000, 100)
 species_names = [sp.name for sp in oxygen_mixture.species]
-ni = []
+ni_list = []
 
 # %%
 # Perform the composition calculations.
@@ -92,8 +92,8 @@ ni = []
 
 for T in temperatures:
     oxygen_mixture.T = T
-    ni.append(oxygen_mixture.calculate_composition())
-ni = np.array(ni).transpose()
+    ni_list.append(oxygen_mixture.calculate_composition())
+ni = np.array(ni_list).transpose()
 
 # %%
 # Plot the results.

@@ -62,12 +62,10 @@ sico_mixtures = [mpc.mixture.lte_from_names(species, x0, 1000, 101325) for x0 in
 # Also initialise a list to store the property values at each temperature.
 
 temperatures = np.linspace(1000, 25000, 100)
-viscosity, electrical_conductivity, thermal_conductivity, total_emission_coefficient = (
-    [[] for _ in range(3)],
-    [[] for _ in range(3)],
-    [[] for _ in range(3)],
-    [[] for _ in range(3)],
-)
+viscosity: list[list[float]] = [[], [], []]
+electrical_conductivity: list[list[float]] = [[], [], []]
+thermal_conductivity: list[list[float]] = [[], [], []]
+total_emission_coefficient: list[list[float]] = [[], [], []]
 
 # %%
 # Perform the composition calculations.

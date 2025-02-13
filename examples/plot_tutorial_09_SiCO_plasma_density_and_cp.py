@@ -62,8 +62,8 @@ sico_mixtures = [mpc.mixture.lte_from_names(species, x0, 1000, 101325) for x0 in
 # Also initialise a list to store the property values for the various mixture at each temperature.
 
 temperatures = np.linspace(1000, 25000, 100)
-densities = [[] for _ in range(3)]
-heat_capacities = [[] for _ in range(3)]
+densities: list[list[float]] = [[], [], []]
+heat_capacities: list[list[float]] = [[], [], []]
 
 # %%
 # Perform the composition calculations.

@@ -106,7 +106,7 @@ water = mpc.species.Polyatomic(
     polarisability=1.501e-30,
     multiplicity=1,
     effectiveelectrons=7.04,
-    electroncrosssection=[9.274e-36, 41.81, -2.090, 1.066e-20],
+    electroncrosssection=(9.274e-36, 41.81, -2.090, 1.066e-20),
     emissionlines=[],
     sources=[
         "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. "

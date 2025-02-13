@@ -85,7 +85,7 @@ sico_mixture = mpc.mixture.lte_from_names(species, x0, 1000, 101325)
 
 temperatures = np.linspace(1000, 25000, 100)
 species_names = [sp.name for sp in sico_mixture.species]
-ni = []
+ni_list = []
 
 # %%
 # Perform the composition calculations.
@@ -102,8 +102,8 @@ ni = []
 
 for T in temperatures:
     sico_mixture.T = T
-    ni.append(sico_mixture.calculate_composition())
-ni = np.array(ni).transpose()
+    ni_list.append(sico_mixture.calculate_composition())
+ni = np.array(ni_list).transpose()
 
 # %%
 # Plot the results.
