@@ -1,7 +1,5 @@
 """List of atomic symbols and corresponding atomic masses."""
 
-import numpy as np
-
 from minplascalc.units import Units
 
 u = Units()

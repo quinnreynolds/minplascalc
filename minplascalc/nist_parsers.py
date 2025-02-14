@@ -7,7 +7,7 @@ Level is the energy level in electron volts.
 Inspired from https://github.com/exoclime/HELIOS-K/blob/master/nist_ELevels2.py
 """
 
-import requests
+import requests  # type: ignore  # To download the data from the NIST Atomic Spectra Database.
 
 from minplascalc.units import Units
 
@@ -94,7 +94,7 @@ def get_nist_energy_levels(
 
 def get_nist_spectral_lines(
     atom_symbol: str, ionization_state: str
-) -> list[tuple[float, float]]:
+) -> list[tuple[float, float, float]]:
     """Get the spectral lines for a given atom and ionization state.
 
     Lines included are the observed one, as well as those of Ritz.

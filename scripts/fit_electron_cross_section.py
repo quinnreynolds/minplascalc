@@ -69,7 +69,8 @@ if __name__ == "__main__":
     # LXCAT
     # DATABASE:         Morgan (Kinema Research  Software)
     # PERMLINK:         www.lxcat.net/Morgan
-    # DESCRIPTION:      Assembled over the course of 30 years WL Morgan and suitable for use with 2-term Boltzmann solvers.
+    # DESCRIPTION:      Assembled over the course of 30 years WL Morgan and suitable for use with 2-term
+    #                   Boltzmann solvers.
     # CONTACT:          W. Lowell Morgan, Kinema Research  Software
     # e / C
     # Effective E + C → E + C (m/M = 0.000045683, complete set) | (p. 1664, Vol. IV). Updated: 6 June 2011.

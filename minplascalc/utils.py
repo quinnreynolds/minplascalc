@@ -42,9 +42,7 @@ def get_path_to_data(*paths: str, force_return: bool = False) -> Path:
     --------
         >>> from minplascalc.utils import get_path_to_data
         >>> path = get_path_to_data()
-        >>> path = get_path_to_data(
-        ...     "demo", "nist", "nist_Oplus_emissionlines"
-        ... )
+        >>> path = get_path_to_data("demo", "nist", "nist_Oplus_emissionlines")
 
     Raises
     ------

@@ -1,7 +1,6 @@
 import pickle
 
 import numpy as np
-import pytest
 
 from minplascalc.nist_parsers import get_nist_energy_levels, get_nist_spectral_lines
 from minplascalc.utils import get_path_to_data
