@@ -41,7 +41,7 @@ box is unchecked.
 # The dissociation energy can be found either on the NIST Computational Chemistry Comparison and
 # Benchmark Database (http://cccbdb.nist.gov/introx.asp), or alternatively from chemistry textbooks
 # or other sources. In the case of SiO, the value is 798 kJ/mol.
-
+# 
 # We then need some information about the electronic ground state of the molecule,
 # and its vibrational and rotational parameters.
 # To get this, go back to the main page for SiO in the Chemistry WebBook and click on
