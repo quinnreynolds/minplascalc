@@ -12,6 +12,11 @@ List of bibliographic references used in this project:
 Articles
 --------
 
+.. [Cambi1991] Cambi, Roberto; Cappelletti, David;
+  Generalized correlations in terms of polarizability for van der Waals interaction potential parameter calculations
+  Journal of Chemical Physics ; AIP Publishing ; Aug 1, 1991
+  DOI: https://doi.org/10.1063/1.461035
+
 .. [Devoto1966] RS Devoto. Transport Properties of Ionized Monatomic Gases,
   *The Physics of Fluids*, 9(6), 1966, 1230-1240
 
@@ -35,6 +40,12 @@ Books
 
 Code
 ----
+
+.. [NIST_ASD] Kramida, A., Ralchenko, Yu., Reader, J. and NIST ASD Team (2024).
+  NIST Atomic Spectra Database (version 5.12), [Online].
+  Available: https://physics.nist.gov/asd [Thu Feb 13 2025].
+  National Institute of Standards and Technology, Gaithersburg, MD.
+  DOI: https://doi.org/10.18434/T4W30F
 
 Lectures
 --------
