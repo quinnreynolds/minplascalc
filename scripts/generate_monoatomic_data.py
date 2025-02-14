@@ -59,7 +59,7 @@ multiplicity = 4
 # alpha = 4 pi \epsilon_0 a^3 with a = 5.29e-11 m (Bohr radius) = 1.48 × 10−31 m3
 # Or you could use the following approximation: divide by 2 the polarizability of the neutral species
 # This is based on C/C+, O/O+ and Si/Si+ data
-polarisability = 4.50711 * 0.1481847113 * 1e-30 / 2
+polarisability = 3.91e-31
 
 # Only for neutral species
 # See eq.6 of [Cambi1991]_
@@ -90,7 +90,7 @@ electron_cross_section = None
 # ],
 
 
-oxygenplus = Monatomic(
+monoatomic_species = Monatomic(
     name=species,
     stoichiometry=stochoiometry,
     molarmass=molar_mass,
@@ -112,6 +112,7 @@ oxygenplus = Monatomic(
 )
 
 species_folder = get_path_to_data("species")
-oxygenplus.to_file(datafile=species_folder / f"{species}.json")
+path_to_species = species_folder / f"{monoatomic_species.name}.json"
+monoatomic_species.to_file(datafile=species_folder / f"{path_to_species}.json")
 
-print(f"Data for {species} has been generated and saved in {species_folder}.")
+print(f"Data for {species} has been generated and saved in {path_to_species}.")
