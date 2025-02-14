@@ -41,7 +41,7 @@ box is unchecked.
 # The dissociation energy can be found either on the NIST Computational Chemistry Comparison and
 # Benchmark Database (http://cccbdb.nist.gov/introx.asp), or alternatively from chemistry textbooks
 # or other sources. In the case of SiO, the value is 798 kJ/mol.
-# 
+#
 # We then need some information about the electronic ground state of the molecule,
 # and its vibrational and rotational parameters.
 # To get this, go back to the main page for SiO in the Chemistry WebBook and click on
@@ -69,11 +69,11 @@ box is unchecked.
 # * The electric charge in units of the elementary charge.
 # * The ionisation energy of the species, in J.
 # * The dissociation (atomisation) energy of the species, in J, only used by neutral species.
-# * The symmetry constant $\sigma_s$, takes a value of 1 for heteronuclear molecules like SiO,
-#   and 2 for homonuclear molecules like O<sub>2</sub>.
-# * The vibrational constant $\omega_e$, in J.
-# * The rotational constant $B_e$, in J.
-# * The polarisability of the species, in m<sup>3</sup>.
+# * The symmetry constant :math:`\sigma_s`, takes a value of 1 for heteronuclear molecules like SiO,
+#   and 2 for homonuclear molecules like :math:`O_2`.
+# * The vibrational constant :math:`\omega_e`, in J.
+# * The rotational constant :math:`B_e`, in J.
+# * The polarisability of the species, in :math:`m^3`.
 # * The multiplicity of the ground state.
 # * The number of effective valence electrons (see docstring for more information),
 #   only used by neutral species.

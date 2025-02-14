@@ -65,10 +65,10 @@ search" box is unchecked.
 # * The electric charge in units of the elementary charge.
 # * The ionisation energy of the species, in J.
 # * The dissociation (atomisation) energy of the species, in J, only used by neutral species.
-# * The symmetry constant $\sigma_s$, and a flag indicating whether the molecule is linear or not.
-# * The vibrational constants $\omega_{e,i}$, in J.
-# * The rotational constants $A$, $B$, and $C$ in J.
-# * The polarisability of the species, in m<sup>3</sup>.
+# * The symmetry constant :math:`\sigma_s`, and a flag indicating whether the molecule is linear or not.
+# * The vibrational constants :math:`\omega_{e,i}`, in J.
+# * The rotational constants :math:`A`, :math:`B`, and :math:`C` in J.
+# * The polarisability of the species, in :math:`O_2`.
 # * The multiplicity of the ground state.
 # * The number of effective valence electrons (see docstring for more information),
 #   only used by neutral species.
