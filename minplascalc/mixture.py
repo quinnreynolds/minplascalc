@@ -3,8 +3,9 @@ import warnings
 
 import numpy as np
 
-from minplascalc import functions_radiation, functions_transport
+from minplascalc import functions_radiation
 from minplascalc import species as _species
+from minplascalc.transport import functions_transport
 from minplascalc.units import Units
 
 u = Units()
