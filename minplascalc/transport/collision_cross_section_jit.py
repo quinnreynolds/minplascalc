@@ -5,20 +5,16 @@ from scipy.special import gamma
 
 from minplascalc.data_transport import c_in, c_nn
 from minplascalc.transport.potential_functions import (
-    x0_ion_neut,
-    x0_neut_neut,
     sum1,
     sum2,
+    x0_ion_neut,
+    x0_neut_neut,
 )
 from minplascalc.transport.potential_functions_jit import (
     beta_jit,
-    coulomb_logarithm_ee_jit,
-    coulomb_logarithm_ei_jit,
-    coulomb_logarithm_ii_jit,
     pot_parameters_ion_neut_jit,
     pot_parameters_neut_neut_jit,
 )
-from minplascalc.units import Units
 
 
 @njit
