@@ -2,8 +2,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from minplascalc.transport.collision_cross_section import Qij_mix
 from minplascalc.transport.potential_functions import delta
+from minplascalc.transport.q_hat_matrix import qhat
 from minplascalc.transport.q_matrix import q
 from minplascalc.units import Units
 
@@ -11,115 +11,6 @@ if TYPE_CHECKING:
     from minplascalc.mixture import LTE
 
 u = Units()
-
-
-def qhat(mixture: "LTE") -> np.ndarray:
-    """Calculate the qhat-matrix for a mixture of species.
-
-    Parameters
-    ----------
-    mixture : LTE
-        Mixture of species.
-
-    Returns
-    -------
-    np.ndarray
-        qhat-matrix.
-
-    Notes
-    -----
-    The various elements of the qhat-matrix are calculated from the appendix of [Devoto1966]_, from
-    equation A19 to A22.
-    """
-    nb_species = len(mixture.species)
-    number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molarmass / u.N_a for sp in mixture.species])
-
-    Q11 = Qij_mix(mixture, 1, 1)
-    Q12 = Qij_mix(mixture, 1, 2)
-    Q13 = Qij_mix(mixture, 1, 3)
-    Q22 = Qij_mix(mixture, 2, 2)
-    Q23 = Qij_mix(mixture, 2, 3)
-    Q24 = Qij_mix(mixture, 2, 4)
-    Q33 = Qij_mix(mixture, 3, 3)
-
-    # Equation A19 of [Devoto1966]_.
-    qhat00 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            sum_val = 0.0
-            for l in range(nb_species):
-                term1 = (
-                    number_densities[l]
-                    * masses[l] ** (1 / 2)
-                    / (masses[i] + masses[l]) ** (3 / 2)
-                )
-                term2 = (delta(i, j) - delta(j, l)) * 10 / 3 * masses[j] * Q11[i, l] + (
-                    delta(i, j) + delta(j, l)
-                ) * 2 * masses[l] * Q22[i, l]
-                sum_val += term1 * term2
-            qhat00[i, j] = 8 * number_densities[i] * (masses[i] / masses[j]) * sum_val
-
-    # Equation A20 of [Devoto1966]_.
-    qhat01 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            sum_val = 0.0
-            for l in range(nb_species):
-                term1 = (
-                    number_densities[l]
-                    * masses[l] ** (3 / 2)
-                    / (masses[i] + masses[l]) ** (5 / 2)
-                )
-                term2 = (delta(i, j) - delta(j, l)) * masses[j] * (
-                    35 / 3 * Q11[i, l] - 14 * Q12[i, l]
-                ) + (delta(i, j) + delta(j, l)) * masses[l] * (
-                    7 * Q22[i, l] - 8 * Q23[i, l]
-                )
-                sum_val += term1 * term2
-            qhat01[i, j] = (
-                8 * number_densities[i] * (masses[i] / masses[j]) ** 2 * sum_val
-            )
-
-    # Equation A22 of [Devoto1966]_.
-    qhat11 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            sum_val = 0.0
-            for l in range(nb_species):
-                term1 = (
-                    number_densities[l]
-                    * masses[l] ** (1 / 2)
-                    / (masses[i] + masses[l]) ** (7 / 2)
-                )
-                term2 = (delta(i, j) - delta(j, l)) * masses[j] * (
-                    1 / 6 * (140 * masses[j] ** 2 + 245 * masses[l] ** 2) * Q11[i, l]
-                    - masses[l] ** 2
-                    * (98 * Q12[i, l] - 64 * Q13[i, l] - 24 * Q33[i, l])
-                ) + (delta(i, j) + delta(j, l)) * masses[l] * (
-                    1 / 6 * (154 * masses[j] ** 2 + 147 * masses[l] ** 2) * Q22[i, l]
-                    - masses[l] ** 2 * (56 * Q23[i, l] - 40 * Q24[i, l])
-                )
-                sum_val += term1 * term2
-            qhat11[i, j] = (
-                8 * number_densities[i] * (masses[i] / masses[j]) ** 2 * sum_val
-            )
-
-    # Equation A21 of [Devoto1966]_.
-    qhat10 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            qhat10[i, j] = masses[j] / masses[i] * qhat01[i, j]
-
-    qq = np.zeros((2 * nb_species, 2 * nb_species))
-
-    qq[0 * nb_species : 1 * nb_species, 0 * nb_species : 1 * nb_species] = qhat00
-    qq[0 * nb_species : 1 * nb_species, 1 * nb_species : 2 * nb_species] = qhat01
-
-    qq[1 * nb_species : 2 * nb_species, 0 * nb_species : 1 * nb_species] = qhat10
-    qq[1 * nb_species : 2 * nb_species, 1 * nb_species : 2 * nb_species] = qhat11
-
-    return qq
 
 
 ### Transport property calculations ############################################
