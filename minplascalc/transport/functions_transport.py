@@ -2,7 +2,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from minplascalc.transport.potential_functions import delta
+from minplascalc.transport.functions_transport_jit import (
+    Dij_jit,
+    DTi_jit,
+    electricalconductivity_jit,
+    viscosity_jit,
+    thermalconductivity_dash_jit,
+)
 from minplascalc.transport.q_hat_matrix import qhat
 from minplascalc.transport.q_matrix import q
 from minplascalc.units import Units
@@ -74,35 +80,14 @@ def Dij(mixture: "LTE") -> np.ndarray:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()  # m^-3
-    n_tot = np.sum(number_densities)  # m^-3
     masses = np.array([sp.molarmass / u.N_a for sp in mixture.species])  # kg
     rho = mixture.calculate_density()  # kg/m^3
 
     diffusion_matrix = np.zeros((nb_species, nb_species))
 
     qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
-    # qq = q(mixture)[:nb_species, :nb_species]
-    invq = np.linalg.inv(qq)
-    bvec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
-    # bvec = np.zeros(nb_species)
-    for i in range(nb_species):
-        for j in range(nb_species):
-            # TODO: Check if this is correct
-            # Equation 6 of [Devoto1966]_.
-            dij = np.array([delta(h, i) - delta(h, j) for h in range(0, nb_species)])
-            bvec[:nb_species] = 3 * np.sqrt(u.pi) * dij
-            cflat = invq.dot(bvec)
-            cip = cflat.reshape(4, nb_species)
-            # cip = cflat.reshape(1, nb_species)
 
-            # Diffusion coefficient, equation 3 of [Devoto1966]_.
-            diffusion_matrix[i, j] = (
-                rho
-                * number_densities[i]
-                / (2 * n_tot * masses[j])
-                * np.sqrt(2 * u.k_b * mixture.T / masses[i])
-                * cip[0, i]
-            )
+    diffusion_matrix = Dij_jit(nb_species, number_densities, masses, rho, mixture.T, qq)
 
     return diffusion_matrix
 
@@ -166,20 +151,8 @@ def DTi(mixture: "LTE") -> float:
     masses = np.array([sp.molarmass / u.N_a for sp in mixture.species])
 
     qq = q(mixture)
-    invq = np.linalg.inv(qq)
-    bvec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
-    # Only the first element is non-zero
-    bvec[nb_species : 2 * nb_species] = -15 / 2 * np.sqrt(u.pi) * number_densities
-    aflat = invq.dot(bvec)
-    aip = aflat.reshape(4, nb_species)
 
-    return (
-        0.5
-        * number_densities
-        * masses
-        * np.sqrt(2 * u.k_b * mixture.T / masses)
-        * aip[0]
-    )
+    return DTi_jit(nb_species, number_densities, masses, mixture.T, qq)
 
 
 def viscosity(mixture: "LTE") -> float:
@@ -235,17 +208,9 @@ def viscosity(mixture: "LTE") -> float:
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
     masses = np.array([sp.molarmass / u.N_a for sp in mixture.species])
-
     qq = qhat(mixture)
-    invq = np.linalg.inv(qq)
-    bvec = np.zeros(2 * nb_species)  # 2 for 2nd order approximation
-    bvec[:nb_species] = (
-        5 * number_densities * np.sqrt(2 * u.pi * masses / (u.k_b * mixture.T))
-    )
-    bflat = invq.dot(bvec)
-    bip = bflat.reshape(2, nb_species)
 
-    return 0.5 * u.k_b * mixture.T * np.sum(number_densities * bip[0])
+    return viscosity_jit(nb_species, number_densities, masses, mixture.T, qq)
 
 
 def electricalconductivity(mixture: "LTE") -> float:
@@ -288,23 +253,16 @@ def electricalconductivity(mixture: "LTE") -> float:
 
     The sum is over all ionic species in the mixture.
     """
+    charge_numbers = np.array([sp.chargenumber for sp in mixture.species])
     number_densities = mixture.calculate_composition()
     masses = np.array([sp.molarmass / u.N_a for sp in mixture.species])
-    n_tot = np.sum(number_densities)
     rho = mixture.calculate_density()
 
     D1 = Dij(mixture)[-1, :]
 
-    sum_val = 0.0
-    for species_j, D1j, mj, nj in zip(mixture.species, D1, masses, number_densities):
-        # TODO: Check if this is correct. Electrons should be discarded.
-        # TODO: Check if this is correct. Neutrak species should be discarded (but ok,
-        # since they have 0 charge).
-        sum_val += nj * mj * species_j.chargenumber * D1j
-
-    premult = u.e**2 * n_tot / (rho * u.k_b * mixture.T)
-
-    return premult * sum_val
+    return electricalconductivity_jit(
+        charge_numbers, number_densities, masses, rho, mixture.T, D1
+    )
 
 
 def thermalconductivity(
@@ -424,19 +382,11 @@ def thermalconductivity(
     ### Translational tk components. ###
     # Solve equation 5 of [Devoto1966]_ to get the `a` matrix.
     qq = q(mixture)
-    invq = np.linalg.inv(qq)
-    bvec = np.zeros(4 * nb_species)
-    bvec[nb_species : 2 * nb_species] = -15 / 2 * np.sqrt(u.pi) * number_densities
-    aflat = invq.dot(bvec)
-    aip = aflat.reshape(4, nb_species)
-    # Equation 13 of [Devoto1966]_.
-    kdash = (
-        -5
-        / 4
-        * u.k_b
-        * np.sum(number_densities * np.sqrt(2 * u.k_b * mixture.T / masses) * aip[1])
-    )
+
     # TODO: Why not use equation 14?
+    kdash = thermalconductivity_dash_jit(
+        nb_species, number_densities, masses, mixture.T, qq
+    )
 
     ### Thermal diffusion tk components. ###
     if DTterms_yn:
