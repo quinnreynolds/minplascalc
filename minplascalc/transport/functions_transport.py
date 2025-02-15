@@ -6,8 +6,8 @@ from minplascalc.transport.functions_transport_jit import (
     Dij_jit,
     DTi_jit,
     electricalconductivity_jit,
-    viscosity_jit,
     thermalconductivity_dash_jit,
+    viscosity_jit,
 )
 from minplascalc.transport.q_hat_matrix import qhat
 from minplascalc.transport.q_matrix import q
