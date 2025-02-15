@@ -4,8 +4,7 @@ import numpy as np
 from scipy import constants
 from scipy.special import gamma
 
-from minplascalc.data_transport import c_in, c_nn
-from minplascalc.transport.collision_cross_section_jit import Qnn_jit
+from minplascalc.transport.collision_cross_section_jit import Qin_jit, Qnn_jit, Qtr_jit
 from minplascalc.transport.potential_functions import (
     A,
     B,
@@ -213,7 +212,7 @@ def Qin(
     Parameters
     ----------
     species_i : Species
-        First neutral species.
+        First ion species.
     species_j : Species
         Second neutral species.
     l : int
@@ -226,7 +225,7 @@ def Qin(
     Returns
     -------
     float
-        Neutral-neutral elastic collision integral.
+        Ion-neutral elastic collision integral.
 
     Notes
     -----
@@ -276,36 +275,23 @@ def Qin(
             - Qin(species_i, species_j, l, s - 1, negT)
         )
     # Get the equilibrium distance r_e and binding energy epsilon_0.
-    # (eq. 9 and 10 of [Laricchiuta2007]).
-    r_e, epsilon_0 = pot_parameters_ion_neut(species_i, species_j)
-    # Calculate the beta parameter (eq. 5 of [Laricchiuta2007]).
-    beta_value = beta(species_i, species_j)
-    # Calculate the x0 parameter (eq. 17 of [Laricchiuta2007]).
-    x0 = x0_ion_neut(beta_value)
-    # Evaluate the polynomial coefficients a (eq. 16 of [Laricchiuta2007]_).
-    a = c_in[l - 1, s - 1].dot([1, beta_value, beta_value**2])
-    # Get the parameter sigma (Paragraph above eq. 13 of [Laricchiuta2007]).
-    sigma = r_e * x0
-    # Compute T* (eq. 12 of [Laricchiuta2007]).
-    T_star = (
-        u.K_to_eV * T / epsilon_0
-    )  # TODO: Check this: K_to_eV or k_b? (units seem good.)
-    # Calculate the parameter x (Paragraph above eq. 16 of [Laricchiuta2007]).
-    x = np.log(T_star)
-    # Calculate the reduced collision integral (eq. 15 of [Laricchiuta2007]).
-    lnS1 = (
-        (a[0] + a[1] * x)
-        * np.exp((x - a[2]) / a[3])
-        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
+    alpha_i, alpha_j = species_i.polarisability * 1e30, species_j.polarisability * 1e30
+    z_ion = species_i.chargenumber
+    spin_multiplicity_i, spin_multiplicity_j = (
+        species_i.multiplicity,
+        species_j.multiplicity,
     )
-    lnS2 = (
-        a[4]
-        * np.exp((x - a[5]) / a[6])
-        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
+    T_eV = T * u.K_to_eV
+    omega = Qin_jit(
+        alpha_i,
+        alpha_j,
+        z_ion,
+        spin_multiplicity_i,
+        spin_multiplicity_j,
+        l,
+        s,
+        T_eV,
     )
-    omega_reduced = np.exp(lnS1 + lnS2)
-    # Dimensional collision integral (Paragraph above eq. 17).
-    omega = omega_reduced * u.pi * sigma**2 * 1e-20  # TODO: why pi?
     return omega
 
 
@@ -366,17 +352,8 @@ def Qtr(
         M = species_j.molarmass
     ln_term = np.log(4 * u.R * T / M)
 
-    zeta_1 = sum1(s)
-    zeta_2 = sum2(s)
-
     # Same as eq. 12 of [Devoto1967], with rearranged terms.
-    return (
-        a**2
-        - zeta_1 * a * b
-        + (b / 2) ** 2 * (u.pi**2 / 6 - zeta_2 + zeta_1**2)
-        + (b / 2) ** 2 * ln_term**2
-        + (zeta_1 * b**2 / 2 - a * b) * ln_term
-    )
+    return Qtr_jit(s, a, b, ln_term)
 
 
 def Qc(
