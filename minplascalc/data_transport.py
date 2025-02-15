@@ -239,17 +239,17 @@ c1_nn_44 = [
     2.842981e-1,
 ]
 c2_nn_44 = [0, 0, 0, 0, -3.899247e-3, -1.939452e-2, -1.874462e-2]
-c_nn_11 = np.array([c0_nn_11, c1_nn_11, c2_nn_11]).transpose()
-c_nn_12 = np.array([c0_nn_12, c1_nn_12, c2_nn_12]).transpose()
-c_nn_13 = np.array([c0_nn_13, c1_nn_13, c2_nn_13]).transpose()
-c_nn_14 = np.array([c0_nn_14, c1_nn_14, c2_nn_14]).transpose()
-c_nn_15 = np.array([c0_nn_15, c1_nn_15, c2_nn_15]).transpose()
-c_nn_22 = np.array([c0_nn_22, c1_nn_22, c2_nn_22]).transpose()
-c_nn_23 = np.array([c0_nn_23, c1_nn_23, c2_nn_23]).transpose()
-c_nn_24 = np.array([c0_nn_24, c1_nn_24, c2_nn_24]).transpose()
-c_nn_33 = np.array([c0_nn_33, c1_nn_33, c2_nn_33]).transpose()
-c_nn_44 = np.array([c0_nn_44, c1_nn_44, c2_nn_44]).transpose()
-fill_nan_c_nn = np.full(c_nn_11.shape, np.nan)
+c_nn_11 = np.array([c0_nn_11, c1_nn_11, c2_nn_11], dtype=np.float64).transpose()
+c_nn_12 = np.array([c0_nn_12, c1_nn_12, c2_nn_12], dtype=np.float64).transpose()
+c_nn_13 = np.array([c0_nn_13, c1_nn_13, c2_nn_13], dtype=np.float64).transpose()
+c_nn_14 = np.array([c0_nn_14, c1_nn_14, c2_nn_14], dtype=np.float64).transpose()
+c_nn_15 = np.array([c0_nn_15, c1_nn_15, c2_nn_15], dtype=np.float64).transpose()
+c_nn_22 = np.array([c0_nn_22, c1_nn_22, c2_nn_22], dtype=np.float64).transpose()
+c_nn_23 = np.array([c0_nn_23, c1_nn_23, c2_nn_23], dtype=np.float64).transpose()
+c_nn_24 = np.array([c0_nn_24, c1_nn_24, c2_nn_24], dtype=np.float64).transpose()
+c_nn_33 = np.array([c0_nn_33, c1_nn_33, c2_nn_33], dtype=np.float64).transpose()
+c_nn_44 = np.array([c0_nn_44, c1_nn_44, c2_nn_44], dtype=np.float64).transpose()
+fill_nan_c_nn = np.full(c_nn_11.shape, np.nan, dtype=np.float64)
 
 c_nn = np.array(
     [
@@ -257,7 +257,8 @@ c_nn = np.array(
         [fill_nan_c_nn, c_nn_22, c_nn_23, c_nn_24, fill_nan_c_nn],
         [fill_nan_c_nn, fill_nan_c_nn, c_nn_33, fill_nan_c_nn, fill_nan_c_nn],
         [fill_nan_c_nn, fill_nan_c_nn, fill_nan_c_nn, c_nn_44, fill_nan_c_nn],
-    ]
+    ],
+    dtype=np.float64,
 )
 """Parameters for the classical transport collision integrals for neutral-neutral interactions."""
 
