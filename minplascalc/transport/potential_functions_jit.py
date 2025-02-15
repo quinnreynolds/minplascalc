@@ -11,9 +11,9 @@ def pot_parameters_neut_neut_jit(
     Parameters
     ----------
     alpha_i : float
-        Polarisability of species i in m^3.
+        Polarisability of species i in Å^3.
     alpha_j : float
-        Polarisability of species j in m^3.
+        Polarisability of species j in Å^3.
     n_eff_i : float
         Effective number of electrons of species i.
     n_eff_j : float
@@ -32,7 +32,7 @@ def pot_parameters_neut_neut_jit(
 
         r_e = 1.767 \frac{\alpha_1^{1 / 3}+\alpha_2^{1 / 3}}{\left(\alpha_1 \alpha_2\right)^{0.095}}
 
-    where :math:`\alpha_i` is the polarisability of species :math:`i` in m^3.
+    where :math:`\alpha_i` is the polarisability of species :math:`i` in Å^3.
 
 
     The binding energy is given by eq. 7 of [Laricchiuta2007]_ by the formula:
@@ -76,9 +76,9 @@ def pot_parameters_ion_neut_jit(
     Parameters
     ----------
     alpha_i : float
-        Polarisability of the ion species in m^3.
+        Polarisability of the ion species in Å^3.
     alpha_n : float
-        Polarisability of the neutral species in m^3.
+        Polarisability of the neutral species in Å^3.
     Z_ion : float
         Charge number of the ion species
 
@@ -97,7 +97,7 @@ def pot_parameters_ion_neut_jit(
                          {\left(\alpha_i \alpha_n \[ 1 + \frac{1}{\rho}\] \right)^{0.095}}
 
     where :math:`\alpha_i` is the polarisability of the ion species and :math:`\alpha_n` is the polarisability
-    of the neutral species, both in m^3.
+    of the neutral species, both in Å^3.
 
     The binding energy is given by eq. 10 of [Laricchiuta2007]_ by the formula:
 
@@ -106,7 +106,7 @@ def pot_parameters_ion_neut_jit(
         \epsilon_0 = 5.2 \frac{z^2 \alpha_n}{r_e^4} \left(1 + \rho\right)
 
     where :math:`z` is the charge number of the ion species, :math:`\alpha_n` is the polarisability of the
-    neutral species in m^3
+    neutral species in Å^3
 
     :math:`\rho` is representative of the relative role of dispersion and induction attraction components in
     proximity to the equilibrium distance, defined in eq. 11 of [Laricchiuta2007]_ by the formula:
@@ -145,9 +145,9 @@ def beta_jit(
     Parameters
     ----------
     alpha_i : float
-        Polarisability of species i in m^3.
+        Polarisability of species i in Å^3.
     alpha_j : float
-        Polarisability of species j in m^3.
+        Polarisability of species j in Å^3.
     spin_multiplicity_i : float
         Spin multiplicity of species i.
     spin_multiplicity_j : float
