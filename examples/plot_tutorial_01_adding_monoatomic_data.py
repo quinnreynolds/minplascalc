@@ -57,7 +57,7 @@ formatted using JSON syntax, and it will then be available for use in any of you
 # A similar exercise must then be performed for the spectral lines using the "lines" form on
 # the NIST ASD - these must be stored in a list of length-3 lists containing the line wavelength
 # :math:`\lambda` in m, the transition strength :math:`g_k A_{ki}` in 1/s,
-# and the line energy math:`E_k` in J.
+# and the line energy :math:`E_k` in J.
 # This exercise has already been performed for the oxygen cation, and data lists from NIST ASD
 # are stored in pickle files at data/demo/nist.
 #
@@ -67,7 +67,7 @@ formatted using JSON syntax, and it will then be available for use in any of you
 # * The molar mass of the species, in kg/mol.
 # * The electric charge in units of the elementary charge.
 # * The ionisation energy of the species, in J.
-# * The polarisability of the species, in m<sup>3</sup>.
+# * The polarisability of the species, in :math:`m^3`.
 # * The multiplicity of the ground state.
 # * The number of effective valence electrons (see docstring for more information),
 #   only used by neutral species.

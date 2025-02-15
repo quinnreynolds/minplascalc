@@ -128,7 +128,7 @@ class Species(BaseSpecies):
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
         effectiveelectrons : float | None
-            Effective number of electrons in valence shell, per Cambi 1991
+            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]
             (only required for neutral species).
         electroncrosssection : float | tuple[float, float, float, float] | None
             Cross section for elastic electron collisions in m^2 (only required
@@ -211,7 +211,7 @@ class Monatomic(Species):
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
         effectiveelectrons : float | None
-            Effective number of electrons in valence shell, per Cambi 1991
+            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]
             (only required for neutral species).
             Could be None if not available.
         electroncrosssection : float | tuple[float, float, float, float] | None
@@ -448,7 +448,7 @@ class Diatomic(Species):
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
         effectiveelectrons : float | None
-            Effective number of electrons in valence shell, per Cambi 1991
+            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]
             (only required for neutral species)
         electroncrosssection : float | tuple[float, float, float, float] | None
             Cross section for elastic electron collisions in m^2 (only required
@@ -741,7 +741,7 @@ class Polyatomic(Species):
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
         effectiveelectrons : float | None
-            Effective number of electrons in valence shell, per Cambi 1991
+            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]
             (only required for neutral species)
         electroncrosssection : float | tuple[float, float, float, float] | None
             Cross section for elastic electron collisions in m^2 (only required
