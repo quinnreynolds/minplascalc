@@ -1,16 +1,5 @@
 import numpy as np
 from numba import njit
-from scipy import constants
-from scipy.special import gamma
-
-from minplascalc.data_transport import c_in, c_nn
-from minplascalc.units import Units
-
-u = Units()
-
-ke = 1 / (4 * u.pi * u.epsilon_0)
-a0 = constants.physical_constants["Bohr radius"][0]
-egamma = np.euler_gamma
 
 
 @njit
