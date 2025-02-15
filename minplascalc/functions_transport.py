@@ -1,11 +1,19 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+from numba import njit
 from scipy import constants
 from scipy.special import gamma
 
 from minplascalc.data_transport import c_in, c_nn
-from minplascalc.functions_transport_jit import pot_parameters_neut_neut_jit
+from minplascalc.functions_transport_jit import (
+    beta_jit,
+    coulomb_logarithm_ee_jit,
+    coulomb_logarithm_ei_jit,
+    coulomb_logarithm_ii_jit,
+    pot_parameters_ion_neut_jit,
+    pot_parameters_neut_neut_jit,
+)
 from minplascalc.units import Units
 
 if TYPE_CHECKING:
@@ -135,21 +143,11 @@ def pot_parameters_ion_neut(
     # Polarisabilities of the species, in m^3.
     alpha_i = species_ion.polarisability * 1e30
     alpha_n = species_neutral.polarisability * 1e30
-    # rho, as defined in eq. 11 of [Laricchiuta2007]_.
-    rho = alpha_i / (
-        species_ion.chargenumber**2
-        * np.sqrt(alpha_n)
-        * (1 + (2 * alpha_i / alpha_n) ** (2 / 3))
-    )
-    # Equilibrium distance r_e, as defined in eq. 9 of [Laricchiuta2007]_.
-    r_e = (
-        1.767
-        * (alpha_i ** (1 / 3) + alpha_n ** (1 / 3))
-        / (alpha_i * alpha_n * (1 + 1 / rho)) ** 0.095
-    )
-    # Binding energy epsilon_0, as defined in eq. 10 of [Laricchiuta2007]_.
-    epsilon_0 = 5.2 * species_ion.chargenumber**2 * alpha_n * (1 + rho) / r_e**4
+    # Charge number of the ion species.
+    Z_ion = species_ion.chargenumber
+
     # Return the equilibrium distance and the binding energy.
+    r_e, epsilon_0 = pot_parameters_ion_neut_jit(alpha_i, alpha_n, Z_ion)
     return r_e, epsilon_0
 
 
@@ -192,13 +190,12 @@ def beta(
     # Polarisabilities of the species, in m^3.
     alpha_i = species_i.polarisability * 1e30
     alpha_j = species_j.polarisability * 1e30
-    # Compute the softness of the species.
-    s_i = alpha_i ** (1 / 3) * species_i.multiplicity
-    s_j = alpha_j ** (1 / 3) * species_j.multiplicity
     # Return the beta parameter.
-    return 6 + 5 / (s_i + s_j)
+    beta = beta_jit(alpha_i, alpha_j, species_i.multiplicity, species_j.multiplicity)
+    return beta
 
 
+@njit
 def x0_neut_neut(beta_value: float) -> float:
     r"""Calculate the x0 parameter for a neutral-neutral pair.
 
@@ -226,6 +223,7 @@ def x0_neut_neut(beta_value: float) -> float:
     return 0.8002 * beta_value**0.049256
 
 
+@njit
 def x0_ion_neut(beta_value: float) -> float:
     r"""Calculate the x0 parameter for a ion-neutral pair.
 
@@ -309,38 +307,27 @@ def coulomb_logarithm_charged(
     if species_i.name == "e" and species_j.name == "e":
         # Electron-electron collisions.
         ne_cgs = n_i * 1e-6  # m^-3 to cm^-3
-        return (
-            23.5
-            - np.log(ne_cgs ** (1 / 2) * T_eV ** (-5 / 4))
-            - (1e-5 + (np.log(T_eV) - 2) ** 2 / 16) ** (1 / 2)
-        )
+        return coulomb_logarithm_ee_jit(ne_cgs, T_eV)
     elif species_i.name == "e":
         # Electron-ion collisions.
         ne_cgs = n_i * 1e-6  # m^-3 to cm^-3
-        return 23 - np.log(
-            ne_cgs ** (1 / 2) * abs(species_j.chargenumber) * T_eV ** (-3 / 2)
-        )
+        z_ion = species_j.chargenumber
+        return coulomb_logarithm_ei_jit(ne_cgs, T_eV, z_ion)
     elif species_j.name == "e":
         # Ion-electron collisions, same as electron-ion collisions.
         ne_cgs = n_j * 1e-6  # m^-3 to cm^-3
-        return 23 - np.log(
-            ne_cgs ** (1 / 2) * abs(species_i.chargenumber) * T_eV ** (-3 / 2)
-        )
+        z_ion = species_i.chargenumber
+        return coulomb_logarithm_ei_jit(ne_cgs, T_eV, z_ion)
     else:
         # Ion-ion collisions.
         ni_cgs, nj_cgs = n_i * 1e-6, n_j * 1e-6  # m^-3 to cm^-3
-        return 23 - np.log(
-            abs(species_i.chargenumber * species_j.chargenumber)  # TODO: why abs?
-            / T_eV
-            * (
-                ni_cgs * abs(species_i.chargenumber) ** 2 / T_eV
-                + nj_cgs * abs(species_j.chargenumber) ** 2 / T_eV
-            )
-            ** (1 / 2)
-        )
+        z_ion_i = species_i.chargenumber
+        z_ion_j = species_j.chargenumber
+        return coulomb_logarithm_ii_jit(ni_cgs, nj_cgs, T_eV, z_ion_i, z_ion_j)
 
 
-def psiconst(s):
+@njit
+def psiconst(s: int) -> float:
     if s == 1:
         return 0
     else:
@@ -397,6 +384,7 @@ def B(ionisation_energy: float) -> float:
     return np.sqrt(u.pi) * 4.78257679e-10 / ie_eV**0.657012657
 
 
+@njit
 def sum1(s: int) -> float:
     r"""Sum of the first s+1 terms of the harmonic series, minus Euler's constant.
 
@@ -418,9 +406,10 @@ def sum1(s: int) -> float:
 
         \zeta_1(s) = \sum_{n=1}^{s+1} \frac{1}{n} - \gamma
     """
-    return np.sum(1 / np.array(range(1, s + 2))) - egamma
+    return np.sum(1 / np.arange(1, s + 2)) - egamma
 
 
+@njit
 def sum2(s: int) -> float:
     r"""Sum of the first s+1 terms squared of the harmonic series.
 
@@ -442,9 +431,10 @@ def sum2(s: int) -> float:
 
         \zeta_1(s) = \sum_{n=1}^{s+1} \frac{1}{n^2}
     """
-    return np.sum(1 / np.array(range(1, s + 2)) ** 2)
+    return np.sum(1 / np.arange(1, s + 2) ** 2)
 
 
+@njit
 def delta(i: int, j: int) -> int:
     """Kronecker delta.
 
