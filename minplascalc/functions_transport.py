@@ -5,6 +5,7 @@ from scipy import constants
 from scipy.special import gamma
 
 from minplascalc.data_transport import c_in, c_nn
+from minplascalc.functions_transport_jit import pot_parameters_neut_neut_jit
 from minplascalc.units import Units
 
 if TYPE_CHECKING:
@@ -74,21 +75,11 @@ def pot_parameters_neut_neut(
         raise ValueError(
             "Effective number of electrons must be provided for neutral species."
         )
-    C_d = (
-        15.7
-        * alpha_i
-        * alpha_j
-        / (
-            np.sqrt(alpha_i / species_i.effectiveelectrons)
-            + np.sqrt(alpha_j / species_j.effectiveelectrons)
-        )
-    )
-    # Equilibrium distance r_e, as defined in eq. 6 of [Laricchiuta2007]_.
-    r_e = (
-        1.767 * (alpha_i ** (1 / 3) + alpha_j ** (1 / 3)) / (alpha_i * alpha_j) ** 0.095
-    )
-    # Binding energy epsilon_0, as defined in eq. 7 of [Laricchiuta2007]_.
-    epsilon_0 = 0.72 * C_d / r_e**6
+    n_eff_i = species_i.effectiveelectrons
+    n_eff_j = species_j.effectiveelectrons
+
+    r_e, epsilon_0 = pot_parameters_neut_neut_jit(alpha_i, alpha_j, n_eff_i, n_eff_j)
+
     # Return the equilibrium distance and the binding energy.
     return r_e, epsilon_0
 
