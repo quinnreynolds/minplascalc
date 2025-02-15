@@ -14,6 +14,7 @@ from minplascalc.transport.potential_functions import (
 from minplascalc.units import Units
 
 if TYPE_CHECKING:
+    from minplascalc.mixture import LTE
     from minplascalc.species import Species
 
 u = Units()
@@ -414,3 +415,104 @@ def Qc(
         + psiconst(s)
     )
     return term1 * term2 * term3
+
+
+### Unified cross section calculations #########################################
+
+
+def Qij(
+    species_i: "Species",
+    ni: float,
+    species_j: "Species",
+    nj: float,
+    l: int,
+    s: int,
+    T: float,
+) -> float:
+    """Calculate the collision integral for a pair of species.
+
+    Parameters
+    ----------
+    species_i : Species
+        First species.
+    ni : float
+        Number density of the first species, in m^-3.
+    species_j : Species
+        Second species.
+    nj : float
+        Number density of the second species, in m^-3.
+    l : int
+        TODO: Angular momentum quantum number? Or integer moment?
+    s : int
+        TODO: Principal quantum number? Or integer moment?
+    T : float
+        Temperature, in K.
+
+    Returns
+    -------
+    float
+        Collision integral.
+
+    Raises
+    ------
+    ValueError
+        If the collision type is unknown.
+    """
+    if species_i.chargenumber != 0 and species_j.chargenumber != 0:
+        # For charged species, like ion-ion collisions, use the Coulomb collision integral.
+        return Qc(species_i, ni, species_j, nj, l, s, T)
+    elif species_j.name == "e":
+        # For neutral-electron collisions, use the electron-neutral collision integral.
+        return Qe(species_i, l, s, T)
+    elif species_i.name == "e":
+        # For electron-neutral collisions, use the electron-neutral collision integral.
+        return Qe(species_j, l, s, T)
+    elif species_i.chargenumber == 0 and species_j.chargenumber == 0:
+        # For neutral-neutral collisions, use the neutral-neutral collision integral.
+        return Qnn(species_i, species_j, l, s, T)
+    elif (
+        species_i.stoichiometry == species_j.stoichiometry
+        and abs(species_i.chargenumber - species_j.chargenumber) == 1
+        and l % 2 == 1
+    ):
+        # For neutral-ion (with ion charge difference of 1) --> resonant charge transfer collisions.
+        return Qtr(species_i, species_j, s, T)
+    elif species_i.chargenumber == 0:
+        # For neutral-ion collisions, use the ion-neutral collision integral.
+        return Qin(species_j, species_i, l, s, T)
+    elif species_j.chargenumber == 0:
+        # For ion-neutral collisions, use the ion-neutral collision integral.
+        return Qin(species_i, species_j, l, s, T)
+    else:
+        raise ValueError("Unknown collision type")
+
+
+def Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
+    """Calculate the collision integral matrix for a mixture of species.
+
+    Parameters
+    ----------
+    mixture : LTE
+        Mixture of species.
+    l : int
+        TODO: Angular momentum quantum number? Or integer moment?
+    s : int
+        TODO: Principal quantum number? Or integer moment?
+
+    Returns
+    -------
+    np.ndarray
+        Collision integral matrix.
+    """
+    # Square matrix to store the collision integrals.
+    Q_values = np.zeros((len(mixture.species), len(mixture.species)))
+    # Get the number densities of the species in the mixture.
+    number_densities = mixture.calculate_composition()  # in m^-3
+
+    # For all pairs of species in the mixture, calculate the corresponding collision integral.
+    for i, (ndi, species_i) in enumerate(zip(number_densities, mixture.species)):
+        for j, (ndj, species_j) in enumerate(zip(number_densities, mixture.species)):
+            Q_values[i, j] = Qij(species_i, ndi, species_j, ndj, l, s, mixture.T)
+
+    # Return the collision integral matrix.
+    return Q_values
