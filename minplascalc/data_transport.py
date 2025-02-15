@@ -460,23 +460,24 @@ c1_in_44 = [
     3.388072e-1,
 ]
 c2_in_44 = [0, 0, 0, 0, -1.210668e-2, -2.759622e-2, -2.669344e-2]
-c_in_11 = np.array([c0_in_11, c1_in_11, c2_in_11]).transpose()
-c_in_12 = np.array([c0_in_12, c1_in_12, c2_in_12]).transpose()
-c_in_13 = np.array([c0_in_13, c1_in_13, c2_in_13]).transpose()
-c_in_14 = np.array([c0_in_14, c1_in_14, c2_in_14]).transpose()
-c_in_15 = np.array([c0_in_15, c1_in_15, c2_in_15]).transpose()
-c_in_22 = np.array([c0_in_22, c1_in_22, c2_in_22]).transpose()
-c_in_23 = np.array([c0_in_23, c1_in_23, c2_in_23]).transpose()
-c_in_24 = np.array([c0_in_24, c1_in_24, c2_in_24]).transpose()
-c_in_33 = np.array([c0_in_33, c1_in_33, c2_in_33]).transpose()
-c_in_44 = np.array([c0_in_44, c1_in_44, c2_in_44]).transpose()
-fill_nan_c_in = np.full(c_in_11.shape, np.nan)
+c_in_11 = np.array([c0_in_11, c1_in_11, c2_in_11], dtype=np.float64).transpose()
+c_in_12 = np.array([c0_in_12, c1_in_12, c2_in_12], dtype=np.float64).transpose()
+c_in_13 = np.array([c0_in_13, c1_in_13, c2_in_13], dtype=np.float64).transpose()
+c_in_14 = np.array([c0_in_14, c1_in_14, c2_in_14], dtype=np.float64).transpose()
+c_in_15 = np.array([c0_in_15, c1_in_15, c2_in_15], dtype=np.float64).transpose()
+c_in_22 = np.array([c0_in_22, c1_in_22, c2_in_22], dtype=np.float64).transpose()
+c_in_23 = np.array([c0_in_23, c1_in_23, c2_in_23], dtype=np.float64).transpose()
+c_in_24 = np.array([c0_in_24, c1_in_24, c2_in_24], dtype=np.float64).transpose()
+c_in_33 = np.array([c0_in_33, c1_in_33, c2_in_33], dtype=np.float64).transpose()
+c_in_44 = np.array([c0_in_44, c1_in_44, c2_in_44], dtype=np.float64).transpose()
+fill_nan_c_in = np.full(c_in_11.shape, np.nan, dtype=np.float64)
 c_in = np.array(
     [
         [c_in_11, c_in_12, c_in_13, c_in_14, c_in_15],
         [fill_nan_c_in, c_in_22, c_in_23, c_in_24, fill_nan_c_in],
         [fill_nan_c_in, fill_nan_c_in, c_in_33, fill_nan_c_in, fill_nan_c_in],
         [fill_nan_c_in, fill_nan_c_in, fill_nan_c_in, c_in_44, fill_nan_c_in],
-    ]
+    ],
+    dtype=np.float64,
 )
 """Parameters for the classical transport collision integrals for neutral-ion interactions."""
