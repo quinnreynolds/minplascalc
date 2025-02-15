@@ -1,9 +1,7 @@
 import numpy as np
 from numba import njit
-from scipy import constants
-from scipy.special import gamma
 
-from minplascalc.data_transport import c_in, c_nn
+from minplascalc.transport.data_transport import c_in, c_nn
 from minplascalc.transport.potential_functions import (
     sum1,
     sum2,
