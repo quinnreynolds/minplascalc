@@ -1,4 +1,4 @@
-"""Downloads the couple (J, Level[eV]) from the [NIST_ASD] lebels data.
+"""Downloads the couple (J, Level[eV]) from the [NIST_ASD]_ lebels data.
 
 J is the total angular momentum number.
 Level is the energy level in electron volts.
@@ -17,7 +17,7 @@ u = Units()
 def get_nist_energy_levels(
     atom_symbol: str, ionization_state: str
 ) -> list[tuple[float, float]]:
-    """Get the angular momentum and energy levels for a given atom and ionization state.
+    r"""Get the angular momentum and energy levels for a given atom and ionization state.
 
     Parameters
     ----------
@@ -29,7 +29,8 @@ def get_nist_energy_levels(
     Returns
     -------
     list[tuple[float, float]]:
-        A list of tuples, each containing the angular momentum number J and the energy level in joules.
+        A list of tuples, each containing the angular momentum number J and the energy level,
+        in :math:`\text{J}`.
 
     Raises
     ------
@@ -95,7 +96,7 @@ def get_nist_energy_levels(
 def get_nist_spectral_lines(
     atom_symbol: str, ionization_state: str
 ) -> list[tuple[float, float, float]]:
-    """Get the spectral lines for a given atom and ionization state.
+    r"""Get the spectral lines for a given atom and ionization state.
 
     Lines included are the observed one, as well as those of Ritz.
 
@@ -109,10 +110,11 @@ def get_nist_spectral_lines(
     Returns
     -------
     list[tuple[float, float, float]]:
-        A list of tuples, each containing
-        - the wavelength lambda in m,
-        - the transition strength g_k A_{ki} in 1/s,
-        - the line energy E_k in J.
+        A list of tuples, each containing:
+
+        - the wavelength :math:`\lambda`, in :math:`\text{m}`,
+        - the transition strength :math:`g_k A_{ki}`, in :math:`\text{Hz}`, and
+        - the line energy :math:`E_k`, in :math:`J`.
 
     Raises
     ------

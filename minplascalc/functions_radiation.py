@@ -28,7 +28,8 @@ def total_emission_coefficient(mix: "LTE") -> float:
     Notes
     -----
     The explicit expression for the emission coefficient of a spectral line emitted by an atom
-    or an ion as a function of temperature is given by equation 5 of chapter 20 of [Boulos2023]_:
+    or an ion as a function of temperature is given by equation 5 of chapter 20 of [Boulos2023]_,
+    (and also at eq. 75 of chapter 7 of [Boulos2023]_):
 
     .. math::
 
@@ -37,18 +38,19 @@ def total_emission_coefficient(mix: "LTE") -> float:
 
     where:
 
-    * :math:`\varepsilon_L` is the emission coefficient of the spectral line in W/m^3/sr,
+    * :math:`\varepsilon_L` is the emission coefficient of the spectral line
+      in :math:`\text{W.m}^{-3}.sr^{-1}`,
     * :math:`A_{u \ell}^r` is the Einstein coefficient (or transition probability) for spontaneous
-      emission in s^-1,
-    * :math:`n_r` is the number density of the species in m^-3,
+      emission in :math:`\text{s}^{-1}`,
+    * :math:`n_r` is the number density of the species, in :math:`\text{m}^{-3}`,
     * :math:`g_{r u}` is the statistical weight of the upper state,
     * :math:`Q_r` is the internal partition function of the species,
-    * :math:`E_{r u}` is the energy difference between the upper and lower states in J,
-    * :math:`k_b` is Boltzmann's constant in J/K,
-    * :math:`T` is the temperature in K,
-    * :math:`h` is Planck's constant in J.s,
-    * :math:`\nu_{u \ell}` is the frequency of the transition in Hz,
-    * :math:`\frac{1}{4 \pi}` is the solid angle in steradians.
+    * :math:`E_{r u}` is the energy difference between the upper and lower states, in :math:`\text{J}`,
+    * :math:`k_b` is Boltzmann's constant, in :math:`\text{J.K}^{-1}`,
+    * :math:`T` is the temperature, in :math:`\text{K}`,
+    * :math:`h` is Planck's constant, in :math:`\text{J.s}`,
+    * :math:`\nu_{u \ell}` is the frequency of the transition, in :math:`\text{Hz}`,
+    * :math:`\frac{1}{4 \pi}` is the solid angle, in :math:`\text{sr}`.
 
 
     Then, the total emission coefficient is calculated by summing the contributions of each
@@ -71,17 +73,21 @@ def total_emission_coefficient(mix: "LTE") -> float:
 
     where:
 
-    * :math:`\varepsilon` is the total emission coefficient, in W/m^3/sr,
-    * :math:`h` is Planck's constant, in J.s,
-    * :math:`c` is the speed of light, in m/s,
+    * :math:`\varepsilon` is the total emission coefficient, in :math:`\text{W.m}^{-3}.sr^{-1}`,
+    * :math:`h` is Planck's constant, in :math:`\text{J.s}`,
+    * :math:`c` is the speed of light, in :math:`\text{m.s}^{-1}`,
     * :math:`\pi` is Pi,
-    * :math:`n_i` is the number density of species :math:`i`, in m^-3,
-    * :math:`A_{ij}` is the Einstein coefficient for spontaneous emission, in s^-1,
-    * :math:`E_i` is the energy of the lower state, in J,
-    * :math:`k_B` is Boltzmann's constant, in J/K,
-    * :math:`T` is the temperature, in K,
+    * :math:`n_i` is the number density of species :math:`i`, in :math:`\text{m}^{-3}`,
+    * :math:`A_{ij}` is the Einstein coefficient for spontaneous emission, in :math:`\text{s}^{-1}`,
+    * :math:`E_i` is the energy of the lower state, in :math:`\text{J}`,
+    * :math:`k_B` is Boltzmann's constant, in :math:`\text{J.K}^{-1}`,
+    * :math:`T` is the temperature, in :math:`\text{K}`,
     * :math:`Q_i` is the internal partition function of species :math:`i`,
-    * :math:`\lambda_{ij}` is the wavelength of the transition, in m.
+    * :math:`\lambda_{ij}` is the wavelength of the transition, in :math:`\text{m}`.
+
+    See Also
+    --------
+    TODO: Equation 131 of chapter 7 of [Boulos2023]_ for net emission coefficient (NEC).
     """
     # Calculate the number densities of species in the mixture.
     nd = mix.calculate_composition()

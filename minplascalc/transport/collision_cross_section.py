@@ -39,15 +39,15 @@ def Qe(species_i: "Species", l: int, s: int, T: float) -> float:
     s : int
         TODO: Principal quantum number? Or integer moment?
     T : float
-        Temperature, in K.
+        Temperature, in :math:`\text{K}`.
 
     Returns
     -------
     float
         Electron-neutral collision integral.
 
-    Note
-    ----
+    Notes
+    -----
     Calculation of the electron-neutral collision integral :math:`\theta_e` from
     first principles is an extremely complex process and requires detailed knowledge
     of quantum mechanical properties of the target species.
@@ -114,7 +114,7 @@ def Qnn(
     s : int
         TODO: Principal quantum number? Or integer moment?
     T : float
-        Temperature, in K.
+        Temperature, in :math:`\text{K}`.
 
     Returns
     -------
@@ -123,8 +123,8 @@ def Qnn(
 
     Notes
     -----
-    The reduced collision integral \Omega^{(\ell, s) \star} is computed, using
-    eq. 16 of [Laricchiuta2007]_, as:
+    The reduced collision integral :math:`\Omega^{(\ell, s) \star}` is computed, using
+    eq. 15 of [Laricchiuta2007]_, as:
 
     .. math::
 
@@ -212,7 +212,7 @@ def Qin(
     s : int
         TODO: Principal quantum number? Or integer moment?
     T : float
-        Temperature, in K.
+        Temperature, in :math:`\text{K}`.
 
     Returns
     -------
@@ -221,8 +221,8 @@ def Qin(
 
     Notes
     -----
-    The reduced collision integral \Omega^{(\ell, s) \star} is computed, using
-    eq. 16 of [Laricchiuta2007]_, as:
+    The reduced collision integral :math:`\Omega^{(\ell, s) \star}` is computed, using
+    eq. 15 of [Laricchiuta2007]_, as:
 
     .. math::
 
@@ -250,7 +250,7 @@ def Qin(
     distribution densities, and it is estimated in eq. 5 of [Laricchiuta2007]_.
 
     The reduced temperature is defined as :math:`T^{\star}=\frac{k_b T}{\epsilon}` in eq. 12
-    of [Laricchiuta2007]_, where :math:`\epsilon` is the binding energy, defined in eq. 7 of
+    of [Laricchiuta2007]_, where :math:`\epsilon` is the binding energy, defined in eq. 10 of
     [Laricchiuta2007]_.
     """
     if (
@@ -304,7 +304,7 @@ def Qtr(
     s : int
         TODO: Principal quantum number? Or integer moment?
     T : float
-        Temperature, in K.
+        Temperature, in :math:`\text{K}`.
 
     Returns
     -------
@@ -330,7 +330,7 @@ def Qtr(
     - :math:`x=\ln (4 R)`, with :math:`R` the gas constant,
     - :math:`\zeta=\sum_{n=1}^{s+1} \frac{1}{n} - \gamma`,
     - :math:`\gamma` is Euler's constant,
-    - :math:`M` is the molar mass of the species.
+    - :math:`M` is the molar mass of the species, in :math:`\text{kg.mol}^{-1}`.
 
     See Also
     --------
@@ -364,17 +364,17 @@ def Qc(
     species_i : Species
         First species.
     n_i : float
-        Number density of the first species, in m^-3.
+        Number density of the first species, in :math:`\text{m}^{-3}`.
     species_j : Species
         Second species.
     n_j : float
-        Number density of the second species, in m^-3.
+        Number density of the second species, in :math:`\text{m}^{-3}`.
     l : int
         TODO: Angular momentum quantum number? Or integer moment?
     s : int
         TODO: Principal quantum number? Or integer moment?
     T : float
-        Temperature, in K.
+        Temperature, in :math:`\text{K}`.
 
     Returns
     -------
@@ -429,24 +429,24 @@ def Qij(
     s: int,
     T: float,
 ) -> float:
-    """Calculate the collision integral for a pair of species.
+    r"""Calculate the collision integral for a pair of species.
 
     Parameters
     ----------
     species_i : Species
         First species.
     ni : float
-        Number density of the first species, in m^-3.
+        Number density of the first species, in :math:`\text{m}^{-3}`.
     species_j : Species
         Second species.
     nj : float
-        Number density of the second species, in m^-3.
+        Number density of the second species, in :math:`\text{m}^{-3}`.
     l : int
         TODO: Angular momentum quantum number? Or integer moment?
     s : int
         TODO: Principal quantum number? Or integer moment?
     T : float
-        Temperature, in K.
+        Temperature, in :math:`\text{K}`.
 
     Returns
     -------

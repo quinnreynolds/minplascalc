@@ -24,7 +24,7 @@ class LTE:
         gfe_reltol: float,
         gfe_maxiter: int,
     ):
-        """Local Thermodynamic Equilibrium (LTE) plasma mixture object.
+        r"""Local Thermodynamic Equilibrium (LTE) plasma mixture object.
 
         Class representing a thermal plasma specification with multiple
         species, and methods for calculating equilibrium species concentrations
@@ -41,9 +41,9 @@ class LTE:
             room-temperature composition of the plasma-generating gas.
             It should be the same length as species.
         T : float
-            LTE plasma temperature, in K.
+            LTE plasma temperature, in :math:`\text{K}`.
         P : float
-            LTE plasma pressure, in Pa.
+            LTE plasma pressure, in :math:`\text{Pa}`.
         gfe_ni0 : float
             Gibbs Free Energy minimiser solution control: Starting estimate for
             number of particles of each species. Typically O(1e20).
@@ -161,7 +161,7 @@ class LTE:
         -------
         tuple[np.ndarray, np.ndarray]
             Reference energy and ionisation energy lowering of each species
-            in the mixture, in J.
+            in the mixture, in :math:`\text{J}`.
 
         Notes
         -----
@@ -191,7 +191,8 @@ class LTE:
 
         Here,
 
-        * :math:`\delta E_i` is the amount the ionisation energy of species i is lowered by (in J),
+        * :math:`\delta E_i` is the amount the ionisation energy of species i is lowered by,
+          in :math:`\text{J}`,
         * :math:`a_i` is the ion-sphere radius of species i,
         * :math:`l_D` is the Debye sphere radius,
         * :math:`z^*` is the effective charge number in a plasma consisting of a mixture of species
@@ -318,7 +319,7 @@ class LTE:
         return E0, dE
 
     def calculate_composition(self) -> np.ndarray:
-        r"""Calculate the LTE composition of the plasma in particles/m3.
+        r"""Calculate the LTE composition of the plasma in :math:`\text{particles.m}^{-3}`.
 
         An iterative Lagrange multiplier approach is used to minimise the Gibbs
         free energy of the plasma, subject to the constraints of constant
@@ -328,7 +329,7 @@ class LTE:
         -------
         np.ndarray
             Number density of each species in the plasma as listed in
-            Mixture.species, in particles/m3.
+            :meth:`~minplascalc.mixture.Mixture.species`, in :math:`\text{particles.m}^{-3}`.
 
         Notes
         -----
@@ -338,7 +339,17 @@ class LTE:
 
         .. math::
 
-            \frac{\partial G}{\partial N_i} = \mu_i = 0, \quad i = 1, 2, \ldots, n
+            \left( dG \right)_{P, T} = 0 = \sum_j \mu_j dN_j
+
+        where :math:`dG` is the change in Gibbs free energy, :math:`P` is the
+        pressure, :math:`T` is the temperature, :math:`\mu_j` is the chemical
+        potential of species :math:`j`, and :math:`N_j` is the number of
+        particles of species :math:`j`. The chemical potential of each species
+        is given by:
+
+        .. math::
+
+            \mu_i = \frac{\partial G}{\partial N_i}, \quad i = 1, 2, \ldots, n
 
         where :math:`G` is the Gibbs free energy of the plasma, :math:`N_i` is
         the number of particles of species :math:`i`, and :math:`\mu_i` is the
@@ -552,7 +563,7 @@ class LTE:
         Returns
         -------
         float
-            Plasma density, in kg/m3.
+            Plasma density, in :math:`\text{kg.m}^{-3}`.
 
         Notes
         -----
@@ -564,10 +575,10 @@ class LTE:
 
         where:
 
-        * :math:`\rho` is the plasma density, in kg/m3,
-        * :math:`N_A` is Avogadro's number, in mol^-1,
-        * :math:`n_i` is the number density of species :math:`i`, in particles/m3,
-        * :math:`M_i` is the molar mass of species :math:`i`, in kg/mol.
+        * :math:`\rho` is the plasma density, in :math:`\text{kg.m}^{-3}`,
+        * :math:`N_A` is Avogadro's number, in :math:`\text{mol}^{-1}`,
+        * :math:`n_i` is the number density of species :math:`i`, in :math:`\text{particles.m}^{-3}`,
+        * :math:`M_i` is the molar mass of species :math:`i`, in :math:`\text{kg.mol}^{-1}`.
         """
         number_densities = self.calculate_composition()  # particules/m^3
         molar_masses = [sp.molarmass for sp in self.species]  # kg/mol
@@ -583,7 +594,7 @@ class LTE:
         Returns
         -------
         np.ndarray
-            Enthalpies of each species, in J/kg.
+            Enthalpies of each species, in :math:`\text{J.kg}^{-1}`.
 
         Notes
         -----
@@ -591,15 +602,15 @@ class LTE:
 
         .. math::
 
-            H_i = \left ( U_i + E_i^0 + k_B T \right)
+            H_i = U_i + E_i^0 + k_B T
 
         where:
 
-        * :math:`H_i` is the enthalpy of species :math:`i`, in J/particle,
-        * :math:`U_i` is the internal energy of species :math:`i`, in J/particle,
-        * :math:`E_i^0` is the reference energy of species :math:`i`, in J,
-        * :math:`k_B` is the Boltzmann constant, in J/K,
-        * :math:`T` is the temperature, in K.
+        * :math:`H_i` is the enthalpy of species :math:`i`, in :math:`\text{J.particle}^{-1}`,
+        * :math:`U_i` is the internal energy of species :math:`i`, in :math:`\text{J.particle}^{-1}`,
+        * :math:`E_i^0` is the reference energy of species :math:`i`, in :math:`\text{J}`,
+        * :math:`k_B` is the Boltzmann constant, in :math:`\text{J.K}^{-1}`,
+        * :math:`T` is the temperature, in :math:`\text{K}`.
 
         The enthalpy is then divided by the mass of the species to obtain
         the enthalpy per unit mass.
@@ -610,9 +621,9 @@ class LTE:
 
         where:
 
-        * :math:`h_i` is the enthalpy of species :math:`i`, in J/kg,
-        * :math:`m_i` is the mass of species :math:`i`, in kg/particle,
-        * :math:`M_i` is the molar mass of species :math:`i`, in kg/mol.
+        * :math:`h_i` is the enthalpy of species :math:`i`, in :math:`\text{J.kg}^{-1}`,
+        * :math:`m_i` is the mass of species :math:`i`, in :math:`\text{kg.particle}^{-1}`,
+        * :math:`M_i` is the molar mass of species :math:`i`, in :math:`\text{kg.mol}^{-1}`.
         """
         internal_energies = [
             sp.internal_energy(self.T, dE) for sp, dE in zip(self.species, self.__dE)
@@ -637,7 +648,7 @@ class LTE:
         Returns
         -------
         float
-            Enthalpy, in J/kg.
+            Enthalpy, in :math:`\text{J.kg}^{-1}`.
 
         Notes
         -----
@@ -649,13 +660,15 @@ class LTE:
 
         where:
 
-        * :math:`H` is the enthalpy of the plasma, in J/kg,
-        * :math:`\rho` is the plasma density, in kg/m3,
-        * :math:`n_i` is the number density of species :math:`i`, in particles/m3,
-        * :math:`H_i` is the enthalpy of species :math:`i`, in J/particle,
-        * :math:`E_{i=min}^0` is the reference energy of the species with the lowest reference energy, in J,
-        * :math:`M_{i=min}` is the molar mass of the species with the lowest reference energy, in kg/mol,
-        * :math:`M_i` is the molar mass of species :math:`i`, in kg/mol.
+        * :math:`H` is the enthalpy of the plasma, in :math:`\text{J.kg}^{-1}`,
+        * :math:`\rho` is the plasma density, in :math:`\text{kg.m}^{-3}`,
+        * :math:`n_i` is the number density of species :math:`i`, in :math:`\text{particles.m}^{-3}`,
+        * :math:`H_i` is the enthalpy of species :math:`i`, in :math:`\text{J.kg}^{-1}`,
+        * :math:`E_{i=min}^0` is the reference energy of the species with the lowest reference energy,
+          in :math:`\text{J}`,
+        * :math:`M_{i=min}` is the molar mass of the species with the lowest reference energy,
+          in :math:`\text{kg.mol}^{-1}`,
+        * :math:`M_i` is the molar mass of species :math:`i`, in :math:`\text{kg.mol}^{-1}`.
         """
         number_densities = self.calculate_composition()  # m^-3
         molar_masses = [sp.molarmass for sp in self.species]  # kg/mol
@@ -679,7 +692,7 @@ class LTE:
 
         return weighted_enthalpy / density
 
-    def calculate_heat_capacity(self, rel_delta_T=0.001) -> float:
+    def calculate_heat_capacity(self, rel_delta_T: float = 0.001) -> float:
         r"""Calculate the LTE heat capacity at constant pressure of the plasma.
 
         Calculate the LTE heat capacity at constant pressure of the plasma
@@ -700,7 +713,7 @@ class LTE:
         Returns
         -------
         float
-            Heat capacity, in J/kg.K.
+            Heat capacity, in :math:`\text{J.kg}^{-1}.\text{K}^{-1}`.
 
         Notes
         -----
@@ -713,9 +726,9 @@ class LTE:
 
         where:
 
-        * :math:`C_p` is the heat capacity at constant pressure, in J/kg.K,
-        * :math:`H` is the enthalpy of the plasma, in J/kg,
-        * :math:`T` is the temperature, in K,
+        * :math:`C_p` is the heat capacity at constant pressure, in :math:`\text{J.kg}^{-1}.\text{K}^{-1}`,
+        * :math:`H` is the enthalpy of the plasma, in :math:`\text{J.kg}^{-1}`,
+        * :math:`T` is the temperature, in :math:`\text{K}`, and
         * :math:`\Delta T` is the relative change in temperature.
         """
         start_temperature = self.T
@@ -727,21 +740,21 @@ class LTE:
         return (enthalpy_high - enthalpy_low) / (2 * rel_delta_T * self.T)
 
     def calculate_viscosity(self) -> float:
-        """Calculate the LTE viscosity of the plasma in Pa.s.
+        r"""Calculate the LTE viscosity of the plasma in :math:`\text{Pa.s}`.
 
         Calculate the LTE viscosity of the plasma in Pa.s based on current conditions and species composition.
 
         Returns
         -------
         float
-            Viscosity, in Pa.s.
+            Viscosity, in :math:`\text{Pa.s}`.
         """
         return functions_transport.viscosity(self)
 
     def calculate_thermal_conductivity(
         self, rel_delta_T: float = 0.001, DTterms_yn: bool = True, ni_limit: float = 1e8
     ) -> float:
-        """Calculate the LTE thermal conductivity of the plasma in W/m.K.
+        r"""Calculate the LTE thermal conductivity of the plasma in :math:`\text{W.m}^{-1}.\text{K}^{-1}`.
 
         Parameters
         ----------
@@ -758,35 +771,35 @@ class LTE:
         Returns
         -------
         float
-            Thermal conductivity, in W/m.K.
+            Thermal conductivity, in :math:`\text{W.m}^{-1}.\text{K}^{-1}`.
         """
         return functions_transport.thermalconductivity(
             self, rel_delta_T, DTterms_yn, ni_limit
         )
 
     def calculate_electrical_conductivity(self) -> float:
-        """Calculate the LTE electrical conductivity of the plasma in 1/(ohm.m).
+        r"""Calculate the LTE electrical conductivity of the plasma in :math:`\text{S.m}^{-1}`.
 
         Returns
         -------
         float
-            Electrical conductivity, in 1/(ohm.m).
+            Electrical conductivity, in :math:`\text{S.m}^{-1}`.
         """
         return functions_transport.electricalconductivity(self)
 
     def calculate_total_emission_coefficient(self) -> float:
-        """Calculate the LTE total radiation emission coefficient of the plasma in W/m3.sr.
+        r"""Calculate the LTE total radiation emission coefficient of the plasma in :math:`\text{W.m}^{-3}`.
 
         Returns
         -------
         float
-            Total radiation emission coefficient, in W/m3.sr.
+            Total radiation emission coefficient, in :math:`\text{W.m}^{-3}`.
         """
         return functions_radiation.total_emission_coefficient(self)
 
 
 def lte_from_names(names: list[str], x0: list[float], T: float, P: float) -> LTE:
-    """Create a LTE mixture from a list of species names using the species database.
+    r"""Create a LTE mixture from a list of species names using the species database.
 
     Parameters
     ----------
@@ -796,9 +809,9 @@ def lte_from_names(names: list[str], x0: list[float], T: float, P: float) -> LTE
         Initial value of mole fractions for each species, typically the
         room-temperature composition of the plasma-generating gas.
     T : float
-        LTE plasma temperature, in K.
+        LTE plasma temperature, in :math:`\text{K}`.
     P : float
-        LTE plasma pressure, in Pa.
+        LTE plasma pressure, in :math:`\text{Pa}`.
 
     Returns
     -------

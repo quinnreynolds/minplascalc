@@ -25,19 +25,19 @@ SPECIES_PATH = DATAPATH / "species"
 class BaseSpecies:
     def __init__(self):
         self.molarmass: float
-        """Molar mass of the species in kg/mol."""
+        """Molar mass of the species in :math:`\text{kg.mol}^{-1}`."""
 
     def partitionfunction_total(self, V: float, T: float, dE: float) -> float:
-        """Calculate the total partition function for the species.
+        r"""Calculate the total partition function for the species.
 
         Parameters
         ----------
         V : float
-            Volume in m^3.
+            Volume, in :math:`\text{m}^3`.
         T : float
-            Temperature in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
@@ -71,7 +71,7 @@ class BaseSpecies:
         Parameters
         ----------
         T : float
-            Temperature in K.
+            Temperature, in :math:`\text{K}`.
 
         Returns
         -------
@@ -108,9 +108,9 @@ class Species(BaseSpecies):
         electroncrosssection: float | tuple[float, float, float, float] | None,
         emissionlines: list[tuple[float, float, float]],
     ):
-        """Heavy particle base class.
+        r"""Heavy particle base class.
 
-        Monatomic, diatomic, or polyatomic chemical species in the plasma, eg O2 or Si+.
+        Monatomic, diatomic, or polyatomic chemical species in the plasma, e.g. O2 or Si+.
         Not for electrons.
 
         Parameters
@@ -120,25 +120,26 @@ class Species(BaseSpecies):
         stoichiometry : dictionary
             Dictionary describing the elemental stoichiometry of the species.
         molarmass : float
-            Molar mass of the species in kg/mol.
+            Molar mass of the species, in :math:`\text{kg.mol}^{-1}`.
         chargenumber : int
             Charge on the species (in integer units of the fundamental charge).
         polarisability : float
-            Polarisability of the species in m^3.
+            Polarisability of the species, in :math:`\text{m}^3`.
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
         effectiveelectrons : float | None
-            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]
+            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]_
             (only required for neutral species).
         electroncrosssection : float | tuple[float, float, float, float] | None
-            Cross section for elastic electron collisions in m^2 (only required
+            Cross section for elastic electron collisions, in math:`\text{m}^2` (only required
             for neutral species). Either a single constant value, or a 4-tuple
             of empirical fitting parameters.
             Could be None if not available.
         emissionlines : list[tuple[float, float, float]]
             Radiation emission line data - each entry in the list contains three
-            values giving the line's wavelength in m, its g x A constant in 1/s,
-            and its emission strength in J.
+            values giving the line's wavelength :math:`\lambda` in :math:`\text{m}`,
+            its :math:`g \times A` constant in :math:`\text{s}^{-1}`,
+            and its emission strength in :math:`\text{J}`.
         """
         self.name = name
         self.stoichiometry = deepcopy(stoichiometry)
@@ -151,7 +152,7 @@ class Species(BaseSpecies):
         self.emissionlines = emissionlines
 
         self.ionisationenergy: float
-        """Ionisation energy of the species in J."""
+        """Ionisation energy of the species in :math:`\text{J}`."""
 
     def to_file(self, datafile: str | Path | None = None) -> None:
         """Save a Species object to a file for easy re-use.
@@ -187,7 +188,7 @@ class Monatomic(Species):
         emissionlines: list[tuple[float, float, float]],
         sources: list[str],
     ):
-        """Class for monatomic plasma species (single atoms and ions).
+        r"""Class for monatomic plasma species (single atoms and ions).
 
         Parameters
         ----------
@@ -197,32 +198,33 @@ class Monatomic(Species):
             Dictionary describing the elemental stoichiometry of the species
             (e.g. {'O': 1} for O or O+).
         molarmass : float
-            Molar mass of the species in kg/mol.
+            Molar mass of the species, in :math:`\text{kg.mol}^{-1}`.
         chargenumber : int
             Charge on the species (in integer units of the fundamental charge).
         ionisationenergy : float
-            Ionisation energy of the species in J.
+            Ionisation energy of the species, in :math:`\text{J}`.
         energylevels : list[tuple[float, float]]
             Atomic energy level data - each entry in the list contains a pair of
             values giving the level's quantum number and its energy
-            respectively, with energy in J.
+            respectively, with energy in :math:`\text{J}`.
         polarisability : float
-            Polarisability of the species in m^3.
+            Polarisability of the species, in :math:`\text{m}^3`.
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
         effectiveelectrons : float | None
-            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]
+            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]_
             (only required for neutral species).
             Could be None if not available.
         electroncrosssection : float | tuple[float, float, float, float] | None
-            Cross section for elastic electron collisions in m^2 (only required
+            Cross section for elastic electron collisions, in math:`\text{m}^2` (only required
             for neutral species). Either a single constant value, or a 4-tuple
             of empirical fitting parameters.
             Could be None if not available.
         emissionlines : list[tuple[float, float, float]]
             Radiation emission line data - each entry in the list contains three
-            values giving the line's wavelength in m, its g x A constant in 1/s,
-            and its emission strength in J.
+            values giving the line's wavelength :math:`\lambda` in :math:`\text{m}`,
+            its :math:`g \times A` constant in :math:`\text{s}^{-1}`,
+            and its emission strength in :math:`\text{J}`.
         sources : list of str
             Each entry represents a reference from which the data was obtained.
         """
@@ -281,9 +283,9 @@ class Monatomic(Species):
         Parameters
         ----------
         T : float
-            Temperature, in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
@@ -302,13 +304,13 @@ class Monatomic(Species):
         where:
 
         - :math:`g_i` is the degeneracy of the energy level :math:`i`,
-        - :math:`E_i` is the energy of the energy level :math:`i`,
-        - :math:`k_B` is the Boltzmann constant, and
-        - :math:`T` is the temperature.
+        - :math:`E_i` is the energy of the energy level :math:`i`, in :math:`\text{J}`,
+        - :math:`k_B` is the Boltzmann constant, in :math:`\text{J.K}^{-1}`, and
+        - :math:`T` is the temperature, in :math:`\text{K}`.
 
         The sum is taken over all energy levels of the species, up to the
         ionisation energy lowered by :math:`dE` (:math:`dE` is the amont the ionisation
-        energy is lowered by, in J).
+        energy is lowered by, in :math:`\text{J}`).
 
         The degeneracy of the electronic energy levels is given by:
 
@@ -338,14 +340,14 @@ class Monatomic(Species):
         Parameters
         ----------
         T : float
-            Temperature, in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
         float
-            The internal energy of the species, in J.
+            The internal energy of the species, in :math:`\text{J}`.
 
         Notes
         -----
@@ -358,13 +360,13 @@ class Monatomic(Species):
         where:
 
         - :math:`g_i` is the degeneracy of the energy level :math:`i`,
-        - :math:`E_i` is the energy of the energy level :math:`i`,
-        - :math:`k_B` is the Boltzmann constant, and
-        - :math:`T` is the temperature.
+        - :math:`E_i` is the energy of the energy level :math:`i`, in :math:`\text{J}`,
+        - :math:`k_B` is the Boltzmann constant, in :math:`\text{J.K}^{-1}`, and
+        - :math:`T` is the temperature, in :math:`\text{K}`.
 
         The sum is taken over all energy levels of the species, up to the
         ionisation energy lowered by :math:`dE` (:math:`dE` is the amont the ionisation
-        energy is lowered by, in J).
+        energy is lowered by, in :math:`\text{J}`).
 
         The degeneracy of the electronic energy levels is given by:
 
@@ -415,7 +417,7 @@ class Diatomic(Species):
         emissionlines: list[tuple[float, float, float]],
         sources: list[str],
     ):
-        """Class for diatomic plasma species.
+        r"""Class for diatomic plasma species.
 
         Diatomic species is defined as bonded pairs of atoms, like neutral particles or ions.
 
@@ -427,38 +429,39 @@ class Diatomic(Species):
             Dictionary describing the elemental stoichiometry of the species
             (e.g. {'Si': 1, 'O': 1} for SiO or SiO+).
         molarmass : float
-            Molar mass of the species in kg/mol.
+            Molar mass of the species, in :math:`\text{kg.mol}^{-1}`.
         chargenumber : int
             Charge on the species (in integer units of the fundamental charge).
         ionisationenergy : float
-            Ionisation energy of the species in J.
+            Ionisation energy of the species, in :math:`\text{J}`.
         dissociationenergy : float
-            Dissociation energy of the species in J.
+            Dissociation energy of the species, in :math:`\text{J}`.
         sigma_s : int
             Symmetry constant (=2 for homonuclear molecules, =1 for
             heteronuclear).
         g0 : float
             Ground state electronic energy level degeneracy.
         w_e : float
-            Vibrational energy level constant in J.
+            Vibrational energy level constant, in :math:`\text{J}`.
         b_e : float
-            Rotational energy level constant in J.
+            Rotational energy level constant, in :math:`\text{J}`.
         polarisability : float
-            Polarisability of the species in m^3.
+            Polarisability of the species, in :math:`\text{m}^3`.
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
         effectiveelectrons : float | None
-            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]
+            Effective number of electrons, in valence shell, per eq.6 of [Cambi1991]_
             (only required for neutral species)
         electroncrosssection : float | tuple[float, float, float, float] | None
-            Cross section for elastic electron collisions in m^2 (only required
+            Cross section for elastic electron collisions, in math:`\text{m}^2` (only required
             for neutral species). Either a single constant value, or a 4-tuple
             of empirical fitting parameters.
             Could be None if not available.
         emissionlines : list[tuple[float, float, float]]
             Radiation emission line data - each entry in the list contains three
-            values giving the line's wavelength in m, its g x A constant in 1/s,
-            and its emission strength in J.
+            values giving the line's wavelength :math:`\lambda` in :math:`\text{m}`,
+            its :math:`g \times A` constant in :math:`\text{s}^{-1}`,
+            and its emission strength in :math:`\text{J}`.
         sources : list[str]
             Each dictionary represents a reference source from which the data
             was obtained.
@@ -527,9 +530,9 @@ class Diatomic(Species):
         Parameters
         ----------
         T : float
-            Temperature, in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
@@ -557,7 +560,7 @@ class Diatomic(Species):
         level :math:`i`, :math:`k_B` the Boltzmann constant, and :math:`T` the
         temperature. The sum is taken over all energy levels of the species, up
         to the ionisation energy lowered by :math:`dE` (:math:`dE` is the amont
-        the ionisation energy is lowered by, in J).
+        the ionisation energy is lowered by, in :math:`\text{J}`).
 
         For diatomic species, the current implementation of electronic partition
         function is equal to the ground state electronic energy level degeneracy.
@@ -570,14 +573,15 @@ class Diatomic(Species):
             Z_{vib} = \frac{e^{-w_e / (2 k_B T)}}{1 - e^{-w_e / k_B T}}
 
         is the vibrational partition function, with :math:`w_e` the vibrational
-        energy level constant for vibration mode.
+        energy level constant for vibration mode, in :math:`\text{J}`.
 
         .. math::
 
             Z_{rot} = \frac{k_B T}{\sigma_s B_e}
 
         is the rotational partition function, with :math:`\sigma_s` the rotational
-        symmetry constant and :math:`B_e` the rotational energy level constant.
+        symmetry constant and :math:`B_e` the rotational energy level constant, in
+        :math:`\text{J}`.
         """
         kbt = u.k_b * T
 
@@ -607,14 +611,14 @@ class Diatomic(Species):
         Parameters
         ----------
         T : float
-            Temperature, in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
         float
-            The internal energy of the species, in J.
+            The internal energy of the species, in :math:`\text{J}`.
 
         Notes
         -----
@@ -653,7 +657,7 @@ class Diatomic(Species):
             U_{vib} = \frac{w_e}{2 \tanh(w_e / (2 k_B T))}
 
         is the vibrational energy, with :math:`w_e` the vibrational energy level constant
-        for vibration mode.
+        for vibration mode, in :math:`\text{J}`.
 
 
         TODO: Check this --> The internal energy is defined as the sum of the translational
@@ -705,7 +709,7 @@ class Polyatomic(Species):
         emissionlines: list[tuple[float, float, float]],
         sources: list[str],
     ):
-        """Class for polyatomic plasma species.
+        r"""Class for polyatomic plasma species.
 
         Polyatomic species is defined as molecules (bonded sets of atoms) or ions.
 
@@ -717,13 +721,13 @@ class Polyatomic(Species):
             Dictionary describing the elemental stoichiometry of the species
             (e.g. {'H': 2, 'O': 1} for H2O or H2O+).
         molarmass : float
-            Molar mass of the species in kg/mol.
+            Molar mass of the species in :math:`\text{kg.mol}^{-1}`.
         chargenumber : int
             Charge on the species (in integer units of the fundamental charge).
         ionisationenergy : float
-            Ionisation energy of the species in J.
+            Ionisation energy of the species in :math:`\text{J}`.
         dissociationenergy : float
-            Dissociation energy of the species in J.
+            Dissociation energy of the species in :math:`\text{J}`.
         linear_yn : bool
             For linear molecules, only the B rotation constant is used in
             calculation of the rotational partition function. For non-linear
@@ -733,25 +737,26 @@ class Polyatomic(Species):
         g0 : float
             Ground state electronic energy level degeneracy.
         wi_e : list[float]
-            Vibrational energy level constants for each vibration mode, in J.
+            Vibrational energy level constants for each vibration mode, in :math:`\text{J}`.
         abc_e : list[float]
-            A, B, and C rotational energy level constants in J.
+            A, B, and C rotational energy level constants in :math:`\text{J}`.
         polarisability : float
-            Polarisability of the species in m^3.
+            Polarisability of the species, in :math:`\text{m}^3`.
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
         effectiveelectrons : float | None
-            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]
+            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]_
             (only required for neutral species)
         electroncrosssection : float | tuple[float, float, float, float] | None
-            Cross section for elastic electron collisions in m^2 (only required
+            Cross section for elastic electron collisions, in math:`\text{m}^2` (only required
             for neutral species). Either a single constant value, or a 4-tuple
             of empirical fitting parameters.
             Could be None if not available.
         emissionlines : list[tuple[float, float, float]]
             Radiation emission line data - each entry in the list contains three
-            values giving the line's wavelength in m, its g x A constant in 1/s,
-            and its emission strength in J.
+            values giving the line's wavelength :math:`\lambda` in :math:`\text{m}`,
+            its :math:`g \times A` constant in :math:`\text{s}^{-1}`,
+            and its emission strength in :math:`\text{J}`.
         sources : list[str]
             Each dictionary represents a reference source from which the data
             was obtained.
@@ -821,9 +826,9 @@ class Polyatomic(Species):
         Parameters
         ----------
         T : float
-            Temperature, in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
@@ -851,7 +856,7 @@ class Polyatomic(Species):
         level :math:`i`, :math:`k_B` the Boltzmann constant, and :math:`T` the
         temperature. The sum is taken over all energy levels of the species, up
         to the ionisation energy lowered by :math:`dE` (:math:`dE` is the amont
-        the ionisation energy is lowered by, in J).
+        the ionisation energy is lowered by, in :math:`\text{J}`).
 
         For diatomic species, the current implementation of electronic partition
         function is equal to the ground state electronic energy level degeneracy.
@@ -864,7 +869,7 @@ class Polyatomic(Species):
             Z_{vib} = \prod_{i} \frac{e^{-w_{e, i} / (2 k_B T)}}{1 - e^{-w_{e, i} / k_B T}}
 
         is the vibrational partition function, with :math:`w_{e, i}` the vibrational
-        energy level constant for vibration mode :math:`i`.
+        energy level constant for vibration mode :math:`i`, in :math:`\text{J}`.
 
         .. math::
 
@@ -875,7 +880,8 @@ class Polyatomic(Species):
 
         is the rotational partition function, with :math:`\sigma_s` the rotational
         symmetry constant, :math:`B_e` the rotational energy level constant, and
-        :math:`A_e`, :math:`B_e`, and :math:`C_e` the rotational energy level constants.
+        :math:`A_e`, :math:`B_e`, and :math:`C_e` the rotational energy level constants,
+        in :math:`\text{J}`.
         """
         kbt = u.k_b * T
 
@@ -907,14 +913,14 @@ class Polyatomic(Species):
         Parameters
         ----------
         T : float
-            Temperature, in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
         float
-            The internal energy of the species, in J.
+            The internal energy of the species, in :math:`\text{J}`.
 
         Notes
         -----
@@ -933,7 +939,7 @@ class Polyatomic(Species):
             U_{tr} = \frac{3}{2} k_B T
 
         is the translational energy, with :math:`k_B` the Boltzmann constant and
-        :math:`T` the temperature.
+        :math:`T` the temperature (in :math:`\text{K}`).
 
         .. math::
 
@@ -1019,9 +1025,9 @@ class Electron(BaseSpecies):
         Parameters
         ----------
         T : float
-            Temperature, in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
@@ -1046,14 +1052,14 @@ class Electron(BaseSpecies):
         Parameters
         ----------
         T : float
-            Temperature, in K.
+            Temperature, in :math:`\text{K}`.
         dE : float
-            Ionisation energy lowering, in J.
+            Ionisation energy lowering, in :math:`\text{J}`.
 
         Returns
         -------
         float
-            The internal energy of the species, in J.
+            The internal energy of the species, in :math:`\text{J}`.
 
         Notes
         -----
