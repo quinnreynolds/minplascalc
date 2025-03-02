@@ -26,10 +26,10 @@ How do I get set up?
 
 * Getting started: Clone the repo. You'll get the package and some 
   test drivers.
-* We use `hatch <http://hatch.pypa.io>`_. You will need to install it before proceeding.
-* Run ``hatch env create`` to create a virtual environment at ``.venv`` with the necessary
+* We use `uv <https://docs.astral.sh/uv/>`_. You will need to install it before proceeding.
+* Run ``uv sync`` to create a virtual environment at ``.venv`` with the necessary
   dependencies.
-* How to run tests: simply run ``hatch run test`` in the root directory.
+* How to run tests: simply run ``uv run pytest`` in the root directory.
 
 Contribution guidelines
 -----------------------
