@@ -29,9 +29,8 @@ dependencies = [
     "scipy>=1.4"
 ]
 
-[project.optional-dependencies]
-dev = ["matplotlib", "pre-commit"]
-test = ["coverage", "pytest", "jupyter", "sympy"]
+[dependency-groups]
+dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter", "sympy"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -46,14 +45,6 @@ path = "minplascalc/__init__.py"
 packages = [
     "minplascalc",
 ]
-
-[tool.hatch.envs.default]
-type = "virtual"
-path = ".venv"
-features=["dev", "test"]
-
-[tool.hatch.envs.default.scripts]
-test = ["pytest {args:.}"]
 
 [tool.ruff]
 lint.extend-ignore = [
