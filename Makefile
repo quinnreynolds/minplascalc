@@ -5,7 +5,7 @@ COV_REPORT := html
 default: unit-tests
 
 unit-tests:
-	uv run pytest test docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"
+	uv run pytest tests docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"
 
 update-requirements:
 	uv pip install -r requirements.txt
