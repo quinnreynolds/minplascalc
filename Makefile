@@ -2,7 +2,10 @@ PROJECT := minplascalc
 CONDAFLAGS :=
 COV_REPORT := html
 
-default: unit-tests
+default: qa unit-tests
+
+qa:
+	pre-commit run --all-files
 
 unit-tests:
 	uv run pytest tests docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"
