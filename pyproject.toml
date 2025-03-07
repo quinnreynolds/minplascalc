@@ -7,7 +7,7 @@ name = "minplascalc"
 dynamic = ["version"]
 description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
 readme = "README.rst"
-requires-python = ">=3.5"
+requires-python = ">=3.11"
 license = {text = "GPLv3"}
 authors = [
     {name = "Quinn Reynolds", email = "quinnr@mintek.co.za"}
@@ -19,8 +19,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Scientific/Engineering :: Physics",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3.5",
-    "Programming Language :: Python :: 3.6"
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
 keywords = ["plasma", "gibbs", "composition"]
 
@@ -30,7 +31,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter", "sympy"]
+dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
