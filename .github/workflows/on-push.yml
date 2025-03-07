@@ -72,7 +72,7 @@ jobs:
       # run: uv sync --group docs
     - name: Install sphinx  
       run: |
-        uv --preview pip install .
+        uv --systeù pip install .
         uv sync --group docs
         python -m sphinx -M html . docs/_build/doctrees
         
