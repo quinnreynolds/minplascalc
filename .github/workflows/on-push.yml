@@ -1,0 +1,96 @@
+name: on-push
+
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - "*"
+  pull_request:
+    branches:
+    - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+    - uses: pre-commit/action@v3.0.1
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"] # Add more versions as needed.
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install the latest version of uv and set the python version
+      uses: astral-sh/setup-uv@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: extractions/setup-just@v2
+    - name: Test with python ${{ matrix.python-version }}
+      run: just unit-tests
+
+  type-check:
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+    - uses: extractions/setup-just@v2
+    - name: Run code quality checks
+      run: just type-check
+
+  docs-build:
+    needs: [unit-tests]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+    - uses: extractions/setup-just@v2
+    - name: Build documentation
+      run: just docs-build
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/_build/html/
+
+  # Deployment job.
+  deploy:
+    needs: docs-build
+
+    # Deploy only when the main branch is pushed.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment.
+    permissions:
+      contents: read
+      pages: write # To deploy to Pages.
+      id-token: write # To verify the deployment originates from an appropriate source.
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
