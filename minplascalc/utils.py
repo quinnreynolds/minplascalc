@@ -49,10 +49,7 @@ def get_path_to_data(*paths: str, force_return: bool = False) -> Path:
     FileNotFoundError
         If the file or folder is not found.
     """
-    path_to_data_folder = get_root() / "data"
-
-    for path in paths:
-        path_to_data_folder /= path
+    path_to_data_folder = get_root().joinpath("data", *paths)
 
     if path_to_data_folder.exists() or force_return:
         return path_to_data_folder.resolve()
