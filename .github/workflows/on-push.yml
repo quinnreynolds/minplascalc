@@ -70,11 +70,11 @@ jobs:
         version: "latest"
     # - name: Install documentation dependencies
       # run: uv sync --group docs
-    - name: Install sphinx
+    - name: Install sphinx  
       run: |
         uv venv .sphinx_env
-        VIRTUAL_ENV=.sphinx_env uv --preview pip install .
-        VIRTUAL_ENV=.sphinx_env uv sync --group docs
+        VIRTUAL_ENV=.sphinx_env uv --preview pip install .  --active
+        VIRTUAL_ENV=.sphinx_env uv sync --group docs  --active
         VIRTUAL_ENV=.sphinx_env python -m sphinx -M html . docs/_build/doctrees -D 
 
     # - name: Check if sphinx is installed
