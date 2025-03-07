@@ -1,6 +1,23 @@
-import numpy
+"""Functions for transport properties calculations."""
+
+from typing import TYPE_CHECKING
+
+import numpy as np
 from scipy import constants
 from scipy.special import gamma
+
+from minplascalc.units import Units
+
+if TYPE_CHECKING:
+    from minplascalc.mixture import LTE
+    from minplascalc.species import Species
+
+u = Units()
+
+ke = 1 / (4 * u.pi * u.epsilon_0)
+a0 = constants.physical_constants["Bohr radius"][0]
+egamma = np.euler_gamma
+
 
 pi = constants.pi
 ke = 1 / (4 * pi * constants.epsilon_0)
@@ -12,7 +29,7 @@ hbar = constants.hbar
 a0 = constants.physical_constants["Bohr radius"][0]
 k2e = 1 / constants.physical_constants["electron volt-kelvin relationship"][0]
 kR = constants.gas_constant
-egamma = numpy.euler_gamma
+egamma = np.euler_gamma
 
 c0_nn_11 = [
     7.884756e-1,
@@ -204,18 +221,18 @@ c1_nn_44 = [
     2.842981e-1,
 ]
 c2_nn_44 = [0, 0, 0, 0, -3.899247e-3, -1.939452e-2, -1.874462e-2]
-c_nn_11 = numpy.array([c0_nn_11, c1_nn_11, c2_nn_11]).transpose()
-c_nn_12 = numpy.array([c0_nn_12, c1_nn_12, c2_nn_12]).transpose()
-c_nn_13 = numpy.array([c0_nn_13, c1_nn_13, c2_nn_13]).transpose()
-c_nn_14 = numpy.array([c0_nn_14, c1_nn_14, c2_nn_14]).transpose()
-c_nn_15 = numpy.array([c0_nn_15, c1_nn_15, c2_nn_15]).transpose()
-c_nn_22 = numpy.array([c0_nn_22, c1_nn_22, c2_nn_22]).transpose()
-c_nn_23 = numpy.array([c0_nn_23, c1_nn_23, c2_nn_23]).transpose()
-c_nn_24 = numpy.array([c0_nn_24, c1_nn_24, c2_nn_24]).transpose()
-c_nn_33 = numpy.array([c0_nn_33, c1_nn_33, c2_nn_33]).transpose()
-c_nn_44 = numpy.array([c0_nn_44, c1_nn_44, c2_nn_44]).transpose()
-fillnan = numpy.full(c_nn_11.shape, numpy.nan)
-c_nn = numpy.array(
+c_nn_11 = np.array([c0_nn_11, c1_nn_11, c2_nn_11]).transpose()
+c_nn_12 = np.array([c0_nn_12, c1_nn_12, c2_nn_12]).transpose()
+c_nn_13 = np.array([c0_nn_13, c1_nn_13, c2_nn_13]).transpose()
+c_nn_14 = np.array([c0_nn_14, c1_nn_14, c2_nn_14]).transpose()
+c_nn_15 = np.array([c0_nn_15, c1_nn_15, c2_nn_15]).transpose()
+c_nn_22 = np.array([c0_nn_22, c1_nn_22, c2_nn_22]).transpose()
+c_nn_23 = np.array([c0_nn_23, c1_nn_23, c2_nn_23]).transpose()
+c_nn_24 = np.array([c0_nn_24, c1_nn_24, c2_nn_24]).transpose()
+c_nn_33 = np.array([c0_nn_33, c1_nn_33, c2_nn_33]).transpose()
+c_nn_44 = np.array([c0_nn_44, c1_nn_44, c2_nn_44]).transpose()
+fillnan = np.full(c_nn_11.shape, np.nan)
+c_nn = np.array(
     [
         [c_nn_11, c_nn_12, c_nn_13, c_nn_14, c_nn_15],
         [fillnan, c_nn_22, c_nn_23, c_nn_24, fillnan],
@@ -414,18 +431,18 @@ c1_in_44 = [
     3.388072e-1,
 ]
 c2_in_44 = [0, 0, 0, 0, -1.210668e-2, -2.759622e-2, -2.669344e-2]
-c_in_11 = numpy.array([c0_in_11, c1_in_11, c2_in_11]).transpose()
-c_in_12 = numpy.array([c0_in_12, c1_in_12, c2_in_12]).transpose()
-c_in_13 = numpy.array([c0_in_13, c1_in_13, c2_in_13]).transpose()
-c_in_14 = numpy.array([c0_in_14, c1_in_14, c2_in_14]).transpose()
-c_in_15 = numpy.array([c0_in_15, c1_in_15, c2_in_15]).transpose()
-c_in_22 = numpy.array([c0_in_22, c1_in_22, c2_in_22]).transpose()
-c_in_23 = numpy.array([c0_in_23, c1_in_23, c2_in_23]).transpose()
-c_in_24 = numpy.array([c0_in_24, c1_in_24, c2_in_24]).transpose()
-c_in_33 = numpy.array([c0_in_33, c1_in_33, c2_in_33]).transpose()
-c_in_44 = numpy.array([c0_in_44, c1_in_44, c2_in_44]).transpose()
-fillnan = numpy.full(c_in_11.shape, numpy.nan)
-c_in = numpy.array(
+c_in_11 = np.array([c0_in_11, c1_in_11, c2_in_11]).transpose()
+c_in_12 = np.array([c0_in_12, c1_in_12, c2_in_12]).transpose()
+c_in_13 = np.array([c0_in_13, c1_in_13, c2_in_13]).transpose()
+c_in_14 = np.array([c0_in_14, c1_in_14, c2_in_14]).transpose()
+c_in_15 = np.array([c0_in_15, c1_in_15, c2_in_15]).transpose()
+c_in_22 = np.array([c0_in_22, c1_in_22, c2_in_22]).transpose()
+c_in_23 = np.array([c0_in_23, c1_in_23, c2_in_23]).transpose()
+c_in_24 = np.array([c0_in_24, c1_in_24, c2_in_24]).transpose()
+c_in_33 = np.array([c0_in_33, c1_in_33, c2_in_33]).transpose()
+c_in_44 = np.array([c0_in_44, c1_in_44, c2_in_44]).transpose()
+fillnan = np.full(c_in_11.shape, np.nan)
+c_in = np.array(
     [
         [c_in_11, c_in_12, c_in_13, c_in_14, c_in_15],
         [fillnan, c_in_22, c_in_23, c_in_24, fillnan],
@@ -439,101 +456,547 @@ def n_effective_electrons(nint, nout):
     return nout * (1 + (1 - nout / nint) * (nint / (nout + nint)) ** 2)
 
 
-def pot_parameters_neut_neut(spi, spj):
-    ai, aj = spi.polarisability * 1e30, spj.polarisability * 1e30
-    londoncoefft = (
-        15.7
-        * ai
-        * aj
-        / (
-            numpy.sqrt(ai / spi.effectiveelectrons)
-            + numpy.sqrt(aj / spj.effectiveelectrons)
+def pot_parameters_neut_neut(
+    species_i: "Species", species_j: "Species"
+) -> tuple[float, float]:
+    r"""Calculate the equilibrium distance and binding energy for a neutral-neutral pair.
+
+    Parameters
+    ----------
+    species_i : Species
+        First species.
+    species_j : Species
+        Second species.
+
+    Returns
+    -------
+    tuple[float, float]
+        Equilibrium distance and binding energy.
+
+    Notes
+    -----
+    The equilibrium distance is given by eq. 6 of [Laricchiuta2007]_ by the formula:
+
+    .. math::
+
+        r_e = 1.767 \frac{\alpha_1^{1 / 3}+\alpha_2^{1 / 3}}{\left(\alpha_1 \alpha_2\right)^{0.095}}
+
+    where :math:`\alpha_i` is the polarisability of species :math:`i` in m^3.
+
+
+    The binding energy is given by eq. 7 of [Laricchiuta2007]_ by the formula:
+
+    .. math::
+
+        \epsilon_0 = 0.72 \frac{C_d}{r_e^6}
+
+    where :math:`C_d` is the effective long-range London coefficient, defined in eq. 8 of [Laricchiuta2007]_
+    by the formula:
+
+    .. math::
+
+        C_d = 15.7 \frac{\alpha_1 \alpha_2}{\sqrt{\frac{\alpha_1}{n_1}} + \sqrt{\frac{\alpha_2}{n_2}}}
+
+    with :math:`n_i` the effective number of electrons of species :math:`i`.
+    """
+    # Polarisabilities of the species, in m^3.
+    alpha_i = species_i.polarisability * 1e30
+    alpha_j = species_j.polarisability * 1e30
+    # Effective long-range London coefficient, as defined in eq. 8 of [Laricchiuta2007]_.
+    if species_i.effectiveelectrons is None or species_j.effectiveelectrons is None:
+        raise ValueError(
+            "Effective number of electrons must be provided for neutral species."
         )
+    n_eff_i = species_i.effectiveelectrons
+    n_eff_j = species_j.effectiveelectrons
+
+    # Effective long-range London coefficient, as defined in eq. 8 of [Laricchiuta2007]_.
+    C_d = (
+        15.7
+        * alpha_i
+        * alpha_j
+        / (np.sqrt(alpha_i / n_eff_i) + np.sqrt(alpha_j / n_eff_j))
     )
-    re = 1.767 * (ai ** (1 / 3) + aj ** (1 / 3)) / (ai * aj) ** 0.095
-    e0 = 0.72 * londoncoefft / re**6
-    return re, e0
+    # Equilibrium distance r_e, as defined in eq. 6 of [Laricchiuta2007]_.
+    r_e = (
+        1.767 * (alpha_i ** (1 / 3) + alpha_j ** (1 / 3)) / (alpha_i * alpha_j) ** 0.095
+    )
+    # Binding energy epsilon_0, as defined in eq. 7 of [Laricchiuta2007]_.
+    epsilon_0 = 0.72 * C_d / r_e**6
+
+    # Return the equilibrium distance and the binding energy.
+    return r_e, epsilon_0
 
 
-def pot_parameters_ion_neut(spi, spn):
-    ai, an = spi.polarisability * 1e30, spn.polarisability * 1e30
-    rho = ai / (spi.chargenumber**2 * numpy.sqrt(an) * (1 + (2 * ai / an) ** (2 / 3)))
-    re = 1.767 * (ai ** (1 / 3) + an ** (1 / 3)) / (ai * an * (1 + 1 / rho)) ** 0.095
-    e0 = 5.2 * spi.chargenumber**2 * an * (1 + rho) / re**4
-    return re, e0
+def pot_parameters_ion_neut(
+    species_ion: "Species",
+    species_neutral: "Species",
+) -> tuple[float, float]:
+    r"""Calculate the equilibrium distance and binding energy for an ion-neutral pair.
+
+    Parameters
+    ----------
+    species_ion : Species
+        Ion species.
+    species_neutral : Species
+        Neutral species.
+
+    Returns
+    -------
+    tuple[float, float]
+        Equilibrium distance and binding energy.
+
+    Notes
+    -----
+    The equilibrium distance is given by eq. 9 of [Laricchiuta2007]_ by the formula:
+
+    .. math::
+
+        r_e = 1.767 \frac{\alpha_i^{1 / 3}+\alpha_n^{1 / 3}}
+                         {\left(\alpha_i \alpha_n \left[ 1 + \frac{1}{\rho}\right] \right)^{0.095}}
+
+    where :math:`\alpha_i` is the polarisability of the ion species and :math:`\alpha_n` is the polarisability
+    of the neutral species, both in m^3.
+
+    The binding energy is given by eq. 10 of [Laricchiuta2007]_ by the formula:
+
+    .. math::
+
+        \epsilon_0 = 5.2 \frac{z^2 \alpha_n}{r_e^4} \left(1 + \rho\right)
+
+    where :math:`z` is the charge number of the ion species, :math:`\alpha_n` is the polarisability of the
+    neutral species in m^3
+
+    :math:`\rho` is representative of the relative role of dispersion and induction attraction components in
+    proximity to the equilibrium distance, defined in eq. 11 of [Laricchiuta2007]_ by the formula:
+
+    .. math::
+
+        \rho = \frac{\alpha_i}
+                    {z^2 \sqrt{\alpha_n} \left(1 + \left(2 \alpha_i / \alpha_n\right)^{2 / 3}\right)}
+
+    """
+    # Polarisabilities of the species, in m^3.
+    alpha_i = species_ion.polarisability * 1e30
+    alpha_n = species_neutral.polarisability * 1e30
+    # Charge number of the ion species.
+    Z_ion = species_ion.chargenumber
+
+    # rho, as defined in eq. 11 of [Laricchiuta2007]_.
+    rho = alpha_i / (
+        Z_ion**2 * np.sqrt(alpha_n) * (1 + (2 * alpha_i / alpha_n) ** (2 / 3))
+    )
+    # Equilibrium distance r_e, as defined in eq. 9 of [Laricchiuta2007]_.
+    r_e = (
+        1.767
+        * (alpha_i ** (1 / 3) + alpha_n ** (1 / 3))
+        / (alpha_i * alpha_n * (1 + 1 / rho)) ** 0.095
+    )
+    # Binding energy epsilon_0, as defined in eq. 10 of [Laricchiuta2007]_.
+    epsilon_0 = 5.2 * Z_ion**2 * alpha_n * (1 + rho) / r_e**4
+    # Return the equilibrium distance and the binding energy.
+    return r_e, epsilon_0
 
 
-def beta(spi, spj):
-    ai, aj = spi.polarisability * 1e30, spj.polarisability * 1e30
-    return 6 + 5 / (spi.multiplicity * ai ** (1 / 3) + spj.multiplicity * aj ** (1 / 3))
+def beta(
+    species_i: "Species",
+    species_j: "Species",
+) -> float:
+    r"""Calculate the beta parameter for a pair of species.
+
+    Parameters
+    ----------
+    species_i : Species
+        First species.
+    species_j : Species
+        Second species.
+
+    Returns
+    -------
+    float
+        Beta parameter.
+
+    Notes
+    -----
+    :math:`\beta` is a parameter to estimate the hardness of interacting electronic
+    distribution densities, and it is estimated in eq. 5 of [Laricchiuta2007]_:
+
+    .. math::
+
+        \beta = 6 + \frac{5}{s_1 + s_2}
+
+    where :math:`s_i` is the softness.
+
+    The softness s defined as the cubic root of the polarizability. For open-shell atoms and ions
+    a multiplicative factor, which is the ground state spin multiplicity, should be also considered:
+
+    .. math::
+
+        s = \frac{\alpha^{1 / 3}}{m}
+    """
+    # Polarisabilities of the species, in m^3.
+    alpha_i = species_i.polarisability * 1e30
+    alpha_j = species_j.polarisability * 1e30
+
+    # Compute the softness of the species.
+    s_i = alpha_i ** (1 / 3) * species_i.multiplicity
+    s_j = alpha_j ** (1 / 3) * species_j.multiplicity
+    # Return the beta parameter.
+    return 6 + 5 / (s_i + s_j)
 
 
-def x0_neut_neut(betaval):
-    return 0.8002 * betaval**0.049256
+def x0_neut_neut(beta_value: float) -> float:
+    r"""Calculate the x0 parameter for a neutral-neutral pair.
+
+    Parameters
+    ----------
+    beta_value : float
+        Beta parameter.
+
+    Returns
+    -------
+    float
+        x0 parameter.
+
+    Notes
+    -----
+    :math:`x_0` is defined in eq. 13 of [Laricchiuta2007]_ as a solution to a transcendal equation.
+    It can be approximated by eq. 17, with the following formula:
+
+    .. math::
+
+        x_0 = \xi_1 \beta^{\xi_2}
+
+    where :math:`\xi_1 = 0.8002` and :math:`\xi_2 = 0.049256`, as given in Table 3.
+    """
+    return 0.8002 * beta_value**0.049256
 
 
-def x0_ion_neut(betaval):
-    return 0.7564 * betaval**0.064605
+def x0_ion_neut(beta_value: float) -> float:
+    r"""Calculate the x0 parameter for a ion-neutral pair.
+
+    Parameters
+    ----------
+    beta_value : float
+        Beta parameter.
+
+    Returns
+    -------
+    float
+        x0 parameter.
+
+    Notes
+    -----
+    :math:`x_0` is defined in eq. 13 of [Laricchiuta2007]_ as a solution to a transcendal equation.
+    It can be approximated by eq. 17, with the following formula:
+
+    .. math::
+
+        x_0 = \xi_1 \beta^{\xi_2}
+
+    where :math:`\xi_1 = 0.7564` and :math:`\xi_2 = 0.064605`, as given in Table 3.
+    """
+    return 0.7564 * beta_value**0.064605
 
 
-def cl_charged(spi, spj, ni, nj, T):
-    T_eV = T * k2e
-    if spi.name == "e" and spj.name == "e":
-        ne_cgs = ni * 1e-6
+def cl_charged(
+    species_i: "Species",
+    species_j: "Species",
+    n_i: float,
+    n_j: float,
+    T: float,
+):
+    r"""Calculate the Coulomb logarithm for a pair of charged species.
+
+    Parameters
+    ----------
+    species_i : Species
+        First species.
+    species_j : Species
+        Second species.
+    n_i : float
+        Number density of the first species, in m^-3.
+    n_j : float
+        Number density of the second species, in m^-3.
+    T : float
+        Temperature, in K.
+
+    Returns
+    -------
+    float
+        Coulomb logarithm.
+
+    Notes
+    -----
+    The Coulomb logarithm is defined at page 34 of [NRL2019]_.
+    The units of this book is cgs, except for temperature which is in eV.
+
+    For thermal electron-electron collisions:
+
+    .. math::
+
+        \lambda_{e e} = 23.5 - \ln \left(n_e^{1 / 2} T^{-5 / 4}\right)
+            - \left[10^{-5}+\left(\ln T - 2 \right)^2 / 16\right]^{1 / 2}
+
+    For electron-ion collisions, assuming that :math:`T \lt 10 eV`:
+
+    .. math::
+
+        \lambda_{e i} = 23 - \ln \left(n_e^{1 / 2} Z T^{-3 / 2}\right)
+
+    For (mixed) ion-ion collisions:
+
+    .. math::
+
+        \lambda_{i i'} = 23 - \ln \left( \frac{Z_i Z_i'}{T}
+            \left(\frac{n_i Z_i^2}{T} + \frac{n_i' Z_i'^2}{T} \right)^{1 / 2}\right)
+    """
+    T_eV = T * u.K_to_eV  # Convert temperature to eV.
+    if species_i.name == "e" and species_j.name == "e":
+        # Electron-electron collisions.
+        ne_cgs = n_i * 1e-6  # m^-3 to cm^-3
         return (
             23.5
-            - numpy.log(ne_cgs ** (1 / 2) * T_eV ** (-5 / 4))
-            - (1e-5 + (numpy.log(T_eV) - 2) ** 2 / 16) ** (1 / 2)
+            - np.log(ne_cgs ** (1 / 2) * T_eV ** (-5 / 4))
+            - (1e-5 + (np.log(T_eV) - 2) ** 2 / 16) ** (1 / 2)
         )
-    elif spi.name == "e":
-        ne_cgs = ni * 1e-6
-        return 23 - numpy.log(
-            ne_cgs ** (1 / 2) * abs(spj.chargenumber) * T_eV ** (-3 / 2)
-        )
-    elif spj.name == "e":
-        ne_cgs = nj * 1e-6
-        return 23 - numpy.log(
-            ne_cgs ** (1 / 2) * abs(spi.chargenumber) * T_eV ** (-3 / 2)
-        )
+    elif species_i.name == "e":
+        # Electron-ion collisions.
+        ne_cgs = n_i * 1e-6  # m^-3 to cm^-3
+        z_ion = species_j.chargenumber
+        return 23 - np.log(ne_cgs ** (1 / 2) * abs(z_ion) * T_eV ** (-3 / 2))
+    elif species_j.name == "e":
+        # Ion-electron collisions, same as electron-ion collisions.
+        ne_cgs = n_j * 1e-6  # m^-3 to cm^-3
+        z_ion = species_i.chargenumber
+        return 23 - np.log(ne_cgs ** (1 / 2) * abs(z_ion) * T_eV ** (-3 / 2))
     else:
-        ni_cgs, nj_cgs = ni * 1e-6, nj * 1e-6
-        return 23 - numpy.log(
-            abs(spi.chargenumber * spj.chargenumber)
+        # Ion-ion collisions.
+        ni_cgs, nj_cgs = n_i * 1e-6, n_j * 1e-6  # m^-3 to cm^-3
+        z_ion_i = species_i.chargenumber
+        z_ion_j = species_j.chargenumber
+        return 23 - np.log(
+            abs(z_ion_i * z_ion_j)
             / T_eV
-            * (
-                ni_cgs * abs(spi.chargenumber) ** 2 / T_eV
-                + nj_cgs * abs(spj.chargenumber) ** 2 / T_eV
-            )
+            * (ni_cgs * abs(z_ion_i) ** 2 / T_eV + nj_cgs * abs(z_ion_j) ** 2 / T_eV)
             ** (1 / 2)
         )
 
 
-def psiconst(s):
+def psiconst(s: int) -> float:
+    r"""Calculate the constant psi(s) for the fit function of the total resonant transfert cross section.
+
+    Parameters
+    ----------
+    s : int
+        Number of terms to sum.
+
+    Returns
+    -------
+    float
+        Constant psi(s).
+
+    Notes
+    -----
+    :math:`\psi(s)` is defined as:
+
+    .. math::
+
+        \psi(s) = \sum_{n=1}^{s} \frac{1}{n}
+    """
     if s == 1:
         return 0
     else:
-        return numpy.sum(1 / numpy.arange(1, s))
+        return np.sum(1 / np.arange(1, s))
 
 
-def A(ie):
-    ie_eV = ie / qe
-    return numpy.sqrt(pi) * 9.81867945e-09 / ie_eV**0.729218856
+def A(ionisation_energy: float) -> float:
+    r"""Constant A for the fit function of the total resonant transfert cross section.
+
+    Parameters
+    ----------
+    ionisation_energy : float
+        First ionisation energy of the species, in J.
+
+    Returns
+    -------
+    float
+        Constant A.
+
+    Notes
+    -----
+    :math:`A` and :math:`B` are given by a simple empirical fit as a function of the ionisation energy to
+    analytical expressions from [Rapp1962]_ and [Smirnov1970]_.
+
+    The fit function is given by eq. 11 of [Devoto1967]_:
+
+    .. math::
+
+        Q_{ T }^{T O T}=(1 / 2)[A-B \ln (g)]^2
+
+    From equation 14 of [Rapp1962]_, we have:
+
+    .. math::
+
+        \begin{aligned}
+            \sigma^{\frac{1}{2}}
+                =\left(\frac{1}{2} \pi\right)^{\frac{1}{2}} b_1
+                =-\left(\frac{1}{2} \pi\right)^{\frac{1}{2}} & \left(a_0 / \gamma\right) \ln v
+                 +\left(\frac{1}{2} \pi\right)^{\frac{1}{2}}\left(a_0 / 2 \gamma\right) \\
+                 & \times \ln \left[\frac{72 \bar{b}_1^3}{\pi \gamma a_0}\left(\frac{I^2}{\hbar^2}\right)
+                    \left(1+\frac{a_0}{\gamma \bar{b}_1}\right)^2\right]
+        \end{aligned}
+
+    where:
+
+    - :math:`\gamma = \sqrt{\frac{I[eV]}{13.6}}` (cf. equation 10 of [Rapp1962]_),
+    - :math:`a_0` is the Bohr radius,
+    - :math:`I` is the ionisation energy in eV,
+    - :math:`\hbar` is the reduced Planck constant, and
+    - :math:`\bar{b}_1` can be found using equation 13 of [Rapp1962]_.
+
+    Therefore, :math:`A` is given by:
+
+    .. math::
+
+        A = \sqrt{\pi} \frac{a_0}{2 \gamma}
+            \ln \left[\frac{72 \bar{b}_1^3}{\pi \gamma a_0}\left(\frac{I^2}{\hbar^2}\right)
+            \left(1+\frac{a_0}{\gamma \bar{b}_1}\right)^2\right]
+
+    TODO: Check the formula for A.
+    """
+    ie_eV = ionisation_energy * u.J_to_eV  # Convert ionisation energy to eV.
+    return np.sqrt(pi) * 9.81867945e-09 / ie_eV**0.729218856
 
 
-def B(ie):
-    ie_eV = ie / qe
-    return numpy.sqrt(pi) * 4.78257679e-10 / ie_eV**0.657012657
+def B(ionisation_energy: float) -> float:
+    r"""Constant B for the fit function of the total resonant transfert cross section.
+
+    Parameters
+    ----------
+    ionisation_energy : float
+        First ionisation energy of the species, in J.
+
+    Returns
+    -------
+    float
+        Constant B.
+
+    Notes
+    -----
+    :math:`A` and :math:`B` are given by a simple empirical fit as a function of the ionisation energy to
+    analytical expressions from [Rapp1962]_ and [Smirnov1970]_.
+
+    The fit function is given by eq. 11 of [Devoto1967]_:
+
+    .. math::
+
+        Q_{ T }^{T O T}=(1 / 2)[A-B \ln (g)]^2
+
+    From equation 14 of [Rapp1962]_, we have:
+
+    .. math::
+
+        \begin{aligned}
+            \sigma^{\frac{1}{2}}
+                =\left(\frac{1}{2} \pi\right)^{\frac{1}{2}} b_1
+                =-\left(\frac{1}{2} \pi\right)^{\frac{1}{2}} & \left(a_0 / \gamma\right) \ln v
+                 +\left(\frac{1}{2} \pi\right)^{\frac{1}{2}}\left(a_0 / 2 \gamma\right) \\
+                 & \times \ln \left[\frac{72 \bar{b}_1^3}{\pi \gamma a_0}\left(\frac{I^2}{\hbar^2}\right)
+                    \left(1+\frac{a_0}{\gamma \bar{b}_1}\right)^2\right]
+        \end{aligned}
+
+    where:
+
+    - :math:`\gamma = \sqrt{\frac{I[eV]}{13.6}}` (cf. equation 10 of [Rapp1962]_),
+    - :math:`a_0` is the Bohr radius,
+    - :math:`I` is the ionisation energy in eV,
+    - :math:`\hbar` is the reduced Planck constant, and
+    - :math:`\bar{b}_1` can be found using equation 13 of [Rapp1962]_.
+
+    Therefore, :math:`B` is given by:
+
+    .. math::
+
+        B = \pi^{\frac{1}{2}} \frac{a_0}{\gamma}
 
 
-def sum1(s):
-    return numpy.sum(1 / numpy.array(range(1, s + 2))) - egamma
+    TODO: Check the following:
+
+    .. math::
+
+        B = \sqrt{\pi} \frac{a_0 \sqrt{13.6} }{\sqrt{I[eV]}}
+          = \sqrt{\pi} \times \frac{1,95.10^{-10}}{ \sqrt{I[eV]}}
+
+    However, the function returns :math:`\sqrt{\pi} \times \frac{4.78.10^{-10}}{ I[eV]^{0.657}}`.
+    """
+    ie_eV = ionisation_energy * u.J_to_eV  # Convert ionisation energy to eV.
+    return np.sqrt(pi) * 4.78257679e-10 / ie_eV**0.657012657
 
 
-def sum2(s):
-    return numpy.sum(1 / numpy.array(range(1, s + 2)) ** 2)
+def sum1(s: int) -> float:
+    r"""Sum of the first s+1 terms of the harmonic series, minus Euler's constant.
+
+    Parameters
+    ----------
+    s : int
+        Number of terms to sum.
+
+    Returns
+    -------
+    float
+        Sum of the first s+1 terms of the harmonic series, minus Euler's constant.
+
+    Notes
+    -----
+    :math:`\zeta_1` is defined as:
+
+    .. math::
+
+        \zeta_1(s) = \sum_{n=1}^{s+1} \frac{1}{n} - \gamma
+    """
+    return np.sum(1 / np.arange(1, s + 2)) - egamma
 
 
-def delta(i, j):
+def sum2(s: int) -> float:
+    r"""Sum of the first s+1 terms squared of the harmonic series.
+
+    Parameters
+    ----------
+    s : int
+        Number of terms to sum.
+
+    Returns
+    -------
+    float
+        Sum of the first s+1 terms squared of the harmonic series.
+
+    Notes
+    -----
+    :math:`\zeta_2` is defined as:
+
+    .. math::
+
+        \zeta_1(s) = \sum_{n=1}^{s+1} \frac{1}{n^2}
+    """
+    return np.sum(1 / np.arange(1, s + 2) ** 2)
+
+
+def delta(i: int, j: int) -> int:
+    """Kronecker delta.
+
+    Parameters
+    ----------
+    i : int
+        First integer.
+    j : int
+        Second integer.
+
+    Returns
+    -------
+    int
+        Returns 1 if i == j, 0 otherwise.
+    """
     if i == j:
         return 1
     else:
@@ -550,7 +1013,7 @@ def Qe(spi, l, s, T):
     except TypeError:
         Ae, Be, Ce, De = spi.electroncrosssection, 0, 0, 0
     barg = Ce / 2 + s + 2
-    tau = numpy.sqrt(2 * me * kb * T) / hbar
+    tau = np.sqrt(2 * me * kb * T) / hbar
     return Ae + Be * tau**Ce * gamma(barg) / (gamma(s + 2) * (De * tau**2 + 1) ** barg)
 
 
@@ -571,18 +1034,18 @@ def Qnn(spi, spj, l, s, T):
     x0 = x0_neut_neut(bv)
     a = c_nn[l - 1, s - 1].dot([1, bv, bv**2])
     sigma = re * x0
-    x = numpy.log(k2e * T / e0)
+    x = np.log(k2e * T / e0)
     lnS1 = (
         (a[0] + a[1] * x)
-        * numpy.exp((x - a[2]) / a[3])
-        / (numpy.exp((x - a[2]) / a[3]) + numpy.exp((a[2] - x) / a[3]))
+        * np.exp((x - a[2]) / a[3])
+        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
     )
     lnS2 = (
         a[4]
-        * numpy.exp((x - a[5]) / a[6])
-        / (numpy.exp((x - a[5]) / a[6]) + numpy.exp((a[5] - x) / a[6]))
+        * np.exp((x - a[5]) / a[6])
+        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
     )
-    return numpy.exp(lnS1 + lnS2) * pi * sigma**2 * 1e-20
+    return np.exp(lnS1 + lnS2) * pi * sigma**2 * 1e-20
 
 
 def Qin(spi, spj, l, s, T):
@@ -602,18 +1065,18 @@ def Qin(spi, spj, l, s, T):
     x0 = x0_ion_neut(bv)
     a = c_in[l - 1, s - 1].dot([1, bv, bv**2])
     sigma = re * x0
-    x = numpy.log(k2e * T / e0)
+    x = np.log(k2e * T / e0)
     lnS1 = (
         (a[0] + a[1] * x)
-        * numpy.exp((x - a[2]) / a[3])
-        / (numpy.exp((x - a[2]) / a[3]) + numpy.exp((a[2] - x) / a[3]))
+        * np.exp((x - a[2]) / a[3])
+        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
     )
     lnS2 = (
         a[4]
-        * numpy.exp((x - a[5]) / a[6])
-        / (numpy.exp((x - a[5]) / a[6]) + numpy.exp((a[5] - x) / a[6]))
+        * np.exp((x - a[5]) / a[6])
+        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
     )
-    return numpy.exp(lnS1 + lnS2) * pi * sigma**2 * 1e-20
+    return np.exp(lnS1 + lnS2) * pi * sigma**2 * 1e-20
 
 
 def Qtr(spi, spj, s, T):
@@ -624,7 +1087,7 @@ def Qtr(spi, spj, s, T):
     else:
         a, b = A(spj.ionisationenergy), B(spj.ionisationenergy)
         mm = spj.molarmass
-    lnterm = numpy.log(4 * kR * T / mm)
+    lnterm = np.log(4 * kR * T / mm)
     s1, s2 = sum1(s), sum2(s)
     cterm = pi**2 / 6 - s2 + s1**2
     return (
@@ -644,7 +1107,7 @@ def Qc(spi, ni, spj, nj, l, s, T):
     term2 = (ke * spi.chargenumber * spj.chargenumber * qe**2 / (2 * kb * T)) ** 2
     term3 = (
         cl_charged(spi, spj, ni, nj, T)
-        + numpy.log(2)
+        + np.log(2)
         - addconst[l - 1]
         - 2 * egamma
         + psiconst(s)
@@ -679,7 +1142,7 @@ def Qij(spi, ni, spj, nj, l, s, T):
 
 
 def Qij_mix(mix, l, s):
-    Qvals = numpy.zeros((len(mix.species), len(mix.species)))
+    Qvals = np.zeros((len(mix.species), len(mix.species)))
     numberdensities = mix.calculate_composition()
     for i, (ndi, spi) in enumerate(zip(numberdensities, mix.species)):
         for j, (ndj, spj) in enumerate(zip(numberdensities, mix.species)):
@@ -693,7 +1156,7 @@ def Qij_mix(mix, l, s):
 def q(mix):
     nsp = len(mix.species)
     nv = mix.calculate_composition()
-    mv = numpy.array([sp.molarmass / kav for sp in mix.species])
+    mv = np.array([sp.molarmass / kav for sp in mix.species])
 
     Q11 = Qij_mix(mix, 1, 1)
     Q12 = Qij_mix(mix, 1, 2)
@@ -712,7 +1175,7 @@ def q(mix):
     Q35 = Qij_mix(mix, 3, 5)
     Q44 = Qij_mix(mix, 4, 4)
 
-    q00 = numpy.zeros((nsp, nsp))
+    q00 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -724,7 +1187,7 @@ def q(mix):
                 sumval += term1 * Q11[i, l] * term2
             q00[i, j] = 8 * sumval
 
-    q01 = numpy.zeros((nsp, nsp))
+    q01 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -736,7 +1199,7 @@ def q(mix):
                 sumval += term1 * term2
             q01[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (3 / 2) * sumval
 
-    q11 = numpy.zeros((nsp, nsp))
+    q11 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -750,7 +1213,7 @@ def q(mix):
                 sumval += term1 * term2
             q11[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (3 / 2) * sumval
 
-    q02 = numpy.zeros((nsp, nsp))
+    q02 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -762,7 +1225,7 @@ def q(mix):
                 sumval += term1 * term2
             q02[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (5 / 2) * sumval
 
-    q12 = numpy.zeros((nsp, nsp))
+    q12 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -779,7 +1242,7 @@ def q(mix):
                 sumval += term1 * term2
             q12[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (5 / 2) * sumval
 
-    q22 = numpy.zeros((nsp, nsp))
+    q22 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -811,7 +1274,7 @@ def q(mix):
                 sumval += term1 * term2
             q22[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (5 / 2) * sumval
 
-    q03 = numpy.zeros((nsp, nsp))
+    q03 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -826,7 +1289,7 @@ def q(mix):
                 sumval += term1 * term2
             q03[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (7 / 2) * sumval
 
-    q13 = numpy.zeros((nsp, nsp))
+    q13 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -844,7 +1307,7 @@ def q(mix):
                 sumval += term1 * term2
             q13[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (7 / 2) * sumval
 
-    q23 = numpy.zeros((nsp, nsp))
+    q23 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -891,7 +1354,7 @@ def q(mix):
                 sumval += term1 * term2
             q23[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (7 / 2) * sumval
 
-    q33 = numpy.zeros((nsp, nsp))
+    q33 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -963,37 +1426,37 @@ def q(mix):
                 sumval += term1 * term2
             q33[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** (7 / 2) * sumval
 
-    q10 = numpy.zeros((nsp, nsp))
+    q10 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             q10[i, j] = mv[j] / mv[i] * q01[i, j]
 
-    q20 = numpy.zeros((nsp, nsp))
+    q20 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             q20[i, j] = (mv[j] / mv[i]) ** 2 * q02[i, j]
 
-    q21 = numpy.zeros((nsp, nsp))
+    q21 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             q21[i, j] = mv[j] / mv[i] * q12[i, j]
 
-    q30 = numpy.zeros((nsp, nsp))
+    q30 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             q30[i, j] = (mv[j] / mv[i]) ** 3 * q03[i, j]
 
-    q31 = numpy.zeros((nsp, nsp))
+    q31 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             q31[i, j] = (mv[j] / mv[i]) ** 2 * q13[i, j]
 
-    q32 = numpy.zeros((nsp, nsp))
+    q32 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             q32[i, j] = mv[j] / mv[i] * q23[i, j]
 
-    qq = numpy.zeros((4 * nsp, 4 * nsp))
+    qq = np.zeros((4 * nsp, 4 * nsp))
 
     qq[0 * nsp : 1 * nsp, 0 * nsp : 1 * nsp] = q00
     qq[0 * nsp : 1 * nsp, 1 * nsp : 2 * nsp] = q01
@@ -1021,7 +1484,7 @@ def q(mix):
 def qhat(mix):
     nsp = len(mix.species)
     nv = mix.calculate_composition()
-    mv = numpy.array([sp.molarmass / kav for sp in mix.species])
+    mv = np.array([sp.molarmass / kav for sp in mix.species])
 
     Q11 = Qij_mix(mix, 1, 1)
     Q12 = Qij_mix(mix, 1, 2)
@@ -1031,7 +1494,7 @@ def qhat(mix):
     Q24 = Qij_mix(mix, 2, 4)
     Q33 = Qij_mix(mix, 3, 3)
 
-    qhat00 = numpy.zeros((nsp, nsp))
+    qhat00 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -1043,7 +1506,7 @@ def qhat(mix):
                 sumval += term1 * term2
             qhat00[i, j] = 8 * nv[i] * (mv[i] / mv[j]) * sumval
 
-    qhat01 = numpy.zeros((nsp, nsp))
+    qhat01 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -1057,7 +1520,7 @@ def qhat(mix):
                 sumval += term1 * term2
             qhat01[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** 2 * sumval
 
-    qhat11 = numpy.zeros((nsp, nsp))
+    qhat11 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             sumval = 0
@@ -1073,12 +1536,12 @@ def qhat(mix):
                 sumval += term1 * term2
             qhat11[i, j] = 8 * nv[i] * (mv[i] / mv[j]) ** 2 * sumval
 
-    qhat10 = numpy.zeros((nsp, nsp))
+    qhat10 = np.zeros((nsp, nsp))
     for i in range(nsp):
         for j in range(nsp):
             qhat10[i, j] = mv[j] / mv[i] * qhat01[i, j]
 
-    qq = numpy.zeros((2 * nsp, 2 * nsp))
+    qq = np.zeros((2 * nsp, 2 * nsp))
 
     qq[0 * nsp : 1 * nsp, 0 * nsp : 1 * nsp] = qhat00
     qq[0 * nsp : 1 * nsp, 1 * nsp : 2 * nsp] = qhat01
@@ -1098,20 +1561,20 @@ def Dij(mix):
     """
     nsp = len(mix.species)
     nv = mix.calculate_composition()
-    mv = numpy.array([sp.molarmass / kav for sp in mix.species])
-    ntot = numpy.sum(nv)
+    mv = np.array([sp.molarmass / kav for sp in mix.species])
+    ntot = np.sum(nv)
     rho = mix.calculate_density()
 
     qq = q(mix)
     # qq = q(mix)[:nsp, :nsp]
-    invq = numpy.linalg.inv(qq)
-    dmat = numpy.zeros((nsp, nsp))
-    bvec = numpy.zeros(4 * nsp)
-    # bvec = numpy.zeros(nsp)
+    invq = np.linalg.inv(qq)
+    dmat = np.zeros((nsp, nsp))
+    bvec = np.zeros(4 * nsp)
+    # bvec = np.zeros(nsp)
     for i in range(nsp):
         for j in range(nsp):
-            dij = numpy.array([delta(h, i) - delta(h, j) for h in range(0, nsp)])
-            bvec[:nsp] = 3 * numpy.sqrt(pi) * dij
+            dij = np.array([delta(h, i) - delta(h, j) for h in range(0, nsp)])
+            bvec[:nsp] = 3 * np.sqrt(pi) * dij
             cflat = invq.dot(bvec)
             cip = cflat.reshape(4, nsp)
             # cip = cflat.reshape(1, nsp)
@@ -1119,7 +1582,7 @@ def Dij(mix):
                 rho
                 * nv[i]
                 / (2 * ntot * mv[j])
-                * numpy.sqrt(2 * kb * mix.T / mv[i])
+                * np.sqrt(2 * kb * mix.T / mv[i])
                 * cip[0, i]
             )
 
@@ -1132,16 +1595,16 @@ def DTi(mix):
     """
     nsp = len(mix.species)
     nv = mix.calculate_composition()
-    mv = numpy.array([sp.molarmass / kav for sp in mix.species])
+    mv = np.array([sp.molarmass / kav for sp in mix.species])
 
     qq = q(mix)
-    invq = numpy.linalg.inv(qq)
-    bvec = numpy.zeros(4 * nsp)
-    bvec[nsp : 2 * nsp] = -15 / 2 * numpy.sqrt(pi) * nv
+    invq = np.linalg.inv(qq)
+    bvec = np.zeros(4 * nsp)
+    bvec[nsp : 2 * nsp] = -15 / 2 * np.sqrt(pi) * nv
     aflat = invq.dot(bvec)
     aip = aflat.reshape(4, nsp)
 
-    return 0.5 * nv * mv * numpy.sqrt(2 * kb * mix.T / mv) * aip[0]
+    return 0.5 * nv * mv * np.sqrt(2 * kb * mix.T / mv) * aip[0]
 
 
 def viscosity(mix):
@@ -1150,16 +1613,16 @@ def viscosity(mix):
     """
     nsp = len(mix.species)
     nv = mix.calculate_composition()
-    mv = numpy.array([sp.molarmass / kav for sp in mix.species])
+    mv = np.array([sp.molarmass / kav for sp in mix.species])
 
     qq = qhat(mix)
-    invq = numpy.linalg.inv(qq)
-    bvec = numpy.zeros(2 * nsp)
-    bvec[:nsp] = 5 * nv * numpy.sqrt(2 * pi * mv / (kb * mix.T))
+    invq = np.linalg.inv(qq)
+    bvec = np.zeros(2 * nsp)
+    bvec[:nsp] = 5 * nv * np.sqrt(2 * pi * mv / (kb * mix.T))
     bflat = invq.dot(bvec)
     bip = bflat.reshape(2, nsp)
 
-    return 0.5 * kb * mix.T * numpy.sum(nv * bip[0])
+    return 0.5 * kb * mix.T * np.sum(nv * bip[0])
 
 
 def electricalconductivity(mix):
@@ -1167,8 +1630,8 @@ def electricalconductivity(mix):
     simplification neglects heavy ion contributions to the current.
     """
     nv = mix.calculate_composition()
-    mv = numpy.array([sp.molarmass / kav for sp in mix.species])
-    ntot = numpy.sum(nv)
+    mv = np.array([sp.molarmass / kav for sp in mix.species])
+    ntot = np.sum(nv)
     rho = mix.calculate_density()
 
     D1 = Dij(mix)[-1, :]
@@ -1188,8 +1651,8 @@ def thermalconductivity(mix, rel_delta_T, DTterms_yn, ni_limit):
     """
     nsp = len(mix.species)
     nv = mix.calculate_composition()
-    mv = numpy.array([sp.molarmass / kav for sp in mix.species])
-    ntot = numpy.sum(nv)
+    mv = np.array([sp.molarmass / kav for sp in mix.species])
+    ntot = np.sum(nv)
     hv = mix.calculate_species_enthalpies()
     rho = mix.calculate_density()
     # rescale species enthalpies relative to average mole mass
@@ -1198,17 +1661,17 @@ def thermalconductivity(mix, rel_delta_T, DTterms_yn, ni_limit):
 
     ### translational tk components ###
     qq = q(mix)
-    invq = numpy.linalg.inv(qq)
-    bvec = numpy.zeros(4 * nsp)
-    bvec[nsp : 2 * nsp] = -15 / 2 * numpy.sqrt(pi) * nv
+    invq = np.linalg.inv(qq)
+    bvec = np.zeros(4 * nsp)
+    bvec[nsp : 2 * nsp] = -15 / 2 * np.sqrt(pi) * nv
     aflat = invq.dot(bvec)
     aip = aflat.reshape(4, nsp)
-    kdash = -5 / 4 * kb * numpy.sum(nv * numpy.sqrt(2 * kb * mix.T / mv) * aip[1])
+    kdash = -5 / 4 * kb * np.sum(nv * np.sqrt(2 * kb * mix.T / mv) * aip[1])
 
     ### thermal diffusion tk components ###
     if DTterms_yn:
         locDTi = DTi(mix)
-        kdt = numpy.sum(hv * locDTi / mix.T)
+        kdt = np.sum(hv * locDTi / mix.T)
     else:
         kdt = 0
 
@@ -1220,8 +1683,8 @@ def thermalconductivity(mix, rel_delta_T, DTterms_yn, ni_limit):
     mix.T = Tval * (1 - rel_delta_T)
     nvneg = mix.calculate_composition()
     mix.T = Tval
-    xvpos = nvpos / numpy.sum(nvpos)
-    xvneg = nvneg / numpy.sum(nvneg)
+    xvpos = nvpos / np.sum(nvpos)
+    xvneg = nvneg / np.sum(nvneg)
     dxdT = (xvpos - xvneg) / (2 * rel_delta_T * mix.T)
     krxn_enth = 0
     for j in range(nsp):
@@ -1231,8 +1694,8 @@ def thermalconductivity(mix, rel_delta_T, DTterms_yn, ni_limit):
 
     ### reactional tk components - thermal diffusion term ###
     if DTterms_yn:
-        dxdTfilt = numpy.where(nv < ni_limit, numpy.zeros(nsp), dxdT)
-        krxn_therm = ntot * kb * Tval * numpy.sum(locDTi * dxdTfilt / (nv * mv))
+        dxdTfilt = np.where(nv < ni_limit, np.zeros(nsp), dxdT)
+        krxn_therm = ntot * kb * Tval * np.sum(locDTi * dxdTfilt / (nv * mv))
     else:
         krxn_therm = 0
 
