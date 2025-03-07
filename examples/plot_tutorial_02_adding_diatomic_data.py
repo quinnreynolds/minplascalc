@@ -98,19 +98,19 @@ eV_to_joule = constants.elementary_charge
 silicon_oxide = mpc.species.Diatomic(
     name="SiO",
     stoichiometry={"Si": 1, "O": 1},
-    molar_mass=0.044084905,
-    charge_number=0,
-    ionisation_energy=eV_to_joule * 11.49,
-    dissociation_energy=798 * 1000 / constants.Avogadro,
+    molarmass=0.044084905,
+    chargenumber=0,
+    ionisationenergy=eV_to_joule * 11.49,
+    dissociationenergy=798 * 1000 / constants.Avogadro,
     sigma_s=1,
     g0=1,
     w_e=invcm_to_joule * 1241.55,
     b_e=invcm_to_joule * 0.7267512,
     polarisability=3.962e-30,
     multiplicity=1,
-    effective_electrons=10.495867769,
-    electron_cross_section=2.4197353806e-19,
-    emission_lines=[],
+    effectiveelectrons=10.495867769,
+    electroncrosssection=2.4197353806e-19,
+    emissionlines=[],
     sources=[
         "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. "
         "PJ Linstrom and WG Mallard (Editors), National Institute of Standards "

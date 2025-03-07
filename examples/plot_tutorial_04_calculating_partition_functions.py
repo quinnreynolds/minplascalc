@@ -47,16 +47,16 @@ temperatures = np.linspace(1000, 25000, 100)
 # Calculate the partition functions for each species.
 # ---------------------------------------------------
 #
-# Then calculate the actual partition functions, using the `translational_partition_function` (T)
-# and `internal_partition_function` (T, :math:`\Delta E`) functions of a minplascalc Species object.
+# Then calculate the actual partition functions, using the `partitionfunction_translational` (T)
+# and `partitionfunction_internal` (T, :math:`\Delta E`) functions of a minplascalc Species object.
 #
 # The required arguments are T in K, and the ionisation energy lowering :math:`\Delta E`) in J
 # (here set to zero).
 translational_partition_functions = [
-    [sp.translational_partition_function(T) for T in temperatures] for sp in species
+    [sp.partitionfunction_translational(T) for T in temperatures] for sp in species
 ]
 internal_partition_functions = [
-    [sp.internal_partition_function(T, 0) for T in temperatures] for sp in species
+    [sp.partitionfunction_internal(T, 0) for T in temperatures] for sp in species
 ]
 
 # %%

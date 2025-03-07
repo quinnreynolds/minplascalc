@@ -67,9 +67,9 @@ oxygen_mixture = mpc.mixture.LTE(
     x0,
     T=1000,
     P=101325,
-    gfe_initial_number_particle=1e20,
-    gfe_rtol=1e-10,
-    gfe_max_iteration=1000,
+    gfe_ni0=1e20,
+    gfe_reltol=1e-10,
+    gfe_maxiter=1000,
 )
 
 # %%
