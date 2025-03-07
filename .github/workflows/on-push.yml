@@ -72,7 +72,7 @@ jobs:
       run: uv sync --group docs
     - uses: extractions/setup-just@v2
     - name: Build documentation
-      run: uv run sphinx.cmd.build -M html ./docs .docs/_build -a -E
+      run: uv python sphinx.cmd.build -M html ./docs .docs/_build -a -E
     - uses: actions/upload-pages-artifact@v3
       with:
         path: docs/_build/html/
