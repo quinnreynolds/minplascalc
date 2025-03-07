@@ -1,7 +1,5 @@
-__version__ = '0.7.0'
+__version__ = "0.7.0"
 
-from . import species
-from . import mixture
-from . import parsers
+from . import mixture, parsers, species
 
-__all__ = ['species', 'mixture', 'parsers']
+__all__ = ["species", "mixture", "parsers"]
