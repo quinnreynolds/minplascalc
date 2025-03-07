@@ -70,22 +70,22 @@ jobs:
         version: "latest"
     - name: Install documentation dependencies
       run: uv sync --group docs
-    - name: See the contents of .venv
-      run: cd .venv && ls -la
-    - name: See the contents of .venv/bin
-      run: cd .venv/bin && ls -la
-    - name: See the contents of .venv/lib
-      run: cd .venv/lib/python3.12 && ls -la
+    # - name: See the contents of .venv
+    #   run: cd .venv && ls -la
+    # - name: See the contents of .venv/bin
+    #   run: cd .venv/bin && ls -la
+    # - name: See the contents of .venv/lib
+    #   run: cd .venv/lib/python3.12 && ls -la
     # - name: test some stuff
     #   # https://stackoverflow.com/questions/37757151/the-sphinx-build-command-was-not-found
     #   run: apt-get install python3-sphinx
-    - name: Install sphinx
-      run: pip install sphinx
-    - name: Install sphinx-rtd-theme
-      run: pip install sphinx-rtd-theme
-    - name: Install sphinx-autodoc-typehints
-      run: pip install sphinx-autodoc-typehints
-    # - name: Install sphinx-autodoc
+    - name: Install sphinx and other dependencies
+      run: pip install sphinx myst-parser sphinx-autoapi sphinx-gallery pydata-sphinx-theme sphinx-rtd-theme
+    # - name: Install sphinx-rtd-theme
+    #   run: pip install sphinx-rtd-theme
+    # - name: Install sphinx-autodoc-typehints
+    #   run: pip install sphinx-autodoc-typehints
+    # # - name: Install sphinx-autodoc
     #   run: pip install sphinx-autodoc
     # - name: Install sphinx-autogen
     #   run: pip install sphinx-autogen
@@ -97,9 +97,9 @@ jobs:
     # - name: Check if sphinx is installed
     #   run: python -m sphinx.cmd.build -M html ./docs .docs/_build -a -E
     # # - uses: extractions/setup-just@v2
-    # - name: Build documentation
-    #   # run: uv python sphinx.cmd.build -M html ./docs .docs/_build -a -E
-    #   run: cd docs && rm -fr _api && make clean && make html
+    - name: Build documentation
+      # run: uv python sphinx.cmd.build -M html ./docs .docs/_build -a -E
+      run: cd docs && rm -fr _api && make clean && make html
     # - uses: actions/upload-pages-artifact@v3
     #   with:
     #     path: docs/_build/html/
