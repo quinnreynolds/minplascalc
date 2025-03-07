@@ -1,20 +1,16 @@
-# Minimal makefile for Sphinx documentation
-#
+PROJECT := minplascalc
+CONDAFLAGS :=
+COV_REPORT := html
 
-# You can set these variables from the command line.
-SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = minplascalc
-SOURCEDIR     = .
-BUILDDIR      = _build
+default: unit-tests
 
-# Put it first so that "make" without argument is like "make help".
-help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+unit-tests:
+	uv run pytest test docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"
 
-.PHONY: help Makefile
+update-requirements:
+	uv pip install -r requirements.txt
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+docs-build:
+	cd docs && rm -fr _api && make clean && make html
+
+# DO NOT EDIT ABOVE THIS LINE, ADD COMMANDS BELOW
