@@ -24,7 +24,8 @@ classifiers = [
 ]
 dependencies = [
   "numpy",
-  "scipy"
+  "scipy",
+  "sphinx",
 ]
 description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
 dynamic = ["version"]

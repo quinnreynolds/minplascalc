@@ -70,8 +70,12 @@ jobs:
         version: "latest"
     - name: Install documentation dependencies
       run: uv sync --group docs
-    - name: See the contents of the current directory
+    - name: See the contents of .venv
       run: cd .venv && ls -la
+    - name: See the contents of .venv/bin
+      run: cd .venv/bin && ls -la
+    - name: See the contents of .venv/lib
+      run: cd .venv/lib && ls -la
     - name: test some stuff
       # https://stackoverflow.com/questions/37757151/the-sphinx-build-command-was-not-found
       run: apt-get install python3-sphinx
