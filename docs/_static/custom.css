@@ -1,0 +1,17 @@
+html[data-theme="light"] {
+    --pst-color-primary: #3E097B;
+    --pst-color-secondary: #519E8A;
+    --pst-color-surface: #EBE2F6;
+    --pst-color-background: white;
+    --pst-color-on-surface: #3E097B;
+    --pst-color-on-background: #ECDFF9;
+}
+
+html[data-theme="dark"] {
+    --pst-color-primary: white;
+    --pst-color-secondary: white;
+    --pst-color-surface: #2E075C; /*519E8A;*/
+    --pst-color-background: #1F043E;
+    --pst-color-on-surface: #519E8A; /*#B481FF;*/
+    --pst-color-on-background: #3D097B;
+}
