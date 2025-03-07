@@ -85,7 +85,7 @@ box is unchecked.
 # %%
 # With these we have all the information to build a minplascalc data entry for the SiO species,
 # which can be done by running the following code snippet:
-from scipy import constants
+from scipy import constants  # type: ignore
 
 import minplascalc as mpc
 

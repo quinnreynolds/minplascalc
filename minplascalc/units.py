@@ -5,7 +5,7 @@ All units are by default in the International System of Units (SI).
 """
 
 import numpy as np
-from scipy import constants
+from scipy import constants  # type: ignore
 
 
 class Units:

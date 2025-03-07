@@ -54,7 +54,7 @@ line-length = 88
 [tool.ruff.lint]
 exclude = [".venv"]
 ignore = [
-  "D",  # Missing docstring.
+  "D1",  # Missing docstring.
   "E741"  # Ambiguous variable name - the math-heavy modules are full of these.
 ]
 select = [

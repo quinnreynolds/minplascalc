@@ -154,6 +154,9 @@ class Species(BaseSpecies):
         self.electroncrosssection = electroncrosssection
         self.emissionlines = emissionlines
 
+        self.ionisationenergy: float
+        r"""Ionisation energy of the species in :math:`\text{J}`."""
+
     def to_file(self, datafile=None):
         """Save a Species object to a file for easy re-use.
 

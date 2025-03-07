@@ -81,7 +81,7 @@ search" box is unchecked.
 # Now we have all the information to build a minplascalc data entry for the H2O species,
 # which can be done by running the following code snippet:
 import numpy
-from scipy import constants
+from scipy import constants  # type: ignore
 
 import minplascalc as mpc
 

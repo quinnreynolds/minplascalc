@@ -3,8 +3,8 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
-from scipy import constants
-from scipy.special import gamma
+from scipy import constants  # type: ignore
+from scipy.special import gamma  # type: ignore
 
 from minplascalc.units import Units
 
@@ -19,18 +19,10 @@ a0 = constants.physical_constants["Bohr radius"][0]
 egamma = np.euler_gamma
 
 
-pi = constants.pi
-ke = 1 / (4 * pi * constants.epsilon_0)
-kb = constants.Boltzmann
-kav = constants.Avogadro
-qe = constants.elementary_charge
-me = constants.electron_mass
-hbar = constants.hbar
-a0 = constants.physical_constants["Bohr radius"][0]
-k2e = 1 / constants.physical_constants["electron volt-kelvin relationship"][0]
-kR = constants.gas_constant
-egamma = np.euler_gamma
-
+#############################################################################
+# Table 2 of [Laricchiuta2007]_
+# "Fitting parameters, entering in Eq. (16), of classical transport collision
+# integrals \Omega^{(l,s), \star} for neutral–neutral interactions (m = 6)."
 c0_nn_11 = [
     7.884756e-1,
     -2.952759e-1,
@@ -221,26 +213,31 @@ c1_nn_44 = [
     2.842981e-1,
 ]
 c2_nn_44 = [0, 0, 0, 0, -3.899247e-3, -1.939452e-2, -1.874462e-2]
-c_nn_11 = np.array([c0_nn_11, c1_nn_11, c2_nn_11]).transpose()
-c_nn_12 = np.array([c0_nn_12, c1_nn_12, c2_nn_12]).transpose()
-c_nn_13 = np.array([c0_nn_13, c1_nn_13, c2_nn_13]).transpose()
-c_nn_14 = np.array([c0_nn_14, c1_nn_14, c2_nn_14]).transpose()
-c_nn_15 = np.array([c0_nn_15, c1_nn_15, c2_nn_15]).transpose()
-c_nn_22 = np.array([c0_nn_22, c1_nn_22, c2_nn_22]).transpose()
-c_nn_23 = np.array([c0_nn_23, c1_nn_23, c2_nn_23]).transpose()
-c_nn_24 = np.array([c0_nn_24, c1_nn_24, c2_nn_24]).transpose()
-c_nn_33 = np.array([c0_nn_33, c1_nn_33, c2_nn_33]).transpose()
-c_nn_44 = np.array([c0_nn_44, c1_nn_44, c2_nn_44]).transpose()
-fillnan = np.full(c_nn_11.shape, np.nan)
+c_nn_11 = np.array([c0_nn_11, c1_nn_11, c2_nn_11], dtype=np.float64).transpose()
+c_nn_12 = np.array([c0_nn_12, c1_nn_12, c2_nn_12], dtype=np.float64).transpose()
+c_nn_13 = np.array([c0_nn_13, c1_nn_13, c2_nn_13], dtype=np.float64).transpose()
+c_nn_14 = np.array([c0_nn_14, c1_nn_14, c2_nn_14], dtype=np.float64).transpose()
+c_nn_15 = np.array([c0_nn_15, c1_nn_15, c2_nn_15], dtype=np.float64).transpose()
+c_nn_22 = np.array([c0_nn_22, c1_nn_22, c2_nn_22], dtype=np.float64).transpose()
+c_nn_23 = np.array([c0_nn_23, c1_nn_23, c2_nn_23], dtype=np.float64).transpose()
+c_nn_24 = np.array([c0_nn_24, c1_nn_24, c2_nn_24], dtype=np.float64).transpose()
+c_nn_33 = np.array([c0_nn_33, c1_nn_33, c2_nn_33], dtype=np.float64).transpose()
+c_nn_44 = np.array([c0_nn_44, c1_nn_44, c2_nn_44], dtype=np.float64).transpose()
+fillnan = np.full(c_nn_11.shape, np.nan, dtype=np.float64)
 c_nn = np.array(
     [
         [c_nn_11, c_nn_12, c_nn_13, c_nn_14, c_nn_15],
         [fillnan, c_nn_22, c_nn_23, c_nn_24, fillnan],
         [fillnan, fillnan, c_nn_33, fillnan, fillnan],
         [fillnan, fillnan, fillnan, c_nn_44, fillnan],
-    ]
+    ],
+    dtype=np.float64,
 )
 
+#############################################################################
+# Table 1 of [Laricchiuta2007]_
+# "Fitting parameters, entering in Eq. (16), of classical transport collision
+# integrals \Omega^{(l,s), \star} for neutral–ion interactions (m = 4)."
 c0_in_11 = [
     9.851755e-1,
     -4.737800e-1,
@@ -431,25 +428,30 @@ c1_in_44 = [
     3.388072e-1,
 ]
 c2_in_44 = [0, 0, 0, 0, -1.210668e-2, -2.759622e-2, -2.669344e-2]
-c_in_11 = np.array([c0_in_11, c1_in_11, c2_in_11]).transpose()
-c_in_12 = np.array([c0_in_12, c1_in_12, c2_in_12]).transpose()
-c_in_13 = np.array([c0_in_13, c1_in_13, c2_in_13]).transpose()
-c_in_14 = np.array([c0_in_14, c1_in_14, c2_in_14]).transpose()
-c_in_15 = np.array([c0_in_15, c1_in_15, c2_in_15]).transpose()
-c_in_22 = np.array([c0_in_22, c1_in_22, c2_in_22]).transpose()
-c_in_23 = np.array([c0_in_23, c1_in_23, c2_in_23]).transpose()
-c_in_24 = np.array([c0_in_24, c1_in_24, c2_in_24]).transpose()
-c_in_33 = np.array([c0_in_33, c1_in_33, c2_in_33]).transpose()
-c_in_44 = np.array([c0_in_44, c1_in_44, c2_in_44]).transpose()
-fillnan = np.full(c_in_11.shape, np.nan)
+c_in_11 = np.array([c0_in_11, c1_in_11, c2_in_11], dtype=np.float64).transpose()
+c_in_12 = np.array([c0_in_12, c1_in_12, c2_in_12], dtype=np.float64).transpose()
+c_in_13 = np.array([c0_in_13, c1_in_13, c2_in_13], dtype=np.float64).transpose()
+c_in_14 = np.array([c0_in_14, c1_in_14, c2_in_14], dtype=np.float64).transpose()
+c_in_15 = np.array([c0_in_15, c1_in_15, c2_in_15], dtype=np.float64).transpose()
+c_in_22 = np.array([c0_in_22, c1_in_22, c2_in_22], dtype=np.float64).transpose()
+c_in_23 = np.array([c0_in_23, c1_in_23, c2_in_23], dtype=np.float64).transpose()
+c_in_24 = np.array([c0_in_24, c1_in_24, c2_in_24], dtype=np.float64).transpose()
+c_in_33 = np.array([c0_in_33, c1_in_33, c2_in_33], dtype=np.float64).transpose()
+c_in_44 = np.array([c0_in_44, c1_in_44, c2_in_44], dtype=np.float64).transpose()
+fillnan = np.full(c_in_11.shape, np.nan, dtype=np.float64)
 c_in = np.array(
     [
         [c_in_11, c_in_12, c_in_13, c_in_14, c_in_15],
         [fillnan, c_in_22, c_in_23, c_in_24, fillnan],
         [fillnan, fillnan, c_in_33, fillnan, fillnan],
         [fillnan, fillnan, fillnan, c_in_44, fillnan],
-    ]
+    ],
+    dtype=np.float64,
 )
+
+
+#############################################################################
+# Potentials functions.
 
 
 def n_effective_electrons(nint, nout):
@@ -866,7 +868,7 @@ def A(ionisation_energy: float) -> float:
     TODO: Check the formula for A.
     """
     ie_eV = ionisation_energy * u.J_to_eV  # Convert ionisation energy to eV.
-    return np.sqrt(pi) * 9.81867945e-09 / ie_eV**0.729218856
+    return np.sqrt(np.pi) * 9.81867945e-09 / ie_eV**0.729218856
 
 
 def B(ionisation_energy: float) -> float:
@@ -931,7 +933,7 @@ def B(ionisation_energy: float) -> float:
     However, the function returns :math:`\sqrt{\pi} \times \frac{4.78.10^{-10}}{ I[eV]^{0.657}}`.
     """
     ie_eV = ionisation_energy * u.J_to_eV  # Convert ionisation energy to eV.
-    return np.sqrt(pi) * 4.78257679e-10 / ie_eV**0.657012657
+    return np.sqrt(np.pi) * 4.78257679e-10 / ie_eV**0.657012657
 
 
 def sum1(s: int) -> float:
@@ -1069,7 +1071,7 @@ def Qe(species_i: "Species", l: int, s: int, T: float) -> float:
     else:
         raise ValueError("Invalid electron cross section data.")
     barg = D3 / 2 + s + 2
-    tau = np.sqrt(2 * me * kb * T) / hbar
+    tau = np.sqrt(2 * u.m_e * u.k_b * T) / u.hbar
     return D1 + D2 * tau**D3 * gamma(barg) / (gamma(s + 2) * (D4 * tau**2 + 1) ** barg)
 
 
@@ -1352,9 +1354,9 @@ def Qtr(
     else:
         a, b = A(species_j.ionisationenergy), B(species_j.ionisationenergy)
         M = species_j.molarmass
-    ln_term = np.log(4 * kR * T / M)
+    ln_term = np.log(4 * u.R * T / M)
     zeta_1, zeta_2 = sum1(s), sum2(s)
-    cterm = pi**2 / 6 - zeta_2 + zeta_1**2
+    cterm = np.pi**2 / 6 - zeta_2 + zeta_1**2
 
     # Same as eq. 12 of [Devoto1967], with rearranged terms.
     return (
@@ -1421,7 +1423,7 @@ def Qc(
     """
     C1 = [4, 12, 12, 16]
     C2 = [1 / 2, 1, 7 / 6, 4 / 3]
-    term1 = C1[l - 1] * u.pi / (s * (s + 1))
+    term1 = C1[l - 1] * np.pi / (s * (s + 1))
     term2 = (
         (
             ke  # TODO: with is there a facotr ke=1/(4*pi*eps0)? Error in documentation or code?
@@ -2179,7 +2181,7 @@ def Dij(mixture: "LTE") -> np.ndarray:
             # TODO: Check if this is correct
             # Equation 6 of [Devoto1966]_.
             dij = np.array([delta(h, i) - delta(h, j) for h in range(0, nb_species)])
-            b_vec[:nb_species] = 3 * np.sqrt(pi) * dij
+            b_vec[:nb_species] = 3 * np.sqrt(np.pi) * dij
             cflat = inverse_q.dot(b_vec)
             cip = cflat.reshape(4, nb_species)
 
@@ -2335,7 +2337,7 @@ def viscosity(mixture: "LTE") -> float:
     bflat = inverse_qhat.dot(b_vec)
     bip = bflat.reshape(2, nb_species)
 
-    return 0.5 * kb * mixture.T * np.sum(number_densities * bip[0])
+    return 0.5 * u.k_b * mixture.T * np.sum(number_densities * bip[0])
 
 
 def electricalconductivity(mixture: "LTE") -> float:
@@ -2393,7 +2395,7 @@ def electricalconductivity(mixture: "LTE") -> float:
         # since they have 0 charge).
         sum_val += nj * mj * charge_number * D1j
 
-    pre_mult = u.e**2 * n_tot / (rho * kb * mixture.T)
+    pre_mult = u.e**2 * n_tot / (rho * u.k_b * mixture.T)
 
     return pre_mult * sum_val
 
