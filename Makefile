@@ -2,7 +2,10 @@ PROJECT := minplascalc
 CONDAFLAGS :=
 COV_REPORT := html
 
-default: qa unit-tests
+default: qa type-check unit-tests
+
+update-env:
+	uv pip install -r requirements.txt
 
 qa:
 	pre-commit run --all-files
@@ -10,8 +13,8 @@ qa:
 unit-tests:
 	uv run pytest tests docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"
 
-update-requirements:
-	uv pip install -r requirements.txt
+type-check:
+	uv run mypy .  --exclude docs
 
 docs-build:
 	cd docs && rm -fr _api && make clean && make html

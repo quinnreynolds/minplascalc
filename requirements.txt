@@ -1,9 +1,12 @@
 matplotlib
+mypy
 myst-parser
 numpy
+pre-commit
 pydata-sphinx-theme
 pytest
 requests
+ruff
 scipy>=1.4
 sphinx>=1.4
 sphinx-autoapi
