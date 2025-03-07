@@ -3,9 +3,9 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter"]
+dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter", "rust-just"]
 docs = ["myst-parser", "sphinx", "sphinx-autoapi", "sphinx-gallery", "sphinx_rtd_theme", "pydata-sphinx-theme"]
-lint = ["ruff"]
+lint = ["ruff", "black"]
 type-checking = ["mypy"]
 
 [project]
