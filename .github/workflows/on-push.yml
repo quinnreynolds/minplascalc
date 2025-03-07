@@ -85,12 +85,12 @@ jobs:
       run: pip install sphinx-rtd-theme
     - name: Install sphinx-autodoc-typehints
       run: pip install sphinx-autodoc-typehints
-    - name: Install sphinx-autodoc
-      run: pip install sphinx-autodoc
-    - name: Install sphinx-autogen
-      run: pip install sphinx-autogen
-    - name: Install sphinx-autosummary
-      run: pip install sphinx-autosummary
+    # - name: Install sphinx-autodoc
+    #   run: pip install sphinx-autodoc
+    # - name: Install sphinx-autogen
+    #   run: pip install sphinx-autogen
+    # - name: Install sphinx-autosummary
+    #   run: pip install sphinx-autosummary
     - name: Check if sphinx-build is installed
       run: sphinx-build --version    
 
