@@ -70,9 +70,10 @@ jobs:
         version: "latest"
     - name: Install documentation dependencies
       run: uv sync --group docs
-    - uses: extractions/setup-just@v2
+    # - uses: extractions/setup-just@v2
     - name: Build documentation
-      run: uv python sphinx.cmd.build -M html ./docs .docs/_build -a -E
+      # run: uv python sphinx.cmd.build -M html ./docs .docs/_build -a -E
+      run: cd docs && rm -fr _api && make clean && make html
     - uses: actions/upload-pages-artifact@v3
       with:
         path: docs/_build/html/
