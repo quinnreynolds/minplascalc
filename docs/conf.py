@@ -36,6 +36,7 @@ extensions = [
     "sphinx.ext.autosummary",  # Create neat summary tables.
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings.
     "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",  # Render math via LaTeX
     "sphinx_gallery.gen_gallery",
 ]
 
