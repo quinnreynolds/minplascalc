@@ -10,10 +10,7 @@ import numpy as np
 
 from minplascalc import functions_radiation, functions_transport
 from minplascalc import species as _species
-from minplascalc.units import Units
-
-u = Units()
-
+from minplascalc import units as u
 
 __all__ = ["lte_from_names", "LTE"]
 

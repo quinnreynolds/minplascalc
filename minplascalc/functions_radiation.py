@@ -4,13 +4,10 @@ from typing import TYPE_CHECKING
 
 import numpy
 
-from minplascalc.units import Units
+from minplascalc import units as u
 
 if TYPE_CHECKING:
     from minplascalc.mixture import LTE
-
-
-u = Units()
 
 
 def total_emission_coefficient(mix: "LTE") -> float:

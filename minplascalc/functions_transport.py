@@ -6,13 +6,11 @@ import numpy as np
 from scipy import constants  # type: ignore
 from scipy.special import gamma  # type: ignore
 
-from minplascalc.units import Units
+from minplascalc import units as u
 
 if TYPE_CHECKING:
     from minplascalc.mixture import LTE
     from minplascalc.species import Species
-
-u = Units()
 
 ke = 1 / (4 * u.pi * u.epsilon_0)
 a0 = constants.physical_constants["Bohr radius"][0]

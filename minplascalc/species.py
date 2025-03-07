@@ -6,10 +6,8 @@ from pathlib import Path
 
 import numpy as np
 
-from minplascalc.units import Units
+from minplascalc import units as u
 from minplascalc.utils import get_path_to_data
-
-u = Units()
 
 __all__ = [
     "SPECIES_PATH",
