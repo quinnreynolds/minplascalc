@@ -3,11 +3,12 @@ import numpy
 import pathlib
 from copy import deepcopy
 from scipy import constants
+from minplascalc.utils import get_path_to_data
 
 __all__ = ['SPECIESPATH', 'from_file', 'from_name', 'Monatomic', 
            'Diatomic', 'Polyatomic', 'Electron']
 
-DATAPATH = pathlib.Path(__file__).parent / 'data'
+DATAPATH = get_path_to_data()
 SPECIESPATH = DATAPATH / 'species'
         
 
