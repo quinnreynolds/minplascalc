@@ -1,8 +1,11 @@
 matplotlib
-nbsphinx
+myst-parser
 numpy
 pytest
+pydata-sphinx-theme
 requests
 scipy>=1.4
 sphinx>=1.4
-sympy
+sphinx-autoapi
+sphinx_gallery
+sphinx_rtd_theme
