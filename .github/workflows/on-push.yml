@@ -70,11 +70,9 @@ jobs:
         version: "latest"
     - name: Install documentation dependencies
       run: uv sync --group docs
-    - name: Force the installation of sphinx
-      run: uv pip install sphinx
     - uses: extractions/setup-just@v2
     - name: Build documentation
-      run: just docs-build
+      run: sphinx-build -M html ./docs .docs/_build -a -E
     - uses: actions/upload-pages-artifact@v3
       with:
         path: docs/_build/html/
