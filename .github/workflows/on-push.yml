@@ -53,6 +53,8 @@ jobs:
       uses: astral-sh/setup-uv@v5
       with:
         version: "latest"
+    - name: Install type-checking dependencies
+      run: uv sync --group type-check 
     - uses: extractions/setup-just@v2
     - name: Run code quality checks
       run: just type-check
@@ -66,6 +68,8 @@ jobs:
       uses: astral-sh/setup-uv@v5
       with:
         version: "latest"
+    - name: Install documentation dependencies
+      run: uv sync --group docs
     - uses: extractions/setup-just@v2
     - name: Build documentation
       run: just docs-build
