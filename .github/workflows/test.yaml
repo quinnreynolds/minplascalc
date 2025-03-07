@@ -11,4 +11,4 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v5
     - name: Run pytest
-      run: uv run pytest test --verbose --durations=5
+      run: uv run pytest tests --verbose --durations=5
