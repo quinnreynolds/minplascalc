@@ -73,7 +73,7 @@ jobs:
     - name: See the contents of the current directory
       run: ls -la
     - name: Check if sphinx is installed
-      run: sphinx-build --version
+      run: python -m sphinx.cmd.build -M html ./docs .docs/_build -a -E
     # # - uses: extractions/setup-just@v2
     # - name: Build documentation
     #   # run: uv python sphinx.cmd.build -M html ./docs .docs/_build -a -E
