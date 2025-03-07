@@ -71,7 +71,7 @@ jobs:
     - name: Install documentation dependencies
       run: uv sync --group docs
     - name: See the contents of the current directory
-      run: ls -la
+      run: cd .venv && ls -la
     - name: Check if sphinx is installed
       run: python -m sphinx.cmd.build -M html ./docs .docs/_build -a -E
     # # - uses: extractions/setup-just@v2
