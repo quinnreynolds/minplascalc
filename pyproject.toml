@@ -2,9 +2,6 @@
 build-backend = "hatchling.build"
 requires = ["hatchling"]
 
-[dependency-groups]
-dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter"]
-
 [project]
 authors = [
   {name = "Quinn Reynolds", email = "quinnr@mintek.co.za"}
@@ -19,10 +16,6 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13"
 ]
-dependencies = [
-  "numpy",
-  "scipy>=1.4"
-]
 description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
 dynamic = ["version"]
 keywords = ["plasma", "gibbs", "composition"]
@@ -31,6 +24,16 @@ name = "minplascalc"
 readme = "README.rst"
 requires-python = ">=3.11"
 urls = {"Homepage" = "https://github.com/quinnreynolds/minplascalc"}
+dependencies = [
+  "numpy",
+  "scipy"
+]
+
+[dependency-groups]
+dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter"]
+docs = ["myst-parser", "sphinx", "sphinx-autoapi", "sphinx-gallery", "sphinx_rtd_theme", "pydata-sphinx-theme"]
+lint = ["ruff"]
+type-checking = ["mypy"]
 
 [tool.hatch.build.targets.sdist]
 include = ["minplascalc/data/*/*.json"]

@@ -1,11 +1,7 @@
-PROJECT := minplascalc
-CONDAFLAGS :=
-COV_REPORT := html
-
 default: qa type-check unit-tests
 
 update-env:
-	uv pip install -r requirements.txt
+	uv lock --upgrade
 
 qa:
 	pre-commit run --all-files
