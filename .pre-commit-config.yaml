@@ -9,6 +9,7 @@ repos:
   - id: check-ast
   - id: check-case-conflict
   # - id: check-docstring-first
+  - id: check-json
   - id: check-merge-conflict
   - id: check-yaml
   - id: check-toml
@@ -44,7 +45,3 @@ repos:
   rev: v8.23.3
   hooks:
   - id: gitleaks
-- repo: https://gitlab.com/bmares/check-json5 # JSON5 allows comments and trailing commas in JSON files
-  rev: v1.0.0
-  hooks:
-  - id: check-json5
