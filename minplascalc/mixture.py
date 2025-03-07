@@ -7,7 +7,6 @@ import logging
 import warnings
 
 import numpy as np
-from scipy import constants
 
 from minplascalc import functions_radiation, functions_transport
 from minplascalc import species as _species

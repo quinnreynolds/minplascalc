@@ -54,7 +54,8 @@ line-length = 88
 [tool.ruff.lint]
 exclude = [".venv"]
 ignore = [
-  "E741"  # Ambiguous variable name - the math-heavy modules are full of these
+  "D",  # Missing docstring.
+  "E741"  # Ambiguous variable name - the math-heavy modules are full of these.
 ]
 select = [
   # pyflakes
