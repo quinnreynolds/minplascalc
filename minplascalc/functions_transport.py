@@ -1006,109 +1006,436 @@ def delta(i: int, j: int) -> int:
 ### Collision cross section calculations #######################################
 
 
-def Qe(spi, l, s, T):
-    """Electron-neutral collision integrals."""
-    try:
-        Ae, Be, Ce, De = spi.electroncrosssection
-    except TypeError:
-        Ae, Be, Ce, De = spi.electroncrosssection, 0, 0, 0
-    barg = Ce / 2 + s + 2
-    tau = np.sqrt(2 * me * kb * T) / hbar
-    return Ae + Be * tau**Ce * gamma(barg) / (gamma(s + 2) * (De * tau**2 + 1) ** barg)
+def Qe(species_i: "Species", l: int, s: int, T: float) -> float:
+    r"""Electron-neutral collision integrals.
 
+    Parameters
+    ----------
+    species_i : Species
+        Neutral species.
+    l : int
+        TODO: Angular momentum quantum number? Or integer moment?
+    s : int
+        TODO: Principal quantum number? Or integer moment?
+    T : float
+        Temperature, in :math:`\text{K}`.
 
-def Qnn(spi, spj, l, s, T):
-    """Neutral-neutral elastic collision integrals."""
-    if (
-        (l == 1 and s >= 6)
-        or (l == 2 and s >= 5)
-        or (l == 3 and s >= 4)
-        or (l == 4 and s >= 5)
-    ):
-        negT, posT = T - 0.5, T + 0.5
-        return Qnn(spi, spj, l, s - 1, T) + T / (s + 1) * (
-            Qnn(spi, spj, l, s - 1, posT) - Qnn(spi, spj, l, s - 1, negT)
-        )
-    re, e0 = pot_parameters_neut_neut(spi, spj)
-    bv = beta(spi, spj)
-    x0 = x0_neut_neut(bv)
-    a = c_nn[l - 1, s - 1].dot([1, bv, bv**2])
-    sigma = re * x0
-    x = np.log(k2e * T / e0)
-    lnS1 = (
-        (a[0] + a[1] * x)
-        * np.exp((x - a[2]) / a[3])
-        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
-    )
-    lnS2 = (
-        a[4]
-        * np.exp((x - a[5]) / a[6])
-        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
-    )
-    return np.exp(lnS1 + lnS2) * pi * sigma**2 * 1e-20
+    Returns
+    -------
+    float
+        Electron-neutral collision integral.
 
+    Notes
+    -----
+    Calculation of the electron-neutral collision integral :math:`\theta_e` from
+    first principles is an extremely complex process and requires detailed knowledge
+    of quantum mechanical properties of the target species.
+    The complexity also increases rapidly as the atomic mass of the target increases
+    and multiple excited states become relevant.
+    In light of this, minplascalc opts for a simple empirical formulation which can
+    be fitted to experimental or theoretical data to obtain an estimate of the
+    collision integral for the neutral species of interest:
 
-def Qin(spi, spj, l, s, T):
-    """Ion-neutral elastic collision integrals."""
-    if (
-        (l == 1 and s >= 6)
-        or (l == 2 and s >= 5)
-        or (l == 3 and s >= 4)
-        or (l == 4 and s >= 5)
-    ):
-        negT, posT = T - 0.5, T + 0.5
-        return Qin(spi, spj, l, s - 1, T) + T / (s + 1) * (
-            Qin(spi, spj, l, s - 1, posT) - Qin(spi, spj, l, s - 1, negT)
-        )
-    re, e0 = pot_parameters_ion_neut(spi, spj)
-    bv = beta(spi, spj)
-    x0 = x0_ion_neut(bv)
-    a = c_in[l - 1, s - 1].dot([1, bv, bv**2])
-    sigma = re * x0
-    x = np.log(k2e * T / e0)
-    lnS1 = (
-        (a[0] + a[1] * x)
-        * np.exp((x - a[2]) / a[3])
-        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
-    )
-    lnS2 = (
-        a[4]
-        * np.exp((x - a[5]) / a[6])
-        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
-    )
-    return np.exp(lnS1 + lnS2) * pi * sigma**2 * 1e-20
+    .. math::
 
+        \Omega_{ej}^{(l)} \approx D_1 + D_2 \left( \frac{m_r g}{\hbar} \right) ^{D_3}
+            \exp \left( -D_4 \left( \frac{m_r g}{\hbar} \right)^2 \right)
 
-def Qtr(spi, spj, s, T):
-    """Ion-neutral resonant charge transfer collision integral."""
-    if spi.chargenumber < spj.chargenumber:
-        a, b = A(spi.ionisationenergy), B(spi.ionisationenergy)
-        mm = spi.molarmass
+    In cases where insufficient data is available, a very crude hard sphere cross section
+    approximation can be implemented by specifying only :math:`D_1` and setting the remaining
+    :math:`D_i` to zero. In all other cases, the :math:`D_i` are fitted to momentum cross
+    section curves obtained from literature. Performing the second collision integral
+    integration step then yields:
+
+    .. math::
+
+        \theta_e = D_1 + \frac{\Gamma(s+2+D_3/2) D_2 \tau^{D_3}}
+            {\Gamma(s+2) \left( D_4 \tau^2 + 1\right) ^ {s+2+D_3/2}}
+
+    where :math:`\tau = \frac{\sqrt{2 m_r k_B T}}{\hbar}`.
+
+    References
+    ----------
+    TODO: Add references.
+
+    See Also
+    --------
+    - LXCat Database: http://www.lxcat.net/
+    """
+    if isinstance(species_i.electroncrosssection, (tuple, list)):
+        D1, D2, D3, D4 = species_i.electroncrosssection
+    elif isinstance(species_i.electroncrosssection, float):
+        D1, D2, D3, D4 = species_i.electroncrosssection, 0, 0, 0
     else:
-        a, b = A(spj.ionisationenergy), B(spj.ionisationenergy)
-        mm = spj.molarmass
-    lnterm = np.log(4 * kR * T / mm)
-    s1, s2 = sum1(s), sum2(s)
-    cterm = pi**2 / 6 - s2 + s1**2
+        raise ValueError("Invalid electron cross section data.")
+    barg = D3 / 2 + s + 2
+    tau = np.sqrt(2 * me * kb * T) / hbar
+    return D1 + D2 * tau**D3 * gamma(barg) / (gamma(s + 2) * (D4 * tau**2 + 1) ** barg)
+
+
+def Qnn(
+    species_i: "Species",
+    species_j: "Species",
+    l: int,
+    s: int,
+    T: float,
+) -> float:
+    r"""Neutral-neutral elastic collision integrals.
+
+    Parameters
+    ----------
+    species_i : Species
+        First neutral species.
+    species_j : Species
+        Second neutral species.
+    l : int
+        TODO: Angular momentum quantum number? Or integer moment?
+    s : int
+        TODO: Principal quantum number? Or integer moment?
+    T : float
+        Temperature, in :math:`\text{K}`.
+
+    Returns
+    -------
+    float
+        Neutral-neutral elastic collision integral.
+
+    Notes
+    -----
+    The reduced collision integral :math:`\Omega^{(\ell, s) \star}` is computed, using
+    eq. 15 of [Laricchiuta2007]_, as:
+
+    .. math::
+
+        \begin{aligned}
+            \ln \Omega^{(\ell, s) \star} =
+            & {\left[a_1(\beta)+a_2(\beta) x\right]
+                \frac{e^{\left(x-a_3(\beta)\right) / a_4(\beta)}}
+                {e^{\left(x-a_3(\beta)\right) / a_4(\beta)}+e^{\left(a_3(\beta)-x\right) / a_4(\beta)}} } \\
+            & +a_5(\beta)
+                \frac{e^{\left(x-a_6(\beta)\right) / a_7(\beta)}}
+                {e^{\left(x-a_6(\beta)\right) / a_7(\beta)}+e^{\left(a_6(\beta)-x\right) / a_7(\beta)}}
+        \end{aligned}
+
+    where :math:`x=\ln T^{\star}`.
+
+    The fitting parameters are :math:`c_j`.
+    They are used in in eq. (16) of [Laricchiuta2007]_ to compute the polynomial
+    functions :math:`a_i(\beta)`.
+
+    .. math::
+
+        a_i(\beta)=\sum_{j=0}^2 c_j \beta^j
+
+    where :math:`\beta` is a parameter to estimate the hardness of interacting electronic
+    distribution densities, and it is estimated in eq. 5 of [Laricchiuta2007]_.
+
+    The reduced temperature is defined as :math:`T^{\star}=\frac{k_b T}{\epsilon}` in eq. 12
+    of [Laricchiuta2007]_, where :math:`\epsilon` is the binding energy, defined in eq. 7 of
+    [Laricchiuta2007]_.
+    """
+    if (
+        (l == 1 and s >= 6)
+        or (l == 2 and s >= 5)
+        or (l == 3 and s >= 4)
+        or (l == 4 and s >= 5)
+    ):
+        # Eq. 18 of [Laricchiuta2007]_.
+        # Recursion relation for the collision integral.
+        negT, posT = T - 0.5, T + 0.5
+        return Qnn(species_i, species_j, l, s - 1, T) + T / (s + 1) * (
+            Qnn(species_i, species_j, l, s - 1, posT)
+            - Qnn(species_i, species_j, l, s - 1, negT)
+        )
+    # Get the equilibrium distance r_e and binding energy epsilon_0.
+    # (eq. 6 and 7 of [Laricchiuta2007]).
+    r_e, epsilon_0 = pot_parameters_neut_neut(species_i, species_j)
+    # Calculate the beta parameter (eq. 5 of [Laricchiuta2007]).
+    beta_value = beta(species_i, species_j)
+    # Calculate the x0 parameter (eq. 17 of [Laricchiuta2007]).
+    x0 = x0_neut_neut(beta_value)
+    # Evaluate the polynomial coefficients a (eq. 16 of [Laricchiuta2007]_).
+    beta_array = np.array([1, beta_value, beta_value**2], dtype=np.float64)
+    a = np.dot(
+        c_nn[l - 1, s - 1],
+        beta_array,
+        out=np.zeros((7,), dtype=np.float64),
+    )
+    # Get the parameter sigma (Paragraph above eq. 13 of [Laricchiuta2007]).
+    sigma = r_e * x0
+    # Compute T* (eq. 12 of [Laricchiuta2007]).
+    T_star = T * u.K_to_eV / epsilon_0
+    # Calculate the parameter x (Paragraph above eq. 16 of [Laricchiuta2007]).
+    x = np.log(T_star)
+    # Calculate the reduced collision integral (eq. 15 of [Laricchiuta2007]).
+    lnS1 = (
+        (a[0] + a[1] * x)
+        * np.exp((x - a[2]) / a[3])
+        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
+    )
+    lnS2 = (
+        a[4]
+        * np.exp((x - a[5]) / a[6])
+        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
+    )
+    omega_reduced = np.exp(lnS1 + lnS2)
+    # Dimensional collision integral (Paragraph above eq. 17).
+    omega = omega_reduced * np.pi * sigma**2 * 1e-20  # TODO: why pi?
+    return omega
+
+
+def Qin(
+    species_i: "Species",
+    species_j: "Species",
+    l: int,
+    s: int,
+    T: float,
+) -> float:
+    r"""Ion-neutral elastic collision integrals.
+
+    Parameters
+    ----------
+    species_i : Species
+        First ion species.
+    species_j : Species
+        Second neutral species.
+    l : int
+        TODO: Angular momentum quantum number? Or integer moment?
+    s : int
+        TODO: Principal quantum number? Or integer moment?
+    T : float
+        Temperature, in :math:`\text{K}`.
+
+    Returns
+    -------
+    float
+        Ion-neutral elastic collision integral.
+
+    Notes
+    -----
+    The reduced collision integral :math:`\Omega^{(\ell, s) \star}` is computed, using
+    eq. 15 of [Laricchiuta2007]_, as:
+
+    .. math::
+
+        \begin{aligned}
+            \ln \Omega^{(\ell, s) \star} =
+            & {\left[a_1(\beta)+a_2(\beta) x\right]
+                \frac{e^{\left(x-a_3(\beta)\right) / a_4(\beta)}}
+                {e^{\left(x-a_3(\beta)\right) / a_4(\beta)}+e^{\left(a_3(\beta)-x\right) / a_4(\beta)}} } \\
+            & +a_5(\beta)
+                \frac{e^{\left(x-a_6(\beta)\right) / a_7(\beta)}}
+                {e^{\left(x-a_6(\beta)\right) / a_7(\beta)}+e^{\left(a_6(\beta)-x\right) / a_7(\beta)}}
+        \end{aligned}
+
+    where :math:`x=\ln T^{\star}`.
+
+    The fitting parameters are :math:`c_j`.
+    They are used in in eq. (16) of [Laricchiuta2007]_ to compute the polynomial
+    functions :math:`a_i(\beta)`.
+
+    .. math::
+
+        a_i(\beta)=\sum_{j=0}^2 c_j \beta^j
+
+    where :math:`\beta` is a parameter to estimate the hardness of interacting electronic
+    distribution densities, and it is estimated in eq. 5 of [Laricchiuta2007]_.
+
+    The reduced temperature is defined as :math:`T^{\star}=\frac{k_b T}{\epsilon}` in eq. 12
+    of [Laricchiuta2007]_, where :math:`\epsilon` is the binding energy, defined in eq. 10 of
+    [Laricchiuta2007]_.
+    """
+    if (
+        (l == 1 and s >= 6)
+        or (l == 2 and s >= 5)
+        or (l == 3 and s >= 4)
+        or (l == 4 and s >= 5)
+    ):
+        # Eq. 18 of [Laricchiuta2007]_.
+        # Recursion relation for the collision integral.
+        negT, posT = T - 0.5, T + 0.5
+        return Qin(species_i, species_j, l, s - 1, T) + T / (s + 1) * (
+            Qin(species_i, species_j, l, s - 1, posT)
+            - Qin(species_i, species_j, l, s - 1, negT)
+        )
+    # Get the equilibrium distance r_e and binding energy epsilon_0.
+    # (eq. 9 and 10 of [Laricchiuta2007]).
+    r_e, epsilon_0 = pot_parameters_ion_neut(species_i, species_j)
+    # Calculate the beta parameter (eq. 5 of [Laricchiuta2007]).
+    beta_value = beta(species_i, species_j)
+    # Calculate the x0 parameter (eq. 17 of [Laricchiuta2007]).
+    x0 = x0_ion_neut(beta_value)
+    # Evaluate the polynomial coefficients a (eq. 16 of [Laricchiuta2007]_).
+    beta_array = np.array([1, beta_value, beta_value**2], dtype=np.float64)
+    a = np.dot(
+        c_in[l - 1, s - 1],
+        beta_array,
+        out=np.zeros((7,), dtype=np.float64),
+    )
+    # Get the parameter sigma (Paragraph above eq. 13 of [Laricchiuta2007]).
+    sigma = r_e * x0
+    # Compute T* (eq. 12 of [Laricchiuta2007]).
+    T_star = T * u.K_to_eV / epsilon_0
+    # Calculate the parameter x (Paragraph above eq. 16 of [Laricchiuta2007]).
+    x = np.log(T_star)
+    # Calculate the reduced collision integral (eq. 15 of [Laricchiuta2007]).
+    lnS1 = (
+        (a[0] + a[1] * x)
+        * np.exp((x - a[2]) / a[3])
+        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
+    )
+    lnS2 = (
+        a[4]
+        * np.exp((x - a[5]) / a[6])
+        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
+    )
+    omega_reduced = np.exp(lnS1 + lnS2)
+    # Dimensional collision integral (Paragraph above eq. 17).
+    omega = omega_reduced * np.pi * sigma**2 * 1e-20  # TODO: why pi?
+    return omega
+
+
+def Qtr(
+    species_i: "Species",
+    species_j: "Species",
+    s: int,
+    T: float,
+) -> float:
+    r"""Ion-neutral resonant charge transfer collision integral.
+
+    Parameters
+    ----------
+    species_i : Species
+        First species.
+    species_j : Species
+        Second species.
+    s : int
+        TODO: Principal quantum number? Or integer moment?
+    T : float
+        Temperature, in :math:`\text{K}`.
+
+    Returns
+    -------
+    float
+        Ion-neutral resonant charge transfer collision integral.
+
+    Notes
+    -----
+    The resonant charge transfer collision integral is given by eq. 12 of [Devoto1967]_:
+
+    .. math::
+
+        \begin{aligned}
+            \bar{Q}^{(1, s)}=A^2- & A B x+\left(\frac{B x}{2}\right)^2+\frac{B \zeta}{2}(B x-2 A) \\
+            & +\frac{B^2}{4}\left(\frac{\pi^2}{6}-\sum_{n=1}^{s+1} \frac{1}{n^2}+\zeta^2\right) \\
+            & +\frac{B}{2}[B(x+\zeta)-2 A] \ln \frac{T}{M} \\
+            & +\left(\frac{B}{2} \ln \frac{T}{M}\right)^2
+        \end{aligned}
+
+    where:
+
+    - :math:`A` and :math:`B` are given by a simple empirical fit as a function of the ionisation energy to
+      analytical expressions from [Rapp1962]_ and [Smirnov1970]_.
+    - :math:`x=\ln (4 R)`, with :math:`R` the gas constant,
+    - :math:`\zeta=\sum_{n=1}^{s+1} \frac{1}{n} - \gamma`,
+    - :math:`\gamma` is Euler's constant,
+    - :math:`M` is the molar mass of the species, in :math:`\text{kg.mol}^{-1}`.
+
+    See Also
+    --------
+    - https://www.wellesu.com/10.1007/978-1-4419-8172-1_4
+    """
+    """Ion-neutral resonant charge transfer collision integral."""
+    if species_i.chargenumber < species_j.chargenumber:
+        a, b = A(species_i.ionisationenergy), B(species_i.ionisationenergy)
+        M = species_i.molarmass
+    else:
+        a, b = A(species_j.ionisationenergy), B(species_j.ionisationenergy)
+        M = species_j.molarmass
+    ln_term = np.log(4 * kR * T / M)
+    zeta_1, zeta_2 = sum1(s), sum2(s)
+    cterm = pi**2 / 6 - zeta_2 + zeta_1**2
+
+    # Same as eq. 12 of [Devoto1967], with rearranged terms.
     return (
         a**2
-        - s1 * a * b
+        - zeta_1 * a * b
         + (b / 2) ** 2 * cterm
-        + (b / 2) ** 2 * lnterm**2
-        + (s1 * b**2 / 2 - a * b) * lnterm
+        + (b / 2) ** 2 * ln_term**2
+        + (zeta_1 * b**2 / 2 - a * b) * ln_term
     )
 
 
-def Qc(spi, ni, spj, nj, l, s, T):
-    """Coulomb collision integral."""
-    preconst = [4, 12, 12, 16]
-    addconst = [1 / 2, 1, 7 / 6, 4 / 3]
-    term1 = preconst[l - 1] * pi / (s * (s + 1))
-    term2 = (ke * spi.chargenumber * spj.chargenumber * qe**2 / (2 * kb * T)) ** 2
+def Qc(
+    species_i: "Species",
+    n_i: float,
+    species_j: "Species",
+    n_j: float,
+    l: int,
+    s: int,
+    T: float,
+) -> float:
+    r"""Coulomb collision integral.
+
+    Parameters
+    ----------
+    species_i : Species
+        First species.
+    n_i : float
+        Number density of the first species, in :math:`\text{m}^{-3}`.
+    species_j : Species
+        Second species.
+    n_j : float
+        Number density of the second species, in :math:`\text{m}^{-3}`.
+    l : int
+        TODO: Angular momentum quantum number? Or integer moment?
+    s : int
+        TODO: Principal quantum number? Or integer moment?
+    T : float
+        Temperature, in :math:`\text{K}`.
+
+    Returns
+    -------
+    float
+        Coulomb collision integral.
+
+    Notes
+    -----
+    The Coulomb collision integrals are given by equation 5 of [Devoto1967]_:
+
+    .. math::
+
+        \begin{aligned}
+        \bar{Q}^{(1,s)}=\frac{4\pi}{s(s+1)} b_0^2\left[\ln \Lambda-\frac{1}{2}-2\bar{\gamma}+\psi(s)\right]\\
+        \bar{Q}^{(2,s)}=\frac{12\pi}{s(s+1)} b_0^2\left[\ln \Lambda-1-2 \bar{\gamma}+\psi(s)\right]\\
+        \bar{Q}^{(3,s)}=\frac{12\pi}{s(s+1)} b_0^2\left[\ln \Lambda-\frac{7}{6}-2\bar{\gamma}+\psi(s)\right]\\
+        \bar{Q}^{(4,s)}=\frac{16\pi}{s(s+1)} b_0^2\left[\ln \Lambda-\frac{4}{3}-2\bar{\gamma}+\psi(s)\right]
+        \end{aligned}
+
+    where:
+
+    - :math:`b_0=\frac{Z_i Z_j e^2}{2k_B T}`,
+    - :math:`\ln \Lambda` is the Coulomb logarithm,
+    - :math:`\bar{\gamma=0.5772...}` is Euler's constant,
+    - :math:`\psi(s) = \sum_{n=1}^{s+1} \frac{1}{n}`.
+    """
+    C1 = [4, 12, 12, 16]
+    C2 = [1 / 2, 1, 7 / 6, 4 / 3]
+    term1 = C1[l - 1] * u.pi / (s * (s + 1))
+    term2 = (
+        (
+            ke  # TODO: with is there a facotr ke=1/(4*pi*eps0)? Error in documentation or code?
+            * species_i.chargenumber
+            * species_j.chargenumber
+            * u.e**2
+            / (2 * u.k_b * T)
+        )
+        ** 2
+    )
     term3 = (
-        cl_charged(spi, spj, ni, nj, T)
+        cl_charged(species_i, species_j, n_i, n_j, T)
         + np.log(2)
-        - addconst[l - 1]
+        - C2[l - 1]
         - 2 * egamma
         + psiconst(s)
     )
