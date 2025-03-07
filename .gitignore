@@ -475,3 +475,5 @@ docs/sg_execution_times.rst
 examples/H2O.json
 examples/O+.json
 examples/SiO.json
+
+uv.lock
