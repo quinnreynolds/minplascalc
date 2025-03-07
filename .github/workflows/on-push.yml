@@ -72,6 +72,9 @@ jobs:
       run: uv sync --group docs
     - name: See the contents of the current directory
       run: cd .venv && ls -la
+    - name: test some stuff
+      # https://stackoverflow.com/questions/37757151/the-sphinx-build-command-was-not-found
+      run: apt-get install python3-sphinx
     - name: Check if sphinx is installed
       run: python -m sphinx.cmd.build -M html ./docs .docs/_build -a -E
     # # - uses: extractions/setup-just@v2
