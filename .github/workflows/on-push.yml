@@ -75,12 +75,27 @@ jobs:
     - name: See the contents of .venv/bin
       run: cd .venv/bin && ls -la
     - name: See the contents of .venv/lib
-      run: cd .venv/lib && ls -la
-    - name: test some stuff
-      # https://stackoverflow.com/questions/37757151/the-sphinx-build-command-was-not-found
-      run: apt-get install python3-sphinx
-    - name: Check if sphinx is installed
-      run: python -m sphinx.cmd.build -M html ./docs .docs/_build -a -E
+      run: cd .venv/lib/python3.12 && ls -la
+    # - name: test some stuff
+    #   # https://stackoverflow.com/questions/37757151/the-sphinx-build-command-was-not-found
+    #   run: apt-get install python3-sphinx
+    - name: Install sphinx
+      run: pip install sphinx
+    - name: Install sphinx-rtd-theme
+      run: pip install sphinx-rtd-theme
+    - name: Install sphinx-autodoc-typehints
+      run: pip install sphinx-autodoc-typehints
+    - name: Install sphinx-autodoc
+      run: pip install sphinx-autodoc
+    - name: Install sphinx-autogen
+      run: pip install sphinx-autogen
+    - name: Install sphinx-autosummary
+      run: pip install sphinx-autosummary
+    - name: Check if sphinx-build is installed
+      run: sphinx-build --version    
+
+    # - name: Check if sphinx is installed
+    #   run: python -m sphinx.cmd.build -M html ./docs .docs/_build -a -E
     # # - uses: extractions/setup-just@v2
     # - name: Build documentation
     #   # run: uv python sphinx.cmd.build -M html ./docs .docs/_build -a -E
