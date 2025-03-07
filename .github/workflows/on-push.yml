@@ -73,7 +73,8 @@ jobs:
     - name: Install sphinx
       run: |
         uv venv .sphinx_env
-        VIRTUAL_ENV=.sphinx_env uv --preview pip install .[docs]
+        VIRTUAL_ENV=.sphinx_env uv --preview pip install .
+        VIRTUAL_ENV=.sphinx_env uv sync --group docs
         python -m sphinx -M html . docs/_build/doctrees -D 
 
     # - name: Check if sphinx is installed
