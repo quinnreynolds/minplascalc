@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install the latest version of uv
+    - name: Install the latest version of uv.
       uses: astral-sh/setup-uv@v5
       with:
         version: "latest"
@@ -36,7 +36,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"] # Add more versions as needed.
     steps:
     - uses: actions/checkout@v4
-    - name: Install the latest version of uv and set the python version
+    - name: Install the latest version of uv and set the python version.
       uses: astral-sh/setup-uv@v5
       with:
         python-version: ${{ matrix.python-version }}
@@ -49,14 +49,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install the latest version of uv
+    - name: Install the latest version of uv.
       uses: astral-sh/setup-uv@v5
       with:
         version: "latest"
-    - name: Install type-checking dependencies
-      run: uv sync --group type-checking
     - uses: extractions/setup-just@v2
-    - name: Run code quality checks
+    - name: Run code quality checks.
       run: just type-check
 
   docs-build:
@@ -64,29 +62,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install the latest version of uv and set the python version to 3.13
+    - name: Install the latest version of uv.
       uses: astral-sh/setup-uv@v5
       with:
         version: "latest"
-    # - name: Install documentation dependencies
-      # run: uv sync --group docs
-    - name: Install sphinx  
-      run: |
-        uv --systeù pip install .
-        uv sync --group docs
-        python -m sphinx -M html . docs/_build/doctrees
-        
-    # uv venv .sphinx_env
-    # VIRTUAL_ENV=.sphinx_env uv --preview pip install .  --active
-    # VIRTUAL_ENV=.sphinx_env uv sync --group docs  --active
-    # VIRTUAL_ENV=.sphinx_env python -m sphinx -M html . docs/_build/doctrees -D 
-    
-    # - name: Check if sphinx is installed
-    #   run: python -m sphinx.cmd.build -M html ./docs .docs/_build -a -E
-    # # - uses: extractions/setup-just@v2
-    # - name: Build documentation
-    #   # run: uv python sphinx.cmd.build -M html ./docs .docs/_build -a -E
-    #   run: cd docs && rm -fr _api && make clean && make html
+    - uses: extractions/setup-just@v2
+    - name: Build the documentation.
+      run: just docs-build
     # - uses: actions/upload-pages-artifact@v3
     #   with:
     #     path: docs/_build/html/

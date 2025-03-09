@@ -3,10 +3,27 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter", "rust-just"]
-docs = ["myst-parser", "sphinx", "sphinx-autoapi", "sphinx-gallery", "sphinx-rtd-theme", "pydata-sphinx-theme"]
-lint = ["ruff", "black"]
-type-checking = ["mypy"]
+dev = [
+  # Development dependencies.
+  "matplotlib",
+  "jupyter",
+  # Tests dependencies.
+  "coverage",
+  "pytest",
+  # Documentation dependencies.
+  "myst-parser",
+  "sphinx",
+  "sphinx-autoapi",
+  "sphinx-gallery",
+  "sphinx-rtd-theme",
+  "pydata-sphinx-theme",
+  # Code quality dependencies.
+  "pre-commit",
+  "ruff",
+  "rust-just",
+  # Type checking dependencies.
+  "mypy"
+]
 
 [project]
 authors = [
@@ -24,7 +41,7 @@ classifiers = [
 ]
 dependencies = [
   "numpy",
-  "scipy",
+  "scipy"
 ]
 description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
 dynamic = ["version"]
