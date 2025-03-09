@@ -67,10 +67,10 @@ jobs:
       with:
         version: "latest"
     - uses: extractions/setup-just@v2
-    - name: Activate the virtual environment.
-      run: source .venv/bin/activate
+    # - name: Activate the virtual environment.
+    #   run: source .venv/bin/activate
     - name: Build the documentation.
-      run: just docs-build
+      run: cd docs && rm -fr _api && uv run sphinx-build -M html . _build -a -E
     # - uses: actions/upload-pages-artifact@v3
     #   with:
     #     path: docs/_build/html/
