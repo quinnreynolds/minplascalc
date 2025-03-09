@@ -1345,7 +1345,6 @@ def Qtr(
     --------
     - https://www.wellesu.com/10.1007/978-1-4419-8172-1_4
     """
-    """Ion-neutral resonant charge transfer collision integral."""
     if species_i.chargenumber < species_j.chargenumber:
         a, b = A(species_i.ionisationenergy), B(species_i.ionisationenergy)
         M = species_i.molarmass
