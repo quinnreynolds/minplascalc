@@ -67,8 +67,8 @@ jobs:
       with:
         version: "latest"
     - uses: extractions/setup-just@v2
-    - name: Install the dependencies, by running the tests. (strange, yes) 
-      run: uv run pytest tests && just docs-build
+    - name: Activate the virtual environment.
+      run: source .venv/bin/activate
     - name: Build the documentation.
       run: just docs-build
     # - uses: actions/upload-pages-artifact@v3
