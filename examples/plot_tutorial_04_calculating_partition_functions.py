@@ -2,8 +2,9 @@ r"""
 Tutorial 04: Calculating partition functions for individual species.
 ====================================================================
 
-Let's use minplascalc to calculate and graph the internal and translational partition
-functions of various oxygen plasma species over a range of temperatures.
+Let's use minplascalc to calculate and graph the internal and translational
+partition functions of various oxygen plasma species over a range of
+temperatures.
 To do this, just execute the following code snippets in order.
 The text in between describes what each piece of code is doing.
 """  # noqa: D205
@@ -47,24 +48,29 @@ temperatures = np.linspace(1000, 25000, 100)
 # Calculate the partition functions for each species.
 # ---------------------------------------------------
 #
-# Then calculate the actual partition functions, using the `partitionfunction_translational` (T)
-# and `partitionfunction_internal` (T, :math:`\Delta E`) functions of a minplascalc Species object.
+# Then calculate the actual partition functions, using the
+# `partitionfunction_translational` (T)
+# and `partitionfunction_internal` (T, :math:`\Delta E`) functions of a
+# minplascalc Species object.
 #
-# The required arguments are T in K, and the ionisation energy lowering :math:`\Delta E`) in J
-# (here set to zero).
+# The required arguments are T in K, and the ionisation energy lowering
+# :math:`\Delta E`) in J (here set to zero).
+
 translational_partition_functions = [
-    [sp.partitionfunction_translational(T) for T in temperatures] for sp in species
+    [sp.partitionfunction_translational(T) for T in temperatures]
+    for sp in species
 ]
 internal_partition_functions = [
-    [sp.partitionfunction_internal(T, 0) for T in temperatures] for sp in species
+    [sp.partitionfunction_internal(T, 0) for T in temperatures]
+    for sp in species
 ]
 
 # %%
 # Plot the results.
 # -----------------
 #
-# Finally, to visualise the results, plot all the partition functions as a function of
-# temperature over the range specified.
+# Finally, to visualise the results, plot all the partition functions as a
+# function of temperature over the range specified.
 
 fig, axs = plt.subplots(1, 2, figsize=(10, 4))
 
