@@ -99,20 +99,22 @@ sphinx_gallery.gen_rst.EXAMPLE_HEADER = """
 """
 
 sphinx_gallery_conf = {
-    "examples_dirs": "../examples",  # path to your example scripts
-    "gallery_dirs": "auto_examples",  # path to where to save gallery generated output
-    # to make references clickable
+    # Path to your example scripts.
+    "examples_dirs": "../examples",
+    # Path to where to save gallery generated output.
+    "gallery_dirs": "auto_examples",
+    # To make references clickable.
     "reference_url": {
         "minplascalc": None,
     },
-    # directory where function/class granular galleries are stored
+    # Directory where function/class granular galleries are stored.
     "backreferences_dir": "source/backreferences",
     # Modules for which function/class level galleries are created. In
     # this case minplascalc, in a tuple of strings:
     "doc_module": ("minplascalc",),
     "inspect_global_variables": True,
     "show_signature": False,
-    # Sort example files within gallery subsections with their filename
+    # Sort example files within gallery subsections with their filename.
     "within_subsection_order": FileNameSortKey,
 }
 

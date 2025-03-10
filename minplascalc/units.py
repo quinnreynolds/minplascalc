@@ -3,7 +3,8 @@
 This module provides a class with physical constants and unit conversions.
 All units are by default in the International System of Units (SI).
 
-Values are taken from the `scipy.constants` module, which itself uses the 2022 CODATA recommended values.
+Values are taken from the `scipy.constants` module, which itself uses the 2022
+CODATA recommended values.
 """
 
 import numpy as np
@@ -97,9 +98,11 @@ The constant is given by:
     \begin{align}
         \text{Spitzer constant}
             &= \left(\frac{4 \pi \varepsilon_0}{e}\right)^2
-                \times \left(\frac{k_b^{3/2}}{\frac{4}{3} \sqrt{2 \pi m_e} }\right)
+                \times \left(\frac{k_b^{3/2}}{\frac{4}{3} \sqrt{2 \pi m_e} }
+                \right)
                 \times 1.96
-            &= 1.53 \times 10^{-2} \, \Omega^{-1} \, \text{m}^{-1} \, \text{K}^{-3/2}
+            &= 1.53 \times 10^{-2} \, \Omega^{-1} \, \text{m}^{-1} \,
+            \text{K}^{-3/2}
     \end{align}
 
 with:
@@ -108,4 +111,4 @@ with:
 * :math:`e` the elementary charge,
 * :math:`k_b` the Boltzmann constant,
 * :math:`m_e` the electron mass.
-"""
+"""  # noqa: E501

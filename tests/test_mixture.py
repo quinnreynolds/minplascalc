@@ -6,7 +6,10 @@ import minplascalc as mpc
 @pytest.fixture
 def mixture_simple():
     c = mpc.mixture.lte_from_names(
-        ["O2", "O2+", "O", "O-", "O+", "O++"], x0=[1, 0, 0, 0, 0, 0], T=1000, P=101325
+        ["O2", "O2+", "O", "O-", "O+", "O++"],
+        x0=[1, 0, 0, 0, 0, 0],
+        T=1000,
+        P=101325,
     )
     return c
 
@@ -251,7 +254,9 @@ def test_emission_coefficient_complex(mixture_complex, x0, result, tol):
 
 def test_species_setter_exception(mixture_simple):
     with pytest.raises(TypeError):
-        mixture_simple.species = [mpc.species.from_name(sp) for sp in ["O", "O+"]]
+        mixture_simple.species = [
+            mpc.species.from_name(sp) for sp in ["O", "O+"]
+        ]
 
 
 def test_species_item_exception(mixture_simple):

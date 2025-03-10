@@ -14,12 +14,16 @@ def monatomic_sample_species():
 
 
 def test_partitionfunction_translational(diatomic_sample_species):
-    partition_function = diatomic_sample_species.partitionfunction_translational(0)
+    partition_function = (
+        diatomic_sample_species.partitionfunction_translational(0)
+    )
     assert partition_function == 0
 
 
 def test_partitionfunction_internal(diatomic_sample_species):
-    partition_function = diatomic_sample_species.partitionfunction_internal(300, 0)
+    partition_function = diatomic_sample_species.partitionfunction_internal(
+        300, 0
+    )
     assert partition_function == pytest.approx(4.921932)
 
 

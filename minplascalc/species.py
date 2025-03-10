@@ -67,7 +67,7 @@ class BaseSpecies:
         )
 
     def partitionfunction_translational(self, T: float) -> float:
-        r"""Calculate the volumic translational partition function for the species.
+        r"""Calculate the volumic translational partition function.
 
         Parameters
         ----------
@@ -77,7 +77,8 @@ class BaseSpecies:
         Returns
         -------
         float
-            The volumic translational partition function, in :math:`\text{m}^{-3}`.
+            The volumic translational partition function,
+            in :math:`\text{m}^{-3}`.
 
         Notes
         -----
@@ -87,7 +88,9 @@ class BaseSpecies:
 
             Z_{tr} = \left(\frac{2 \pi m k_B T}{h^2}\right)^{1.5}
         """
-        return ((2 * u.pi * self.molarmass * u.k_b * T) / (u.N_a * u.h**2)) ** 1.5
+        return (
+            (2 * u.pi * self.molarmass * u.k_b * T) / (u.N_a * u.h**2)
+        ) ** 1.5
 
     def partitionfunction_internal(self, T, dE):
         raise NotImplementedError
@@ -111,8 +114,8 @@ class Species(BaseSpecies):
     ):
         r"""Heavy particle base class.
 
-        Monatomic, diatomic, or polyatomic chemical species in the plasma, e.g. O2 or Si+.
-        Not for electrons.
+        Monatomic, diatomic, or polyatomic chemical species in the plasma,
+        e.g. O2 or Si+. Not for electrons.
 
         Parameters
         ----------
@@ -120,7 +123,7 @@ class Species(BaseSpecies):
             A unique identifier for the species.
         stoichiometry : dictionary
             Dictionary describing the elemental stoichiometry of the species.
-        molar_mass : float
+        molarmass : float
             Molar mass of the species, in :math:`\text{kg.mol}^{-1}`.
         charge_number : int
             Charge on the species (in integer units of the fundamental charge).
@@ -128,17 +131,19 @@ class Species(BaseSpecies):
             Polarisability of the species, in :math:`\text{m}^3`.
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
-        effective_electrons : float | None
-            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]_
+        effectiveelectrons : float | None
+            Effective number of electrons in valence shell,
+            per eq.6 of [Cambi1991]_ (only required for neutral species).
+        electroncrosssection : float | tuple[float, float, float, float] | None
+            Cross section for elastic electron collisions, in math:`\text{m}^2`
             (only required for neutral species).
-        electron_cross_section : float | tuple[float, float, float, float] | None
-            Cross section for elastic electron collisions, in math:`\text{m}^2` (only required
-            for neutral species). Either a single constant value, or a 4-tuple
-            of empirical fitting parameters.
+            Either a single constant value, or a 4-tuple of empirical
+            fitting parameters.
             Could be None if not available.
-        emission_lines : list[tuple[float, float, float]]
-            Radiation emission line data - each entry in the list contains three
-            values giving the line's wavelength :math:`\lambda` in :math:`\text{m}`,
+        emissionlines : list[tuple[float, float, float]]
+            Radiation emission line data - each entry in the list contains
+            three values giving
+            the line's wavelength :math:`\lambda` in :math:`\text{m}`,
             its :math:`g \times A` constant in :math:`\text{s}^{-1}`,
             and its emission strength in :math:`\text{J}`.
         """
@@ -198,32 +203,34 @@ class Monatomic(Species):
         stoichiometry : dictionary
             Dictionary describing the elemental stoichiometry of the species
             (e.g. {'O': 1} for O or O+).
-        molar_mass : float
+        molarmass : float
             Molar mass of the species, in :math:`\text{kg.mol}^{-1}`.
         charge_number : int
             Charge on the species (in integer units of the fundamental charge).
-        ionisation_energy : float
+        ionisationenergy : float
             Ionisation energy of the species, in :math:`\text{J}`.
-        energy_levels : list[tuple[float, float]]
-            Atomic energy level data - each entry in the list contains a pair of
-            values giving the level's quantum number and its energy
+        energylevels : list[tuple[float, float]]
+            Atomic energy level data - each entry in the list contains a pair
+            of values giving the level's quantum number and its energy
             respectively, with energy in :math:`\text{J}`.
         polarisability : float
             Polarisability of the species, in :math:`\text{m}^3`.
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
-        effective_electrons : float | None
-            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]_
+        effectiveelectrons : float | None
+            Effective number of electrons in valence shell, per eq.6 of
+            [Cambi1991]_ (only required for neutral species).
+            Could be None if not available.
+        electroncrosssection : float | tuple[float, float, float, float] | None
+            Cross section for elastic electron collisions, in math:`\text{m}^2`
             (only required for neutral species).
+            Either a single constant value, or a 4-tuple of empirical fitting
+            parameters.
             Could be None if not available.
-        electron_cross_section : float | tuple[float, float, float, float] | None
-            Cross section for elastic electron collisions, in math:`\text{m}^2` (only required
-            for neutral species). Either a single constant value, or a 4-tuple
-            of empirical fitting parameters.
-            Could be None if not available.
-        emission_lines : list[tuple[float, float, float]]
-            Radiation emission line data - each entry in the list contains three
-            values giving the line's wavelength :math:`\lambda` in :math:`\text{m}`,
+        emissionlines : list[tuple[float, float, float]]
+            Radiation emission line data - each entry in the list contains
+            three values giving
+            the line's wavelength :math:`\lambda` in :math:`\text{m}`,
             its :math:`g \times A` constant in :math:`\text{s}^{-1}`,
             and its emission strength in :math:`\text{J}`.
         sources : list of str
@@ -305,13 +312,14 @@ class Monatomic(Species):
         where:
 
         - :math:`g_i` is the degeneracy of the energy level :math:`i`,
-        - :math:`E_i` is the energy of the energy level :math:`i`, in :math:`\text{J}`,
-        - :math:`k_B` is the Boltzmann constant, in :math:`\text{J.K}^{-1}`, and
+        - :math:`E_i` is the energy of the energy level :math:`i`,
+          in :math:`\text{J}`,
+        - :math:`k_B` is the Boltzmann constant, in :math:`\text{J.K}^{-1}`,
         - :math:`T` is the temperature, in :math:`\text{K}`.
 
         The sum is taken over all energy levels of the species, up to the
-        ionisation energy lowered by :math:`dE` (:math:`dE` is the amont the ionisation
-        energy is lowered by, in :math:`\text{J}`).
+        ionisation energy lowered by :math:`dE` (:math:`dE` is the amont the
+        ionisation energy is lowered by, in :math:`\text{J}`).
 
         The degeneracy of the electronic energy levels is given by:
 
@@ -356,18 +364,20 @@ class Monatomic(Species):
 
         .. math::
 
-            U_{int} = U_{el} = \frac{1}{Z_{el}} \sum_{i} g_i E_i e^{-E_i / k_B T}
+            U_{int} = U_{el} = \frac{1}{Z_{el}}
+                    \sum_{i} g_i E_i e^{-E_i / k_B T}
 
         where:
 
         - :math:`g_i` is the degeneracy of the energy level :math:`i`,
-        - :math:`E_i` is the energy of the energy level :math:`i`, in :math:`\text{J}`,
-        - :math:`k_B` is the Boltzmann constant, in :math:`\text{J.K}^{-1}`, and
+        - :math:`E_i` is the energy of the energy level :math:`i`,
+          in :math:`\text{J}`,
+        - :math:`k_B` is the Boltzmann constant, in :math:`\text{J.K}^{-1}`,
         - :math:`T` is the temperature, in :math:`\text{K}`.
 
         The sum is taken over all energy levels of the species, up to the
-        ionisation energy lowered by :math:`dE` (:math:`dE` is the amont the ionisation
-        energy is lowered by, in :math:`\text{J}`).
+        ionisation energy lowered by :math:`dE` (:math:`dE` is the amont
+        the ionisation energy is lowered by, in :math:`\text{J}`).
 
         The degeneracy of the electronic energy levels is given by:
 
@@ -375,8 +385,8 @@ class Monatomic(Species):
 
             g_i = 2J_i + 1
 
-        TODO: Check this --> The internal energy is defined as the sum of the translational
-            energy and the electronic energy.
+        TODO: Check this --> The internal energy is defined as the sum of the
+            translational energy and the electronic energy.
         """
         beta = 1 / (u.k_b * T)  # Inverse temperature, in J^-1.
 
@@ -420,7 +430,8 @@ class Diatomic(Species):
     ):
         r"""Class for diatomic plasma species.
 
-        Diatomic species is defined as bonded pairs of atoms, like neutral particles or ions.
+        Diatomic species is defined as bonded pairs of atoms,
+        like neutral particles or ions.
 
         Parameters
         ----------
@@ -429,11 +440,11 @@ class Diatomic(Species):
         stoichiometry : dict[str, int]
             Dictionary describing the elemental stoichiometry of the species
             (e.g. {'Si': 1, 'O': 1} for SiO or SiO+).
-        molar_mass : float
+        molarmass : float
             Molar mass of the species, in :math:`\text{kg.mol}^{-1}`.
         charge_number : int
             Charge on the species (in integer units of the fundamental charge).
-        ionisation_energy : float
+        ionisationenergy : float
             Ionisation energy of the species, in :math:`\text{J}`.
         dissociation_energy : float
             Dissociation energy of the species, in :math:`\text{J}`.
@@ -450,17 +461,19 @@ class Diatomic(Species):
             Polarisability of the species, in :math:`\text{m}^3`.
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
-        effective_electrons : float | None
-            Effective number of electrons, in valence shell, per eq.6 of [Cambi1991]_
-            (only required for neutral species)
-        electron_cross_section : float | tuple[float, float, float, float] | None
-            Cross section for elastic electron collisions, in math:`\text{m}^2` (only required
-            for neutral species). Either a single constant value, or a 4-tuple
-            of empirical fitting parameters.
+        effectiveelectrons : float | None
+            Effective number of electrons, in valence shell, per eq.6 of
+            [Cambi1991]_ (only required for neutral species)
+        electroncrosssection : float | tuple[float, float, float, float] | None
+            Cross section for elastic electron collisions, in math:`\text{m}^2`
+            (only required for neutral species).
+            Either a single constant value, or a 4-tuple of empirical fitting
+            parameters.
             Could be None if not available.
-        emission_lines : list[tuple[float, float, float]]
-            Radiation emission line data - each entry in the list contains three
-            values giving the line's wavelength :math:`\lambda` in :math:`\text{m}`,
+        emissionlines : list[tuple[float, float, float]]
+            Radiation emission line data - each entry in the list contains
+            three values giving
+            the line's wavelength :math:`\lambda` in :math:`\text{m}`,
             its :math:`g \times A` constant in :math:`\text{s}^{-1}`,
             and its emission strength in :math:`\text{J}`.
         sources : list[str]
@@ -542,9 +555,9 @@ class Diatomic(Species):
 
         Notes
         -----
-        The internal partition function of a diatomic species is equal to the product of
-        its electronic partition function, its vibrational partition function, and its
-        rotational partition function, which are given by:
+        The internal partition function of a diatomic species is equal to the
+        product of its electronic partition function, its vibrational partition
+        function, and its rotational partition function, which are given by:
 
         .. math::
 
@@ -563,11 +576,11 @@ class Diatomic(Species):
         to the ionisation energy lowered by :math:`dE` (:math:`dE` is the amont
         the ionisation energy is lowered by, in :math:`\text{J}`).
 
-        For diatomic species, the current implementation of electronic partition
-        function is equal to the ground state electronic energy level degeneracy.
-        Since these species are generally present only at low temperatures where
-        electronic excitation is limited compared to vibrational and rotational
-        states, this approximation is reasonable.
+        For diatomic species, the current implementation of electronic
+        partition function is equal to the ground state electronic energy level
+        degeneracy. Since these species are generally present only at low
+        temperatures where electronic excitation is limited compared to
+        vibrational and rotational states, this approximation is reasonable.
 
         .. math::
 
@@ -580,9 +593,9 @@ class Diatomic(Species):
 
             Z_{rot} = \frac{k_B T}{\sigma_s B_e}
 
-        is the rotational partition function, with :math:`\sigma_s` the rotational
-        symmetry constant and :math:`B_e` the rotational energy level constant, in
-        :math:`\text{J}`.
+        is the rotational partition function, with :math:`\sigma_s` the
+        rotational symmetry constant and :math:`B_e` the rotational energy
+        level constant, in :math:`\text{J}`.
         """
         kbt = u.k_b * T
 
@@ -624,8 +637,8 @@ class Diatomic(Species):
         Notes
         -----
         The internal energy of a diatomic species is equal to the sum of its
-        translational energy, electronic energy, rotational energy, and vibrational
-        energy, which are given by:
+        translational energy, electronic energy, rotational energy, and
+        vibrational energy, which are given by:
 
         .. math::
 
@@ -637,15 +650,15 @@ class Diatomic(Species):
 
             U_{tr} = \frac{3}{2} k_B T
 
-        is the translational energy, with :math:`k_B` the Boltzmann constant and
-        :math:`T` the temperature.
+        is the translational energy, with :math:`k_B` the Boltzmann constant
+        and :math:`T` the temperature.
 
         .. math::
 
             U_{el} = 0
 
-        is the electronic energy (since the electronic partition function is approximated
-        by the ground state electronic energy level degeneracy).
+        is the electronic energy (since the electronic partition function is
+        approximated by the ground state electronic energy level degeneracy).
 
         .. math::
 
@@ -657,12 +670,12 @@ class Diatomic(Species):
 
             U_{vib} = \frac{w_e}{2 \tanh(w_e / (2 k_B T))}
 
-        is the vibrational energy, with :math:`w_e` the vibrational energy level constant
-        for vibration mode, in :math:`\text{J}`.
+        is the vibrational energy, with :math:`w_e` the vibrational energy
+        level constant for vibration mode, in :math:`\text{J}`.
 
 
-        TODO: Check this --> The internal energy is defined as the sum of the translational
-            energy and internal energy?
+        TODO: Check this --> The internal energy is defined as the sum of the
+            translational energy and internal energy?
         """
         kbt = u.k_b * T
 
@@ -670,8 +683,9 @@ class Diatomic(Species):
         translational_energy = 3 / 2 * kbt
 
         # Calculate the electronic energy.
-        # The electronic energy is zero since the electronic partition function is
-        # approximated by the ground state electronic energy level degeneracy.
+        # The electronic energy is zero since the electronic partition function
+        # is approximated by the ground state electronic energy level
+        # degeneracy.
         electronic_energy = 0
 
         # Calculate the rotational energy.
@@ -712,7 +726,8 @@ class Polyatomic(Species):
     ):
         r"""Class for polyatomic plasma species.
 
-        Polyatomic species is defined as molecules (bonded sets of atoms) or ions.
+        Polyatomic species is defined as molecules (bonded sets of atoms)
+        or ions.
 
         Parameters
         ----------
@@ -721,11 +736,11 @@ class Polyatomic(Species):
         stoichiometry : dict[str, int]
             Dictionary describing the elemental stoichiometry of the species
             (e.g. {'H': 2, 'O': 1} for H2O or H2O+).
-        molar_mass : float
+        molarmass : float
             Molar mass of the species in :math:`\text{kg.mol}^{-1}`.
         charge_number : int
             Charge on the species (in integer units of the fundamental charge).
-        ionisation_energy : float
+        ionisationenergy : float
             Ionisation energy of the species in :math:`\text{J}`.
         dissociation_energy : float
             Dissociation energy of the species in :math:`\text{J}`.
@@ -738,24 +753,27 @@ class Polyatomic(Species):
         g0 : float
             Ground state electronic energy level degeneracy.
         wi_e : list[float]
-            Vibrational energy level constants for each vibration mode, in :math:`\text{J}`.
+            Vibrational energy level constants for each vibration mode,
+            in :math:`\text{J}`.
         abc_e : list[float]
             A, B, and C rotational energy level constants in :math:`\text{J}`.
         polarisability : float
             Polarisability of the species, in :math:`\text{m}^3`.
         multiplicity : float
             Spin multiplicity (2S + 1) of the ground state.
-        effective_electrons : float | None
-            Effective number of electrons in valence shell, per eq.6 of [Cambi1991]_
-            (only required for neutral species)
-        electron_cross_section : float | tuple[float, float, float, float] | None
-            Cross section for elastic electron collisions, in math:`\text{m}^2` (only required
-            for neutral species). Either a single constant value, or a 4-tuple
-            of empirical fitting parameters.
+        effectiveelectrons : float | None
+            Effective number of electrons in valence shell, per eq.6 of
+            [Cambi1991]_ (only required for neutral species)
+        electroncrosssection : float | tuple[float, float, float, float] | None
+            Cross section for elastic electron collisions, in math:`\text{m}^2`
+            (only required for neutral species).
+            Either a single constant value, or a 4-tuple of empirical fitting
+            parameters.
             Could be None if not available.
-        emission_lines : list[tuple[float, float, float]]
-            Radiation emission line data - each entry in the list contains three
-            values giving the line's wavelength :math:`\lambda` in :math:`\text{m}`,
+        emissionlines : list[tuple[float, float, float]]
+            Radiation emission line data - each entry in the list contains
+            three values giving
+            the line's wavelength :math:`\lambda` in :math:`\text{m}`,
             its :math:`g \times A` constant in :math:`\text{s}^{-1}`,
             and its emission strength in :math:`\text{J}`.
         sources : list[str]
@@ -838,9 +856,9 @@ class Polyatomic(Species):
 
         Notes
         -----
-        The internal partition function of a polyatomic species is equal to the product of
-        its electronic partition function, its vibrational partition function, and its
-        rotational partition function, which are given by:
+        The internal partition function of a polyatomic species is equal to the
+        product of its electronic partition function, its vibrational partition
+        function, and its rotational partition function, which are given by:
 
         .. math::
 
@@ -859,30 +877,33 @@ class Polyatomic(Species):
         to the ionisation energy lowered by :math:`dE` (:math:`dE` is the amont
         the ionisation energy is lowered by, in :math:`\text{J}`).
 
-        For diatomic species, the current implementation of electronic partition
-        function is equal to the ground state electronic energy level degeneracy.
-        Since these species are generally present only at low temperatures where
-        electronic excitation is limited compared to vibrational and rotational
-        states, this approximation is reasonable.
+        For polyatomic species, the current implementation of electronic
+        partition function is equal to the ground state electronic energy level
+        degeneracy. Since these species are generally present only at low
+        temperatures where electronic excitation is limited compared to
+        vibrational and rotational states, this approximation is reasonable.
 
         .. math::
 
-            Z_{vib} = \prod_{i} \frac{e^{-w_{e, i} / (2 k_B T)}}{1 - e^{-w_{e, i} / k_B T}}
+            Z_{vib} = \prod_{i} \frac{e^{-w_{e, i} / (2 k_B T)}}
+                                {1 - e^{-w_{e, i} / k_B T}}
 
-        is the vibrational partition function, with :math:`w_{e, i}` the vibrational
-        energy level constant for vibration mode :math:`i`, in :math:`\text{J}`.
+        is the vibrational partition function, with :math:`w_{e, i}` the
+        vibrational energy level constant for vibration mode :math:`i`,
+        in :math:`\text{J}`.
 
         .. math::
 
             Z_{rot} = \begin{cases}
                 \frac{k_B T}{\sigma_s B_e} & \text{if linear} \\
-                \sqrt{\pi} \frac{\sqrt{k_B^3 T^3}}{\sqrt{A_e B_e C_e}} & \text{if non-linear}
+                \sqrt{\pi} \frac{\sqrt{k_B^3 T^3}}{\sqrt{A_e B_e C_e}} &
+                    \text{if non-linear}
             \end{cases}
 
-        is the rotational partition function, with :math:`\sigma_s` the rotational
-        symmetry constant, :math:`B_e` the rotational energy level constant, and
-        :math:`A_e`, :math:`B_e`, and :math:`C_e` the rotational energy level constants,
-        in :math:`\text{J}`.
+        is the rotational partition function, with :math:`\sigma_s` the
+        rotational symmetry constant, :math:`B_e` the rotational energy level
+        constant, and :math:`A_e`, :math:`B_e`, and :math:`C_e` the rotational
+        energy level constants, in :math:`\text{J}`.
         """
         kbt = u.k_b * T
 
@@ -893,7 +914,10 @@ class Polyatomic(Species):
 
         # Calculate the vibrational partition function.
         vibrationalpartition = np.prod(
-            [np.exp(-wi / (2 * kbt)) / (1 - np.exp(-wi / kbt)) for wi in self.wi_e]
+            [
+                np.exp(-wi / (2 * kbt)) / (1 - np.exp(-wi / kbt))
+                for wi in self.wi_e
+            ]
         )
 
         # Calculate the rotational partition function.
@@ -901,11 +925,15 @@ class Polyatomic(Species):
             rotationalpartition = kbt / (self.sigma_s * self.abc_e[1])
         else:
             ABC = np.prod(self.abc_e)
-            rotationalpartition = np.sqrt(np.pi) / self.sigma_s * np.sqrt(kbt**3 / ABC)
+            rotationalpartition = (
+                np.sqrt(np.pi) / self.sigma_s * np.sqrt(kbt**3 / ABC)
+            )
 
         # Return the total internal partition function.
         return (
-            electronic_partition_function * vibrationalpartition * rotationalpartition
+            electronic_partition_function
+            * vibrationalpartition
+            * rotationalpartition
         )
 
     def internal_energy(self, T: float, dE: float) -> float:
@@ -926,8 +954,8 @@ class Polyatomic(Species):
         Notes
         -----
         The internal energy of a polyatomic species is equal to the sum of its
-        translational energy, electronic energy, rotational energy, and vibrational
-        energy, which are given by:
+        translational energy, electronic energy, rotational energy, and
+        vibrational energy, which are given by:
 
         .. math::
 
@@ -939,15 +967,15 @@ class Polyatomic(Species):
 
             U_{tr} = \frac{3}{2} k_B T
 
-        is the translational energy, with :math:`k_B` the Boltzmann constant and
-        :math:`T` the temperature (in :math:`\text{K}`).
+        is the translational energy, with :math:`k_B` the Boltzmann constant
+        and :math:`T` the temperature (in :math:`\text{K}`).
 
         .. math::
 
             U_{el} = 0
 
-        is the electronic energy (since the electronic partition function is approximated
-        by the ground state electronic energy level degeneracy).
+        is the electronic energy (since the electronic partition function is
+        approximated by the ground state electronic energy level degeneracy).
 
         .. math::
 
@@ -962,12 +990,12 @@ class Polyatomic(Species):
 
             U_{vib} = \sum_{i} \frac{w_{e, i}}{2 \tanh(w_{e, i} / (2 k_B T))}
 
-        is the vibrational energy, with :math:`w_{e, i}` the vibrational energy level constant
-        for vibration mode :math:`i`.
+        is the vibrational energy, with :math:`w_{e, i}` the vibrational energy
+        level constant for vibration mode :math:`i`.
 
 
-        TODO: Check this --> The internal energy is defined as the sum of the translational
-            energy and internal energy?
+        TODO: Check this --> The internal energy is defined as the sum of the
+            translational energy and internal energy?
         """
         kbt = u.k_b * T
 
@@ -975,8 +1003,9 @@ class Polyatomic(Species):
         translational_energy = 1.5 * kbt
 
         # Calculate the electronic energy.
-        # The electronic energy is zero since the electronic partition function is
-        # approximated by the ground state electronic energy level degeneracy.
+        # The electronic energy is zero since the electronic partition function
+        # is approximated by the ground state electronic energy level
+        # degeneracy.
         electronic_energy = 0
 
         # Calculate the rotational energy.
@@ -1038,9 +1067,9 @@ class Electron(BaseSpecies):
 
         Notes
         -----
-        The internal partition function of an electron is equal to its electronic
-        partition function, which is equal to the degeneracy of the electron, which
-        is 2.
+        The internal partition function of an electron is equal to its
+        electronic partition function, which is equal to the degeneracy of the
+        electron, which is 2.
 
         .. math::
 
@@ -1065,8 +1094,8 @@ class Electron(BaseSpecies):
 
         Notes
         -----
-        The internal energy of an electron is equal to the sum of its translational
-        energy and electronic energy, which are given by:
+        The internal energy of an electron is equal to the sum of its
+        translational energy and electronic energy, which are given by:
 
         .. math::
 
@@ -1078,15 +1107,15 @@ class Electron(BaseSpecies):
 
             U_{tr} = \frac{3}{2} k_B T
 
-        is the translational energy, with :math:`k_B` the Boltzmann constant and
-        :math:`T` the temperature.
+        is the translational energy, with :math:`k_B` the Boltzmann constant
+        and :math:`T` the temperature.
 
         .. math::
 
             U_{el} = 0
 
-        is the electronic energy (since the electronic partition function is equal
-        to the degeneracy of the electron, which is 2).
+        is the electronic energy (since the electronic partition function is
+        equal to the degeneracy of the electron, which is 2).
         """
         # Calculate the translational energy.
         translational_energy = 1.5 * u.k_b * T

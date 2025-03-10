@@ -7,7 +7,8 @@ def nist_string(nist_line: str) -> list[float]:
     Parameters
     ----------
     nist_line : str
-        A string representing a line of information from a NIST-style data source.
+        A string representing a line of information from a NIST-style data
+        source.
 
     Returns
     -------
@@ -28,7 +29,8 @@ def nist_string(nist_line: str) -> list[float]:
     for record in records:
         if "/" in record:
             # If the record is a fraction, convert it to a float.
-            # This can happen when the total angular momentum number J is a fraction.
+            # This can happen when the total angular momentum number J is a
+            # fraction.
             num, den = record.split("/")
             value = float(num) / float(den)
         else:
