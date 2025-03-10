@@ -15,7 +15,7 @@ type-check:
 
 # See https://www.sphinx-doc.org/en/master/man/sphinx-build.html for more information.
 docs-build:
-	cd docs && rm -fr _api && uv run sphinx-build -M html . _build -a -E
+	cd docs && rm -fr _api && uv run sphinx-build -M html . _build
 
 
 # DO NOT EDIT ABOVE THIS LINE, ADD COMMANDS BELOW
