@@ -58,7 +58,7 @@ jobs:
       run: just type-check
 
   docs-build:
-    # needs: [unit-tests]
+    needs: [unit-tests]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -69,9 +69,9 @@ jobs:
     - uses: extractions/setup-just@v2
     - name: Build the documentation.
       run: just docs-build
-    # - uses: actions/upload-pages-artifact@v3
-    #   with:
-    #     path: docs/_build/html/
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/_build/html/
 
   # Deployment job.
   deploy:
