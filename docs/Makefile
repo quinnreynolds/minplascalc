@@ -18,6 +18,5 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 # ... create folders if don't exist
 %: Makefile
-	mkdir -p source
 	mkdir -p "source/backreferences"
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
