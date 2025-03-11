@@ -4,10 +4,6 @@ README
 .. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/test.yaml/badge.svg
     :target: https://github.com/quinnreynolds/minplascalc/actions
 
-.. image:: https://readthedocs.org/projects/minplascalc/badge/?version=latest
-    :target: https://minplascalc.readthedocs.io/en/latest/?badge=latest
-    :alt: Documentation Status
-
 A simple set of tools in Python 3 for doing calculations of thermal plasma
 compositions relevant to metallurgical problems.
 
