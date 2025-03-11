@@ -1,55 +1,97 @@
 [build-system]
-requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[project]
-name = "minplascalc"
-dynamic = ["version"]
-description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
-readme = "README.rst"
-requires-python = ">=3.5"
-license = {text = "GPLv3"}
-authors = [
-    {name = "Quinn Reynolds", email = "quinnr@mintek.co.za"}
-]
-urls = { "Homepage" = "https://github.com/quinnreynolds/minplascalc" }
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering :: Chemistry",
-    "Topic :: Scientific/Engineering :: Physics",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Programming Language :: Python :: 3.5",
-    "Programming Language :: Python :: 3.6"
-]
-keywords = ["plasma", "gibbs", "composition"]
-
-dependencies = [
-    "numpy",
-    "scipy>=1.4"
-]
+requires = ["hatchling"]
 
 [dependency-groups]
-dev = ["matplotlib", "pre-commit", "coverage", "pytest", "jupyter", "sympy"]
+dev = [
+  # Development dependencies.
+  "matplotlib",
+  "jupyter",
+  # Tests dependencies.
+  "coverage",
+  "pytest",
+  # Documentation dependencies.
+  "myst-parser",
+  "sphinx",
+  "sphinx-autoapi",
+  "sphinx-gallery",
+  "sphinx-rtd-theme",
+  "pydata-sphinx-theme",
+  # Code quality dependencies.
+  "pre-commit",
+  "ruff",
+  "rust-just",
+  # Type checking dependencies.
+  "mypy"
+]
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[project]
+authors = [
+  {name = "Quinn Reynolds", email = "quinnr@mintek.co.za"}
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Physics",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13"
+]
+dependencies = [
+  "numpy",
+  "scipy"
+]
+description = "A simple set of tools for doing calculations of thermal plasma compositions relevant to metallurgical problems using Python 3"
+dynamic = ["version"]
+keywords = ["plasma", "gibbs", "composition"]
+license = {text = "GPLv3"}
+name = "minplascalc"
+readme = "README.rst"
+requires-python = ">=3.11"
+urls = {"Homepage" = "https://github.com/quinnreynolds/minplascalc"}
 
 [tool.hatch.build.targets.sdist]
 include = ["minplascalc/data/*/*.json"]
 
+[tool.hatch.build.targets.wheel]
+packages = [
+  "minplascalc"
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.version]
 path = "minplascalc/__init__.py"
 
-[tool.hatch.build.targets.wheel]
-packages = [
-    "minplascalc",
+[tool.ruff]
+indent-width = 4
+# See https://github.com/quinnreynolds/minplascalc/pull/66#discussion_r1986715810
+line-length = 79
+
+[tool.ruff.lint]
+exclude = [".venv"]
+ignore = [
+  "D1",  # Missing docstring.
+  "E741"  # Ambiguous variable name - the math-heavy modules are full of these.
+]
+select = [
+  # pyflakes
+  "F",
+  # pycodestyle
+  "E",
+  "W",
+  # isort
+  "I",
+  # pydocstyle
+  "D"
 ]
 
-[tool.ruff]
-lint.extend-ignore = [
-    "E741",  # ambiguous variable name - the math-heavy modules are full of these
-]
-lint.exclude = [
-    ".venv",
-]
+[tool.ruff.lint.pycodestyle]
+# See https://github.com/quinnreynolds/minplascalc/pull/66#discussion_r1986715810
+max-line-length = 79
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"  # See https://numpydoc.readthedocs.io/en/latest/format.html

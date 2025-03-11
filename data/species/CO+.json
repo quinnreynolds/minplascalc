@@ -1,0 +1,24 @@
+{
+    "name": "CO+",
+    "stoichiometry": {
+        "C": 1,
+        "O": 1
+    },
+    "molarmass": 0.028009596420090935,
+    "chargenumber": 1,
+    "polarisability": 1.227e-30,
+    "multiplicity": 2,
+    "effectiveelectrons": null,
+    "electroncrosssection": null,
+    "emissionlines": [],
+    "dissociationenergy": Infinity,
+    "ionisationenergy": Infinity,
+    "sigma_s": 1,
+    "g0": 4,
+    "w_e": 4.398389875484898e-20,
+    "b_e": 3.9276020512188334e-23,
+    "sources": [
+        "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. PJ Linstrom and WG Mallard (Editors), National Institute of Standards and Technology, Gaithersburg MD., http://webbook.nist.gov/chemistry/, doi:10.18434/T4D303",
+        "TE Horton (1970). The Computation of Partition Functions and Thermochemistry Data for Atomic, Ionic, Diatomic, and Polyatomic Species, Technical Report 32-7425, NASA Jet Propulsion Laboratory, California Institute of Technology, 1970"
+    ]
+}
