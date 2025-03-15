@@ -3,7 +3,7 @@ name: tests-cov
 on:
   pull_request_target:
     branches:
-      - '*'
+    - '*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
