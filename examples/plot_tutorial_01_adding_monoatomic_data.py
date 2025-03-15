@@ -91,21 +91,21 @@ import minplascalc as mpc
 
 with open("../data/demo/nist/nist_Oplus_levels", "rb") as f:
     elevels = pickle.load(f)
-with open("../data/demo/nist/nist_Oplus_emissionlines", "rb") as f:
+with open("../data/demo/nist/nist_Oplus_emission_lines", "rb") as f:
     elines = pickle.load(f)
 
 oxygenplus = mpc.species.Monatomic(
     name="O+",
     stoichiometry={"O": 1},
-    molarmass=0.01599885642,
-    chargenumber=1,
-    ionisationenergy=5.6270249236e-18,
+    molar_mass=0.01599885642,
+    charge_number=1,
+    ionisation_energy=5.6270249236e-18,
     energylevels=elevels,
     polarisability=0.391e-30,
     multiplicity=4,
-    effectiveelectrons=None,
-    electroncrosssection=None,
-    emissionlines=elines,
+    effective_electrons=None,
+    electron_cross_section=None,
+    emission_lines=elines,
     sources=[
         "NIST Atomic Spectra Database (ver. 5.3), [Online]. A Kramida, "
         "Yu Ralchenko, J Reader, and NIST ASD Team, National Institute "

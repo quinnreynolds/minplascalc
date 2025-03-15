@@ -4,20 +4,20 @@
         "C": 1,
         "O": 1
     },
-    "molarmass": 0.028010145,
-    "chargenumber": 0,
+    "molar_mass": 0.028010145,
+    "charge_number": 0,
     "polarisability": 1.953e-30,
     "multiplicity": 1,
-    "effectiveelectrons": 8.775510204081632,
-    "electroncrosssection": [
+    "effective_electrons": 8.775510204081632,
+    "electron_cross_section": [
         2.6463905876539567e-34,
         4.108173839102651e-38,
         1.966327114101665,
         4.50755687711815e-20
     ],
-    "emissionlines": [],
-    "dissociationenergy": 1.7798487991502877e-18,
-    "ionisationenergy": 2.245291223722296e-18,
+    "emission_lines": [],
+    "dissociation_energy": 1.7798487991502877e-18,
+    "ionisation_energy": 2.245291223722296e-18,
     "sigma_s": 1,
     "g0": 1,
     "w_e": 4.3102186261230426e-20,

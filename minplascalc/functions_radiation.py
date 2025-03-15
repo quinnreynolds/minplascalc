@@ -119,7 +119,7 @@ def total_emission_coefficient(mix: "LTE") -> float:
         Qi = species.partitionfunction_internal(mix.T, 0)
 
         # Iterate over emission lines of the species.
-        for emission_line in species.emissionlines:
+        for emission_line in species.emission_lines:
             # Extract wavelength, Einstein coefficient, and lower state energy
             # of the emission line.
             wavele, gA, Ek = emission_line

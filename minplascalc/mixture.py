@@ -233,13 +233,13 @@ class LTE:
         # negative of the dissociation energy.
         for i, sp in enumerate(self.species):
             if sum(sp.stoichiometry.values()) >= 2:
-                E0[i] = -sp.dissociationenergy
+                E0[i] = -sp.dissociation_energy
 
         # Calculate the effective charge number z*.
         # The effective charge number is the sum of the square of the charge
         # number of each species multiplied by the number density of that
         # species.
-        charge_numbers = np.array([sp.chargenumber for sp in self.species])
+        charge_numbers = np.array([sp.charge_number for sp in self.species])
         weighted_charge_sum_squared, weighted_charge_sum = 0.0, 0.0
         for z_i, nd in zip(charge_numbers, number_densities):
             if z_i > 0:  # Only consider positively charged species.
@@ -273,7 +273,7 @@ class LTE:
                 )
 
         # Get the neutral species.
-        neutral_species = [sp for sp in self.species if sp.chargenumber == 0]
+        neutral_species = [sp for sp in self.species if sp.charge_number == 0]
 
         # Calculate the reference energy for each species.
         for neutral_sp in neutral_species:
@@ -283,14 +283,14 @@ class LTE:
                 for i, sp in enumerate(self.species)
                 if (
                     sp.stoichiometry == neutral_sp.stoichiometry
-                    and sp.chargenumber <= 0
+                    and sp.charge_number <= 0
                 )
             ]
             # Sort the negatively charged species by charge number in
             # descending order.
             # Example: -2, -1, 0.
             negatively_charged_sp.sort(
-                key=lambda sp: sp[1].chargenumber, reverse=True
+                key=lambda sp: sp[1].charge_number, reverse=True
             )
 
             # Get the positively charged species with the same stoichiometry.
@@ -299,14 +299,14 @@ class LTE:
                 for i, sp in enumerate(self.species)
                 if (
                     sp.stoichiometry == neutral_sp.stoichiometry
-                    and sp.chargenumber >= 0
+                    and sp.charge_number >= 0
                 )
             ]
             # Sort the positively charged species by charge number in
             # ascending order.
             # Example: 0, 1, 2.
             positively_charged_sp.sort(
-                key=lambda sp: sp[1].chargenumber, reverse=False
+                key=lambda sp: sp[1].charge_number, reverse=False
             )
 
             # Calculate the reference energy for non-neutral species.
@@ -317,7 +317,7 @@ class LTE:
                 # The reference energy is the reference energy of the species
                 # with one fewer charge number,
                 # plus the lowered ionisation energy of that species.
-                E0[ito] = E0[ifrom] + spfrom.ionisationenergy - dE[ifrom]
+                E0[ito] = E0[ifrom] + spfrom.ionisation_energy - dE[ifrom]
 
                 # Code example:
                 # positively_charged_sp = [(index_H, H), (index_H+, H+), (index_H2+, H2+)]  # noqa: E501
@@ -337,7 +337,7 @@ class LTE:
             for (ifrom, spfrom), (ito, spto) in zip(
                 negatively_charged_sp[:-1], negatively_charged_sp[1:]
             ):
-                E0[ito] = E0[ifrom] - spto.ionisationenergy + dE[ito]
+                E0[ito] = E0[ifrom] - spto.ionisation_energy + dE[ito]
                 # NOTE: For negative ions, dE is equal to zero.
 
         # Return the reference energy and ionisation energy lowering.
@@ -497,7 +497,7 @@ class LTE:
                 A_matrix_constraints_transpose[i, j] = sc
             b_vector_constraints[i] = element["N_tot"]
 
-        for j, qc in enumerate(sp.chargenumber for sp in self.species):
+        for j, qc in enumerate(sp.charge_number for sp in self.species):
             A_matrix_constraints[j, -1] = qc
             A_matrix_constraints_transpose[-1, j] = qc
 
@@ -646,7 +646,7 @@ class LTE:
           in :math:`\text{kg.mol}^{-1}`.
         """
         number_densities = self.calculate_composition()  # particules/m^3
-        molar_masses = [sp.molarmass for sp in self.species]  # kg/mol
+        molar_masses = [sp.molar_mass for sp in self.species]  # kg/mol
         return (
             sum(n_i * M_i for n_i, M_i in zip(number_densities, molar_masses))
             / u.N_a
@@ -708,7 +708,7 @@ class LTE:
         ]  # J/particle
 
         masses = [
-            sp.molarmass / u.N_a for sp in self.species
+            sp.molar_mass / u.N_a for sp in self.species
         ]  # (kg/mol) / (particle/mol) = kg/particle
 
         return np.array(enthalpies) / np.array(masses)  # J/kg
@@ -748,13 +748,13 @@ class LTE:
           in :math:`\text{kg.mol}^{-1}`.
         """
         number_densities = self.calculate_composition()  # m^-3
-        molar_masses = [sp.molarmass for sp in self.species]  # kg/mol
+        molar_masses = [sp.molar_mass for sp in self.species]  # kg/mol
 
         density = self.calculate_density()  # kg/m3
 
         mass_enthalpies = self.calculate_species_enthalpies()  # J/kg
         masses = np.array(
-            [sp.molarmass / u.N_a for sp in self.species]
+            [sp.molar_mass / u.N_a for sp in self.species]
         )  # kg/particle
         enthalpies = mass_enthalpies * masses  # J/particle
 
@@ -763,7 +763,7 @@ class LTE:
             self.__E0
         )  # Index of the species with the lowest reference energy.
         h_mol_0 = (
-            self.__E0[i_min] / self.species[i_min].molarmass
+            self.__E0[i_min] / self.species[i_min].molar_mass
         )  # J/(kg/mol)
 
         weighted_enthalpy = sum(

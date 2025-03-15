@@ -3,13 +3,13 @@
     "stoichiometry": {
         "Si": 1
     },
-    "molarmass": 0.02808440284018187,
-    "chargenumber": 2,
+    "molar_mass": 0.02808440284018187,
+    "charge_number": 2,
     "polarisability": 1.758e-30,
     "multiplicity": 1,
-    "effectiveelectrons": null,
-    "electroncrosssection": null,
-    "emissionlines": [
+    "effective_electrons": null,
+    "electron_cross_section": null,
+    "emission_lines": [
         [
             4.661310000000001e-08,
             438000000.0,
@@ -5221,7 +5221,7 @@
             5.125297598896843e-18
         ]
     ],
-    "ionisationenergy": 5.3661727129011726e-18,
+    "ionisation_energy": 5.3661727129011726e-18,
     "energylevels": [
         [
             0.0,

@@ -3,14 +3,14 @@
     "stoichiometry": {
         "O": 1
     },
-    "molarmass": 0.015999953579909066,
-    "chargenumber": -1,
+    "molar_mass": 0.015999953579909066,
+    "charge_number": -1,
     "polarisability": 1.275e-30,
     "multiplicity": 2,
-    "effectiveelectrons": null,
-    "electroncrosssection": null,
-    "emissionlines": [],
-    "ionisationenergy": 2.340780062274e-19,
+    "effective_electrons": null,
+    "electron_cross_section": null,
+    "emission_lines": [],
+    "ionisation_energy": 2.340780062274e-19,
     "energylevels": [
         [
             0.5,
