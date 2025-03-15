@@ -87,14 +87,15 @@ calculations.
 
 import pickle
 
-import minplascalc as mpc
+from minplascalc.species import Monatomic
+from minplascalc.utils import get_path_to_data
 
-with open("../data/demo/nist/nist_Oplus_levels", "rb") as f:
+with open(get_path_to_data("demo/nist/nist_Oplus_levels"), "rb") as f:
     elevels = pickle.load(f)
-with open("../data/demo/nist/nist_Oplus_emission_lines", "rb") as f:
+with open(get_path_to_data("demo/nist/nist_Oplus_emission_lines"), "rb") as f:
     elines = pickle.load(f)
 
-oxygenplus = mpc.species.Monatomic(
+oxygenplus = Monatomic(
     name="O+",
     stoichiometry={"O": 1},
     molar_mass=0.01599885642,
