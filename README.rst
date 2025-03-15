@@ -59,11 +59,11 @@ Before pushing to GitHub, run the following commands:
 2. Run quality assurance checks (code linting) checks with ``just qa``.
 3. Run type checks with ``just type-check``.
 4. Run unit tests with ``just unit-tests``.
-5. Build the documentation with 
+5. Build the documentation with
 
-  * (macOs and Linux) ``just docs-build``.
+  a. (macOs and Linux) ``just docs-build``.
 
-  * (Windows) ``just docs-build-windows``.
+  b. (Windows) ``just docs-build-windows``.
 
 
 Contribution guidelines
