@@ -477,3 +477,4 @@ examples/O+.json
 examples/SiO.json
 
 uv.lock
+coverage/coverage.svg

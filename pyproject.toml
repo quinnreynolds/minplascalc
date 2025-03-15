@@ -8,8 +8,9 @@ dev = [
   "matplotlib",
   "jupyter",
   # Tests dependencies.
-  "coverage",
   "pytest",
+  "pytest-cov",
+  "coverage-badge",
   # Documentation dependencies.
   "myst-parser",
   "sphinx",

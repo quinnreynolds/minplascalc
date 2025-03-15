@@ -58,8 +58,9 @@ Before pushing to GitHub, run the following commands:
 1. Update dependencies with ``just update-env``.
 2. Run quality assurance checks (code linting) checks with ``just qa``.
 3. Run type checks with ``just type-check``.
-4. Run unit tests with ``just unit-tests``.
-5. Build the documentation with
+4. Run unit tests with ``just tests``.
+5. Run unit tests with coverage and generate a badge with ``just tests-cov``.
+6. Build the documentation with
 
   a. (macOs and Linux) ``just docs-build``.
 

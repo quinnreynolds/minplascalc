@@ -29,7 +29,7 @@ jobs:
         version: "latest"
     - uses: pre-commit/action@v3.0.1
 
-  unit-tests:
+  tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -42,10 +42,30 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - uses: extractions/setup-just@v2
     - name: Test with python ${{ matrix.python-version }}
-      run: just unit-tests
+      run: just tests
+  
+  tests-cov:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install the latest version of uv.
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+    - uses: extractions/setup-just@v2
+    - name: Run tests with coverage.
+      run: just test-cov
+    # See https://stackoverflow.com/a/75033525
+    - name: Publish coverage report to coverage-badge branch
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        branch: coverage-badge  # The branch to push the coverage report to.
+        folder: coverage
+    # The badge url is https://raw.githubusercontent.com/<USER>/<REPO>/coverage-badge/coverage.svg?raw=true
+
 
   type-check:
-    needs: [unit-tests]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -58,7 +78,7 @@ jobs:
       run: just type-check
 
   docs-build:
-    needs: [unit-tests]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4

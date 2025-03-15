@@ -4,7 +4,7 @@
 set windows-shell := ["powershell.exe", "-c"]
 # For the other platforms, use the default shell.
 
-default: qa type-check unit-tests
+default: qa type-check tests
 
 update-env:
 	uv lock --upgrade
@@ -12,8 +12,13 @@ update-env:
 qa:
 	pre-commit run --all-files
 
-unit-tests:
+tests:
 	uv run pytest tests docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"
+
+tests-cov:
+	uv run pytest tests docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"  --cov=minplascalc --cov-report=term-missing
+	mkdir -p coverage
+	coverage-badge -o coverage/coverage.svg
 
 # See https://mypy.readthedocs.io/en/stable/command_line.html for more information.
 type-check:
@@ -25,5 +30,3 @@ docs-build:
 
 docs-build-windows:
 	cd docs; Ls _api -recurse -ea silentlycontinue | remove-item -r -fo; md -Force "source/backreferences"; uv run sphinx-build -M html . _build
-
-# DO NOT EDIT ABOVE THIS LINE, ADD COMMANDS BELOW
