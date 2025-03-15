@@ -48,6 +48,8 @@ Workflow for developers/contributors
 * Run ``uv sync`` to install the necessary dependencies.
 * To test if the package is working, run ``uv run pytest``. All tests should pass.
 
+Next time, you just need to activate the virtual environment.
+
 Before pushing to GitHub, run the following commands:
 
 1. Update dependencies with ``just update-env``.
@@ -74,33 +76,12 @@ Who do I talk to?
 References
 ----------
 
-* MI Boulos, P Fauchais, and E Pfender. Thermal Plasmas: Fundamentals and
-  Applications Volume 1, *Plenum Press*, New York NY, 1994
-* S Chapman and TG Cowling. The Mathematical Theory of Non-Uniform Gases
-  3\ :sup:`ed`\, *Cambridge University Press*, Cambridge, United Kingdom,
-  1970
-* JC Stewart and KD Pyatt Jr. Lowering of Ionization Potentials in Plasmas,
-  *The Astrophysical Journal*, 144, 1966, 1203-1211
-* GJ Dunn and TW Eagar. Calculation of Electrical and Thermal
-  Conductivities of Metallurgical Plasmas,
-  *Welding Research Council*, Bulletin 357, 1990
-* RS Devoto. Transport Properties of Ionized Monatomic Gases,
-  *The Physics of Fluids*, 9(6), 1966, 1230-1240
-* RS Devoto. Transport Coefficients of Partially Ionized Argon,
-  *The Physics of Fluids*, 10(2), 1967, 354-364
-* A Laricchiuta, G Colonna, D Bruno, R Celiberto, C Gorse, F Pirani, and
-  M Capitelli. Classical transport collision integrals for a Lennard-Jones
-  like phenomenological model potential, *Chemical Physical Letters*, 445,
-  2007, 133-139
-* A Kramida, Yu Ralchenko, J Reader, and NIST ASD Team. NIST Atomic Spectra
-  Database (ver. 5.3) [Online],
-  *National Institute of Standards and Technology*, Gaithersburg MD,
-  http://physics.nist.gov/asd
-* PJ Linstrom and WG Mallard (ed). NIST Chemistry WebBook, NIST
-  Standard Reference Database Number 69.
-  *National Institute of Standards and Technology*, Gaithersburg MD,
-  http://webbook.nist.gov/chemistry/
-* RD Johnson III (ed). NIST Chemistry WebBook, NIST Computational
-  Chemistry Comparison and Benchmark Database Release 22.
-  *National Institute of Standards and Technology*, Gaithersburg MD,
-  http://cccbdb.nist.gov/
+* List of references are available at `https://quinnreynolds.github.io/minplascalc/references/_bibliography.html <https://quinnreynolds.github.io/minplascalc/references/_bibliography.html>`_.
+* To add a reference, add a new entry to the ``docs/references/_bibliography.rst`` file.
+
+
+Science behind the code
+-----------------------
+
+A brief overview of the science behind the code is available at
+`https://quinnreynolds.github.io/minplascalc/theory/Background_Theory.html <https://quinnreynolds.github.io/minplascalc/theory/Background_Theory.html>`_.
