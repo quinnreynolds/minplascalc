@@ -2541,7 +2541,7 @@ def viscosity(mixture: "LTE") -> float:
     return 0.5 * u.k_b * mixture.T * np.sum(number_densities * bip[0])
 
 
-def electricalconductivity(mixture: "LTE") -> float:
+def electrical_conductivity(mixture: "LTE") -> float:
     r"""Electrical conductivity.
 
     Electrical conductivity, calculation per [Devoto1966]_ (eq. 29).
@@ -2604,7 +2604,7 @@ def electricalconductivity(mixture: "LTE") -> float:
     return pre_mult * sum_val
 
 
-def thermalconductivity(
+def thermal_conductivity(
     mixture: "LTE",
     rel_delta_T: float,
     DTterms_yn: bool,

@@ -28,7 +28,7 @@ class BaseSpecies:
         self.molar_mass: float
         r"""Molar mass of the species in :math:`\text{kg.mol}^{-1}`."""
 
-    def partitionfunction_total(self, V: float, T: float, dE: float) -> float:
+    def total_partition_function(self, V: float, T: float, dE: float) -> float:
         r"""Calculate the total partition function for the species.
 
         Parameters
@@ -62,11 +62,11 @@ class BaseSpecies:
         """
         return (
             V
-            * self.partitionfunction_translational(T)
-            * self.partitionfunction_internal(T, dE)
+            * self.translational_partition_function(T)
+            * self.internal_partition_function(T, dE)
         )
 
-    def partitionfunction_translational(self, T: float) -> float:
+    def translational_partition_function(self, T: float) -> float:
         r"""Calculate the volumic translational partition function.
 
         Parameters
@@ -92,7 +92,7 @@ class BaseSpecies:
             (2 * u.pi * self.molar_mass * u.k_b * T) / (u.N_a * u.h**2)
         ) ** 1.5
 
-    def partitionfunction_internal(self, T, dE):
+    def internal_partition_function(self, T, dE):
         raise NotImplementedError
 
     def internal_energy(self, T, dE):
@@ -285,7 +285,7 @@ class Monatomic(Species):
             f"Emission lines: {len(self.emission_lines)}"
         )
 
-    def partitionfunction_internal(self, T: float, dE: float) -> float:
+    def internal_partition_function(self, T: float, dE: float) -> float:
         r"""Calculate the internal partition function for an atomic species.
 
         Parameters
@@ -404,7 +404,7 @@ class Monatomic(Species):
                 # Stop summing when the ionisation energy is reached.
                 break
 
-        electronic_energy /= self.partitionfunction_internal(T, dE)
+        electronic_energy /= self.internal_partition_function(T, dE)
         return translational_energy + electronic_energy
 
 
@@ -538,7 +538,7 @@ class Diatomic(Species):
             f"Emission lines: {len(self.emission_lines)}"
         )
 
-    def partitionfunction_internal(self, T: float, dE: float) -> float:
+    def internal_partition_function(self, T: float, dE: float) -> float:
         r"""Calculate the internal partition function for a diatomic species.
 
         Parameters
@@ -839,7 +839,7 @@ class Polyatomic(Species):
             f"Emission lines: {len(self.emission_lines)}"
         )
 
-    def partitionfunction_internal(self, T: float, dE: float) -> float:
+    def internal_partition_function(self, T: float, dE: float) -> float:
         r"""Calculate the internal partition function for a polyatomic species.
 
         Parameters
@@ -1050,7 +1050,7 @@ class Electron(BaseSpecies):
         )
 
     # noinspection PyUnusedLocal
-    def partitionfunction_internal(self, T: float, dE: float) -> float:
+    def internal_partition_function(self, T: float, dE: float) -> float:
         r"""Calculate the internal partition function for an electron.
 
         Parameters

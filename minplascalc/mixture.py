@@ -22,9 +22,9 @@ class LTE:
         x0: list[float],
         T: float,
         P: float,
-        gfe_ni0: float,
-        gfe_reltol: float,
-        gfe_maxiter: int,
+        gfe_initial_number_particle: float,
+        gfe_rtol: float,
+        gfe_max_iter: int,
     ):
         r"""Local Thermodynamic Equilibrium (LTE) plasma mixture object.
 
@@ -46,14 +46,14 @@ class LTE:
             LTE plasma temperature, in :math:`\text{K}`.
         P : float
             LTE plasma pressure, in :math:`\text{Pa}`.
-        gfe_ni0 : float
+        gfe_initial_number_particle : float
             Gibbs Free Energy minimiser solution control: Starting estimate for
             number of particles of each species. Typically O(1e20).
-        gfe_reltol : float
+        gfe_rtol : float
             Gibbs Free Energy minimiser solution control: Relative tolerance at
             which solution for particle numbers is considered converged.
             Typically O(1e-10).
-        gfe_maxiter : int
+        gfe_max_iter : int
             Gibbs Free Energy minimiser solution control: Bailout loop count
             value for iterative solver. Typically O(1e3).
 
@@ -81,9 +81,9 @@ class LTE:
         self.x0 = x0
         self.T = T
         self.P = P
-        self.gfe_ni0 = gfe_ni0
-        self.gfe_reltol = gfe_reltol
-        self.gfe_maxiter = gfe_maxiter
+        self.gfe_initial_number_particle = gfe_initial_number_particle
+        self.gfe_rtol = gfe_rtol
+        self.gfe_max_iter = gfe_max_iter
 
         self.__isLTE = (
             False  # Flag to indicate if LTE composition has been calculated.
@@ -143,8 +143,8 @@ class LTE:
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(species={self.species},"
-            f"x0={self.x0},T={self.T},P={self.P},gfe_ni0={self.gfe_ni0},"
-            f"gfe_reltol={self.gfe_reltol},gfe_maxiter={self.gfe_maxiter})"
+            f"x0={self.x0},T={self.T},P={self.P},gfe_initial_number_particle={self.gfe_initial_number_particle},"
+            f"gfe_rtol={self.gfe_rtol},gfe_max_iter={self.gfe_max_iter})"
         )
 
     def __str__(self):
@@ -155,7 +155,7 @@ class LTE:
             f"Temperature: {self.T} K\nPressure: {self.P} Pa"
         )
 
-    def __recalcE0i(self) -> tuple[np.ndarray, np.ndarray]:
+    def __get_reference_energies(self) -> tuple[np.ndarray, np.ndarray]:
         r"""Calculate the reference energy values for all species.
 
         Calculate the reference energy values for all species, including
@@ -508,7 +508,7 @@ class LTE:
         # Initialise the number of particles of each species.
         # The estimate is the same for all species, and is given by the user.
         # It is typically O(1e20).
-        self.__Ni = np.full(nb_species, self.gfe_ni0)
+        self.__Ni = np.full(nb_species, self.gfe_initial_number_particle)
 
         # Minimise the Gibbs free energy.
         # The minimisation is done iteratively, with a relaxation factor to
@@ -528,13 +528,13 @@ class LTE:
                 governor_iters
             ]  # Relaxation factor.
             relative_tolerance = (
-                self.gfe_reltol * 10
+                self.gfe_rtol * 10
             )  # Initial relative tolerance.
             minimiser_iters = 0  # Iteration counter for the minimiser.
 
-            while relative_tolerance > self.gfe_reltol:
+            while relative_tolerance > self.gfe_rtol:
                 # Calculate reference energy and ionisation energy lowering.
-                self.__E0, self.__dE = self.__recalcE0i()
+                self.__E0, self.__dE = self.__get_reference_energies()
                 N_tot = (
                     self.__Ni.sum()
                 )  # Total number of particles in the plasma.
@@ -554,7 +554,7 @@ class LTE:
 
                 # Calculate the total partition function of each species.
                 total = [
-                    species.partitionfunction_total(V, self.T, dE)
+                    species.total_partition_function(V, self.T, dE)
                     for species, dE in zip(self.species, self.__dE)
                 ]
 
@@ -601,7 +601,7 @@ class LTE:
                 ) * self.__Ni + relaxation_factor * new_Ni
 
                 minimiser_iters += 1
-                if minimiser_iters > self.gfe_maxiter:
+                if minimiser_iters > self.gfe_max_iter:
                     minimiser_success = False
                     break
             governor_iters += 1
@@ -864,7 +864,7 @@ class LTE:
         float
             Thermal conductivity, in :math:`\text{W.m}^{-1}.\text{K}^{-1}`.
         """
-        return functions_transport.thermalconductivity(
+        return functions_transport.thermal_conductivity(
             self, rel_delta_T, DTterms_yn, ni_limit
         )
 
@@ -878,7 +878,7 @@ class LTE:
         float
             Electrical conductivity, in :math:`\text{S.m}^{-1}`.
         """
-        return functions_transport.electricalconductivity(self)
+        return functions_transport.electrical_conductivity(self)
 
     def calculate_total_emission_coefficient(self) -> float:
         r"""Calculate the LTE total emission coefficient of the plasma.
