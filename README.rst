@@ -31,7 +31,7 @@ Quick start
 Documentation
 -------------
 
-A full set of documentation is available at
+A full set of documentation is available online at
 `https://quinnreynolds.github.io/minplascalc/ <https://quinnreynolds.github.io/minplascalc/>`_.
 
 
@@ -59,8 +59,11 @@ Before pushing to GitHub, run the following commands:
 2. Run quality assurance checks (code linting) checks with ``just qa``.
 3. Run type checks with ``just type-check``.
 4. Run unit tests with ``just unit-tests``.
-5. (macOs and Linux) Build the documentation with ``just docs-build``.
-5. (Windows) Build the documentation with ``just docs-build-windows``.
+5. Build the documentation with 
+
+  * (macOs and Linux) ``just docs-build``.
+
+  * (Windows) ``just docs-build-windows``.
 
 
 Contribution guidelines
@@ -80,7 +83,7 @@ Who do I talk to?
 References
 ----------
 
-* List of references are available at `https://quinnreynolds.github.io/minplascalc/references/_bibliography.html <https://quinnreynolds.github.io/minplascalc/references/_bibliography.html>`_.
+* List of references are available at `the reference section <https://quinnreynolds.github.io/minplascalc/references/_bibliography.html>`_.
 * To add a reference, add a new entry to the ``docs/references/_bibliography.rst`` file.
 
 
@@ -88,4 +91,4 @@ Science behind the code
 -----------------------
 
 A brief overview of the science behind the code is available at
-`https://quinnreynolds.github.io/minplascalc/theory/Background_Theory.html <https://quinnreynolds.github.io/minplascalc/theory/Background_Theory.html>`_.
+`the Background/Theory section <https://quinnreynolds.github.io/minplascalc/theory/Background_Theory.html>`_.
