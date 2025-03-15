@@ -109,7 +109,9 @@ class Species(BaseSpecies):
         polarisability: float,
         multiplicity: float,
         effective_electrons: float | None,
-        electron_cross_section: float | tuple[float, float, float, float] | None,
+        electron_cross_section: float
+        | tuple[float, float, float, float]
+        | None,
         emission_lines: list[tuple[float, float, float]],
     ):
         r"""Heavy particle base class.
@@ -134,7 +136,7 @@ class Species(BaseSpecies):
         effective_electrons : float | None
             Effective number of electrons in valence shell,
             per eq.6 of [Cambi1991]_ (only required for neutral species).
-        electron_cross_section : float | tuple[float, float, float, float] | None
+        electron_cross_section : float | tuple[float, ...] | None
             Cross section for elastic electron collisions, in math:`\text{m}^2`
             (only required for neutral species).
             Either a single constant value, or a 4-tuple of empirical
@@ -190,7 +192,9 @@ class Monatomic(Species):
         polarisability: float,
         multiplicity: float,
         effective_electrons: float | None,
-        electron_cross_section: float | tuple[float, float, float, float] | None,
+        electron_cross_section: float
+        | tuple[float, float, float, float]
+        | None,
         emission_lines: list[tuple[float, float, float]],
         sources: list[str],
     ):
@@ -221,7 +225,7 @@ class Monatomic(Species):
             Effective number of electrons in valence shell, per eq.6 of
             [Cambi1991]_ (only required for neutral species).
             Could be None if not available.
-        electron_cross_section : float | tuple[float, float, float, float] | None
+        electron_cross_section : float | tuple[float, ...] | None
             Cross section for elastic electron collisions, in math:`\text{m}^2`
             (only required for neutral species).
             Either a single constant value, or a 4-tuple of empirical fitting
@@ -424,7 +428,9 @@ class Diatomic(Species):
         polarisability: float,
         multiplicity: float,
         effective_electrons: float | None,
-        electron_cross_section: float | tuple[float, float, float, float] | None,
+        electron_cross_section: float
+        | tuple[float, float, float, float]
+        | None,
         emission_lines: list[tuple[float, float, float]],
         sources: list[str],
     ):
@@ -464,7 +470,7 @@ class Diatomic(Species):
         effective_electrons : float | None
             Effective number of electrons, in valence shell, per eq.6 of
             [Cambi1991]_ (only required for neutral species)
-        electron_cross_section : float | tuple[float, float, float, float] | None
+        electron_cross_section : float | tuple[float, ...] | None
             Cross section for elastic electron collisions, in math:`\text{m}^2`
             (only required for neutral species).
             Either a single constant value, or a 4-tuple of empirical fitting
@@ -720,7 +726,9 @@ class Polyatomic(Species):
         polarisability: float,
         multiplicity: float,
         effective_electrons: float | None,
-        electron_cross_section: float | tuple[float, float, float, float] | None,
+        electron_cross_section: float
+        | tuple[float, float, float, float]
+        | None,
         emission_lines: list[tuple[float, float, float]],
         sources: list[str],
     ):
@@ -764,7 +772,7 @@ class Polyatomic(Species):
         effective_electrons : float | None
             Effective number of electrons in valence shell, per eq.6 of
             [Cambi1991]_ (only required for neutral species)
-        electron_cross_section : float | tuple[float, float, float, float] | None
+        electron_cross_section : float | tuple[float, ...] | None
             Cross section for elastic electron collisions, in math:`\text{m}^2`
             (only required for neutral species).
             Either a single constant value, or a 4-tuple of empirical fitting

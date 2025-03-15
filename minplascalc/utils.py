@@ -17,8 +17,8 @@ def get_root() -> Path:
 
     Examples
     --------
-        >>> from minplascalc.utils import get_root
-        >>> path = get_root() / "data"
+    >>> from minplascalc.utils import get_root
+    >>> path = get_root() / "data"
     """
     return ROOT_FOLDER_PATH
 
@@ -40,9 +40,9 @@ def get_path_to_data(*paths: str, force_return: bool = False) -> Path:
 
     Examples
     --------
-        >>> from minplascalc.utils import get_path_to_data
-        >>> path = get_path_to_data()
-        >>> path = get_path_to_data("demo", "nist", "nist_Oplus_emission_lines")
+    >>> from minplascalc.utils import get_path_to_data
+    >>> path = get_path_to_data()
+    >>> path = get_path_to_data("demo", "nist", "nist_Oplus_emission_lines")
 
     Raises
     ------
