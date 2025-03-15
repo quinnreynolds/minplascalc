@@ -1,7 +1,7 @@
 README
 ======
 
-.. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/test.yaml/badge.svg
+.. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/on-push.yaml/badge.svg
     :target: https://github.com/quinnreynolds/minplascalc/actions
 
 A simple set of tools in Python 3 for doing calculations of thermal plasma
@@ -9,23 +9,53 @@ compositions relevant to metallurgical problems.
 
 *Quinn Reynolds, MINTEK Pyrometallurgy Division, 2018-present*
 
+
 What is this repository for?
 ----------------------------
 
 * You're here because you want to calculate plasma compositions,
   thermodynamics, and physical and radiative properties. This package will
   do most of those things for LTE plasmas, to varying degrees of fidelity.
-* Version 0.x alpha
+* Version 0.7.0 alpha
 
-How do I get set up?
---------------------
 
-* Getting started: Clone the repo. You'll get the package and some
-  test drivers.
-* We use `uv <https://docs.astral.sh/uv/>`_. You will need to install it before proceeding.
-* Run ``uv sync`` to create a virtual environment at ``.venv`` with the necessary
-  dependencies.
-* How to run tests: simply run ``uv run pytest`` in the root directory.
+Quick start
+-----------
+
+* Simply install the package with ``pip install minplascalc``.
+* You should now be able to run the example scripts in the ``examples``
+  directory.
+* The package is still in development, so expect bugs and changes.
+
+
+Documentation
+-------------
+
+A full set of documentation is available at
+`https://quinnreynolds.github.io/minplascalc/ <https://quinnreynolds.github.io/minplascalc/>`_.
+
+
+Workflow for developers/contributors
+------------------------------------
+
+* First, clone the repository. You'll get the package and some test drivers.
+* Since we are using `uv <https://docs.astral.sh/uv/>`_, install it with
+  by following `instructions on their website <https://docs.astral.sh/uv/getting-started/installation/>`_.
+* Run ``uv venv --python 3.13`` to create a virtual environment at ``.venv``.
+* Activate the virtual environment with
+  * (macOs and Linux) ``source .venv/bin/activate``.
+  * (Windows) ``.venv\Scripts\activate``.
+* Run ``uv sync`` to install the necessary dependencies.
+* To test if the package is working, run ``uv run pytest``. All tests should pass.
+
+Before pushing to GitHub, run the following commands:
+
+1. Update dependencies with ``just update-env``.
+2. Run quality assurance checks (code linting) checks with ``just qa``.
+3. Run type checks with ``just type-check``.
+4. Run unit tests with ``just unit-tests``.
+5. Build the documentation with ``just docs-build``.
+
 
 Contribution guidelines
 -----------------------
@@ -34,10 +64,12 @@ Contribution guidelines
 * Code review: TBC
 * Other guidelines: TBC
 
+
 Who do I talk to?
 -----------------
 
 * quinnr@mintek.co.za
+
 
 References
 ----------

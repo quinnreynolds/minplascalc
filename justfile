@@ -1,3 +1,9 @@
+# Configure the shell to use for running commands.
+# See https://just.systems/man/en/configuring-the-shell.html
+# On Windows, use PowerShell instead of sh.
+set windows-shell := ["powershell.exe", "-c"]
+# For the other platforms, use the default shell.
+
 default: qa type-check unit-tests
 
 update-env:
