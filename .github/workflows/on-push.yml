@@ -45,6 +45,8 @@ jobs:
       run: just tests
 
   tests-cov:
+    # Does not work from a fork repository,
+    # see https://github.com/JamesIves/github-pages-deploy-action/discussions/1011.
     runs-on: ubuntu-latest
     permissions:
       contents: write  # To save the coverage report.
