@@ -1,0 +1,43 @@
+name: tests-cov
+
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - "*"
+  pull_request:
+    branches:
+    - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  tests-cov:
+    # Does not work from a fork repository,
+    # see https://github.com/JamesIves/github-pages-deploy-action/discussions/1011.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # To save the coverage report.
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install the latest version of uv.
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+    - uses: extractions/setup-just@v2
+    - name: Run tests with coverage.
+      run: just tests-cov
+    # See https://stackoverflow.com/a/75033525
+    - name: Publish coverage report to coverage-badge branch
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        branch: coverage-badge  # The branch to push the coverage report to.
+        folder: coverage
+        # The badge url is https://raw.githubusercontent.com/<USER>/<REPO>/coverage-badge/coverage.svg?raw=true
