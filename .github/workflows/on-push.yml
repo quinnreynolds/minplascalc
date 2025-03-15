@@ -46,6 +46,8 @@ jobs:
 
   tests-cov:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # To save the coverage report.
     steps:
     - uses: actions/checkout@v4
     - name: Install the latest version of uv.
