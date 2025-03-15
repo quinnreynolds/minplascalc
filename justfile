@@ -23,5 +23,7 @@ type-check:
 docs-build:
 	cd docs && rm -fr _api && mkdir -p "source/backreferences" && uv run sphinx-build -M html . _build
 
+docs-build-windows:
+	cd docs; Ls _api -recurse -ea silentlycontinue | remove-item -r -fo; md -Force "source/backreferences"; uv run sphinx-build -M html . _build
 
 # DO NOT EDIT ABOVE THIS LINE, ADD COMMANDS BELOW
