@@ -18,7 +18,7 @@ tests:
 tests-cov:
 	uv run pytest tests docs -vv --doctest-glob="*.md" --doctest-glob="*.rst"  --cov=minplascalc --cov-report=term-missing
 	mkdir -p coverage
-	coverage-badge -o coverage/coverage.svg
+	uv run coverage-badge -o coverage/coverage.svg
 
 # See https://mypy.readthedocs.io/en/stable/command_line.html for more information.
 type-check:
