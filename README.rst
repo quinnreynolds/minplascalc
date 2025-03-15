@@ -1,8 +1,8 @@
 README
 ======
 
-.. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/on-push.yaml/badge.svg
-    :target: https://github.com/quinnreynolds/minplascalc/actions
+.. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/on-push.yml/badge.svg
+    :target: https://github.com/quinnreynolds/minplascalc/actions/workflows/on-push.yml/badge.svg
 
 A simple set of tools in Python 3 for doing calculations of thermal plasma
 compositions relevant to metallurgical problems.
@@ -39,12 +39,15 @@ Workflow for developers/contributors
 ------------------------------------
 
 * First, clone the repository. You'll get the package and some test drivers.
-* Since we are using `uv <https://docs.astral.sh/uv/>`_, install it with
+* Since we are using `uv <https://docs.astral.sh/uv/>`_, install it
   by following `instructions on their website <https://docs.astral.sh/uv/getting-started/installation/>`_.
 * Run ``uv venv --python 3.13`` to create a virtual environment at ``.venv``.
 * Activate the virtual environment with
+
   * (macOs and Linux) ``source .venv/bin/activate``.
+
   * (Windows) ``.venv\Scripts\activate``.
+
 * Run ``uv sync`` to install the necessary dependencies.
 * To test if the package is working, run ``uv run pytest``. All tests should pass.
 
@@ -56,7 +59,8 @@ Before pushing to GitHub, run the following commands:
 2. Run quality assurance checks (code linting) checks with ``just qa``.
 3. Run type checks with ``just type-check``.
 4. Run unit tests with ``just unit-tests``.
-5. Build the documentation with ``just docs-build``.
+5. (macOs and Linux) Build the documentation with ``just docs-build``.
+5. (Windows) Build the documentation with ``just docs-build-windows``.
 
 
 Contribution guidelines
