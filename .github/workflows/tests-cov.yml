@@ -1,14 +1,9 @@
 name: tests-cov
 
 on:
-  push:
+  pull_request_target:
     branches:
-    - main
-    tags:
-    - "*"
-  pull_request:
-    branches:
-    - main
+      - '*'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
