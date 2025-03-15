@@ -43,7 +43,7 @@ jobs:
     - uses: extractions/setup-just@v2
     - name: Test with python ${{ matrix.python-version }}
       run: just tests
-  
+
   tests-cov:
     runs-on: ubuntu-latest
     steps:
@@ -54,7 +54,7 @@ jobs:
         version: "latest"
     - uses: extractions/setup-just@v2
     - name: Run tests with coverage.
-      run: just test-cov
+      run: just tests-cov
     # See https://stackoverflow.com/a/75033525
     - name: Publish coverage report to coverage-badge branch
       uses: JamesIves/github-pages-deploy-action@v4
