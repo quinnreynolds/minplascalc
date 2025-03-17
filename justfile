@@ -25,8 +25,7 @@ type-check:
 	uv run mypy . --exclude docs
 
 # See https://www.sphinx-doc.org/en/master/man/sphinx-build.html for more information.
-docs-build:
-	cd docs && rm -fr _api && mkdir -p "source/backreferences" && uv run sphinx-build -M html . _build
-
-docs-build-windows:
-	cd docs; Ls _api -recurse -ea silentlycontinue | remove-item -r -fo; md -Force "source/backreferences"; uv run sphinx-build -M html . _build
+[working-directory: 'docs']
+build-docs:
+    uv run python prepare_docs.py
+    uv run sphinx-build -M html . _build

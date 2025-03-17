@@ -45,17 +45,16 @@ Workflow for developers/contributors
 * First, clone the repository. You'll get the package and some test drivers.
 * Since we are using `uv <https://docs.astral.sh/uv/>`_, install it
   by following `instructions on their website <https://docs.astral.sh/uv/getting-started/installation/>`_.
-* Run ``uv venv --python 3.13`` to create a virtual environment at ``.venv``.
-* Activate the virtual environment with
+* Run ``uv sync --python 3.13`` to create a virtual environment at ``.venv``,
+  with ``python 3.13`` and all the necessary dependencies.
+* To test if the package is working, run ``uv run pytest``. All tests should pass.
+
+Next time, you just need to activate the virtual environment with
 
   * (macOs and Linux) ``source .venv/bin/activate``.
 
   * (Windows) ``.venv\Scripts\activate``.
 
-* Run ``uv sync`` to install the necessary dependencies.
-* To test if the package is working, run ``uv run pytest``. All tests should pass.
-
-Next time, you just need to activate the virtual environment.
 
 Before pushing to GitHub, run the following commands:
 
@@ -64,11 +63,7 @@ Before pushing to GitHub, run the following commands:
 3. Run type checks with ``just type-check``.
 4. Run unit tests with ``just tests``.
 5. Run unit tests with coverage and generate a badge with ``just tests-cov``.
-6. Build the documentation with
-
-  a. (macOs and Linux) ``just docs-build``.
-
-  b. (Windows) ``just docs-build-windows``.
+6. Build the documentation with ``just build-docs``.
 
 
 Contribution guidelines
