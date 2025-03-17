@@ -20,7 +20,7 @@ What is this repository for?
 * You're here because you want to calculate plasma compositions,
   thermodynamics, and physical and radiative properties. This package will
   do most of those things for LTE plasmas, to varying degrees of fidelity.
-* Version 0.7.0 alpha
+* Version `v0.7.0 <https://github.com/quinnreynolds/minplascalc/releases/latest>`
 
 
 Quick start
