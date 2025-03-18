@@ -29,7 +29,7 @@ jobs:
         version: "latest"
     - uses: pre-commit/action@v3.0.1
 
-  unit-tests:
+  tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -42,10 +42,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - uses: extractions/setup-just@v2
     - name: Test with python ${{ matrix.python-version }}
-      run: just unit-tests
+      run: just tests
 
   type-check:
-    needs: [unit-tests]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
       run: just type-check
 
   docs-build:
-    needs: [unit-tests]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
         version: "latest"
     - uses: extractions/setup-just@v2
     - name: Build the documentation.
-      run: just docs-build
+      run: just build-docs
     - uses: actions/upload-pages-artifact@v3
       with:
         path: docs/_build/html/

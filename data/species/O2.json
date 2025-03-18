@@ -3,20 +3,20 @@
     "stoichiometry": {
         "O": 2
     },
-    "molarmass": 0.031998809999999996,
-    "chargenumber": 0,
+    "molar_mass": 0.031998809999999996,
+    "charge_number": 0,
     "polarisability": 1.562e-30,
     "multiplicity": 3,
-    "effectiveelectrons": 10.5,
-    "electroncrosssection": [
+    "effective_electrons": 10.5,
+    "electron_cross_section": [
         1.6145168738170597e-37,
         9.032970140878764e-30,
         1.0259151634922097,
         1.0602453152090448e-20
     ],
-    "emissionlines": [],
-    "dissociationenergy": 8.031861414013179e-19,
-    "ionisationenergy": 1.9337798594147625e-18,
+    "emission_lines": [],
+    "dissociation_energy": 8.031861414013179e-19,
+    "ionisation_energy": 1.9337798594147625e-18,
     "sigma_s": 2,
     "g0": 3,
     "w_e": 3.138962919945119e-20,

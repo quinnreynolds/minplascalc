@@ -13,15 +13,15 @@ def monatomic_sample_species():
     return mpc.species.from_name("O+")
 
 
-def test_partitionfunction_translational(diatomic_sample_species):
+def test_translational_partition_function(diatomic_sample_species):
     partition_function = (
-        diatomic_sample_species.partitionfunction_translational(0)
+        diatomic_sample_species.translational_partition_function(0)
     )
     assert partition_function == 0
 
 
-def test_partitionfunction_internal(diatomic_sample_species):
-    partition_function = diatomic_sample_species.partitionfunction_internal(
+def test_internal_partition_function(diatomic_sample_species):
+    partition_function = diatomic_sample_species.internal_partition_function(
         300, 0
     )
     assert partition_function == pytest.approx(4.921932)

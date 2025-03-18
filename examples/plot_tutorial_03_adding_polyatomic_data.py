@@ -106,10 +106,10 @@ eV_to_joule = constants.elementary_charge
 water = mpc.species.Polyatomic(
     name="H2O",
     stoichiometry={"H": 2, "O": 1},
-    molarmass=0.0180153,
-    chargenumber=0,
-    ionisationenergy=eV_to_joule * 12.621,
-    dissociationenergy=(498.7 + 428) * 1000 / constants.Avogadro,
+    molar_mass=0.0180153,
+    charge_number=0,
+    ionisation_energy=eV_to_joule * 12.621,
+    dissociation_energy=(498.7 + 428) * 1000 / constants.Avogadro,
     linear_yn=False,
     sigma_s=2,
     g0=1,
@@ -117,9 +117,9 @@ water = mpc.species.Polyatomic(
     abc_e=list(invcm_to_joule * numpy.array([27.877, 14.512, 9.285])),
     polarisability=1.501e-30,
     multiplicity=1,
-    effectiveelectrons=7.04,
-    electroncrosssection=(9.274e-36, 41.81, -2.090, 1.066e-20),
-    emissionlines=[],
+    effective_electrons=7.04,
+    electron_cross_section=(9.274e-36, 41.81, -2.090, 1.066e-20),
+    emission_lines=[],
     sources=[
         "NIST Chemistry WebBook, NIST Standard Reference Database Number 69. "
         "PJ Linstrom and WG Mallard (Editors), "

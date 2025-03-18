@@ -38,7 +38,7 @@ Articles
 
 .. [Stewart1966] Stewart, John C. and Pyatt, Jr., Kedar D.;
   Lowering of Ionization Potentials in Plasmas
-  The Astrophysical Journal, 144, 1203, 1966
+  The Astrophysical Journal, 144, 1203-1211, 1966
   DOI: 10.1086/148714
 
 
@@ -46,9 +46,15 @@ Articles
 Books
 -----
 
+.. [Boulos1994] Boulos, Maher I. and Fauchais, Pierre L. and Pfender, Emil. Thermal Plasmas: Fundamentals and
+  Applications Volume 1, Plenum Press, New York NY, 1994
+
 .. [Boulos2023] Boulos, Maher I. and Fauchais, Pierre L. and Pfender, Emil. Handbook of
   Thermal Plasmas, Springer International Publishing, Cham, 2023, ISBN 978-3-030-84934-4,
   978-3-030-84936-8, DOI 10.1007/978-3-030-84936-8
+
+.. [Chapman1970] S Chapman and TG Cowling. The Mathematical Theory of Non-Uniform Gases
+  3\ :sup:`ed`\, *Cambridge University Press*, Cambridge, United Kingdom, 1970
 
 .. [NRL2019] NRL Plasma Formulary, 2019, A. S. Richardson, Pulsed Power Physics Branch,
   Plasma Physics Division, Naval Research Laboratory,  Washington, DC 20375
@@ -56,17 +62,28 @@ Books
 Code
 ----
 
+Lectures
+--------
+
+Online resources
+----------------
+
 .. [NIST_ASD] Kramida, A., Ralchenko, Yu., Reader, J. and NIST ASD Team (2024).
   NIST Atomic Spectra Database (version 5.12), [Online].
   Available: https://physics.nist.gov/asd [Thu Feb 13 2025].
   National Institute of Standards and Technology, Gaithersburg, MD.
   DOI: https://doi.org/10.18434/T4W30F
 
-Lectures
---------
+.. [NIST_SRD] P.J. Linstrom and W.G. Mallard, Eds., NIST Chemistry WebBook,
+  NIST Standard Reference Database Number 69,
+  National Institute of Standards and Technology, Gaithersburg MD, 20899,
+  DOI: https://doi.org/10.18434/T4D303, (accessed 15/03/2025)
 
-Online resources
-----------------
+.. [NIST_CCCBDB] NIST Computational Chemistry Comparison and Benchmark Database,
+  NIST Standard Reference Database Number 101
+  Release 22, May 2022, Editor: Russell D. Johnson III
+  http://cccbdb.nist.gov/  (accessed 15/03/2025)
+
 
 Thesis
 ------

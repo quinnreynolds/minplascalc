@@ -1,4 +1,4 @@
-__all__ = ["nist_string", "nist_energylevels"]
+__all__ = ["nist_string", "nist_energy_levels"]
 
 
 def nist_string(nist_line: str) -> list[float]:
@@ -40,7 +40,7 @@ def nist_string(nist_line: str) -> list[float]:
     return values
 
 
-def nist_energylevels(data: list[str]) -> list[tuple[float, float]]:
+def nist_energy_levels(data: list[str]) -> list[tuple[float, float]]:
     """Parse a list of atomic energy level data in NIST online database format.
 
     Parameters

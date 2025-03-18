@@ -110,23 +110,23 @@ def total_emission_coefficient(mix: "LTE") -> float:
     total_emission_coefficient = 0.0
 
     # Calculate the pre-constant of the emission line.
-    line_preconst = u.h * u.c / (4 * u.pi)
+    line_pre_constant = u.h * u.c / (4 * u.pi)
 
     # Iterate over species and their number densities
     for nv, species in zip(nd[:-1], mix.species[:-1]):
         # Calculate the internal partition function of the species at the given
         # temperature.
-        Qi = species.partitionfunction_internal(mix.T, 0)
+        Qi = species.internal_partition_function(mix.T, 0)
 
         # Iterate over emission lines of the species.
-        for emission_line in species.emissionlines:
+        for emission_line in species.emission_lines:
             # Extract wavelength, Einstein coefficient, and lower state energy
             # of the emission line.
             wavele, gA, Ek = emission_line
             # Calculate the contribution of this emission line to the total
             # emission coefficient.
             total_emission_coefficient += (
-                line_preconst
+                line_pre_constant
                 * nv
                 * gA
                 * numpy.exp(-Ek / (u.k_b * mix.T))
