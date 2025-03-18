@@ -22,7 +22,7 @@ class LTE:
         x0: list[float],
         T: float,
         P: float,
-        gfe_initial_number_particle: float,
+        gfe_initial_particles: float,
         gfe_rtol: float,
         gfe_max_iter: int,
     ):
@@ -46,7 +46,7 @@ class LTE:
             LTE plasma temperature, in :math:`\text{K}`.
         P : float
             LTE plasma pressure, in :math:`\text{Pa}`.
-        gfe_initial_number_particle : float
+        gfe_initial_particles : float
             Gibbs Free Energy minimiser solution control: Starting estimate for
             number of particles of each species. Typically O(1e20).
         gfe_rtol : float
@@ -81,7 +81,7 @@ class LTE:
         self.x0 = x0
         self.T = T
         self.P = P
-        self.gfe_initial_number_particle = gfe_initial_number_particle
+        self.gfe_initial_particles = gfe_initial_particles
         self.gfe_rtol = gfe_rtol
         self.gfe_max_iter = gfe_max_iter
 
@@ -143,7 +143,7 @@ class LTE:
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(species={self.species},"
-            f"x0={self.x0},T={self.T},P={self.P},gfe_initial_number_particle={self.gfe_initial_number_particle},"
+            f"x0={self.x0},T={self.T},P={self.P},gfe_initial_particles={self.gfe_initial_particles},"
             f"gfe_rtol={self.gfe_rtol},gfe_max_iter={self.gfe_max_iter})"
         )
 
@@ -508,7 +508,7 @@ class LTE:
         # Initialise the number of particles of each species.
         # The estimate is the same for all species, and is given by the user.
         # It is typically O(1e20).
-        self.__Ni = np.full(nb_species, self.gfe_initial_number_particle)
+        self.__Ni = np.full(nb_species, self.gfe_initial_particles)
 
         # Minimise the Gibbs free energy.
         # The minimisation is done iteratively, with a relaxation factor to
