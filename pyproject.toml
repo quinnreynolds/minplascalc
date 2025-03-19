@@ -54,7 +54,7 @@ requires-python = ">=3.11"
 urls = {"Homepage" = "https://github.com/quinnreynolds/minplascalc"}
 
 [tool.hatch.build.targets.sdist]
-include = ["minplascalc/data/*/*.json"]
+include = ["data/*/*.json"]
 
 [tool.hatch.build.targets.wheel]
 packages = [
