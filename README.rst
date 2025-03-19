@@ -4,8 +4,8 @@ README
 .. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/on-push.yml/badge.svg
     :target: https://github.com/quinnreynolds/minplascalc/actions/workflows/on-push.yml/badge.svg
 
-.. image:: https://raw.githubusercontent.com/quinnreynolds/minplascalc/coverage/coverage.svg?raw=true
-    :target: https://raw.githubusercontent.com/quinnreynolds/minplascalc/coverage/coverage.svg?raw=true
+.. image:: https://raw.githubusercontent.com/quinnreynolds/minplascalc/coverage-badge/coverage.svg?raw=true
+    :target: https://raw.githubusercontent.com/quinnreynolds/minplascalc/coverage-badge/coverage.svg?raw=true
 
 
 A simple set of tools in Python 3 for doing calculations of thermal plasma
