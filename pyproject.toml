@@ -56,13 +56,13 @@ urls = {"Homepage" = "https://github.com/quinnreynolds/minplascalc"}
 [tool.hatch.build.targets.sdist]
 include = [
   "minplascalc/*.py",
-  "data/*/*.json"
+  "minplascalc/data/*/*.json",
+  "minplascalc/data/demo/nist/*"
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-  "minplascalc",
-  "data"
+  "minplascalc"
 ]
 
 [tool.hatch.metadata]
