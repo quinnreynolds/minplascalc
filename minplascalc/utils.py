@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-ROOT_FOLDER_PATH = Path(__file__).parent.parent
+ROOT_FOLDER_PATH = Path(__file__).parent
 
 
 def get_root() -> Path:

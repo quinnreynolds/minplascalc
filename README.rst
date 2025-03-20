@@ -4,8 +4,8 @@ README
 .. image:: https://github.com/quinnreynolds/minplascalc/actions/workflows/on-push.yml/badge.svg
     :target: https://github.com/quinnreynolds/minplascalc/actions/workflows/on-push.yml/badge.svg
 
-.. image:: https://raw.githubusercontent.com/quinnreynolds/minplascalc/coverage/coverage.svg?raw=true
-    :target: https://raw.githubusercontent.com/quinnreynolds/minplascalc/coverage/coverage.svg?raw=true
+.. image:: https://raw.githubusercontent.com/quinnreynolds/minplascalc/coverage-badge/coverage.svg?raw=true
+    :target: https://raw.githubusercontent.com/quinnreynolds/minplascalc/coverage-badge/coverage.svg?raw=true
 
 
 A simple set of tools in Python 3 for doing calculations of thermal plasma
@@ -20,7 +20,7 @@ What is this repository for?
 * You're here because you want to calculate plasma compositions,
   thermodynamics, and physical and radiative properties. This package will
   do most of those things for LTE plasmas, to varying degrees of fidelity.
-* Version `v1.0.0 <https://github.com/quinnreynolds/minplascalc/releases/latest>`_.
+* Version `v1.0.1 <https://github.com/quinnreynolds/minplascalc/releases/latest>`_.
 
 
 Quick start

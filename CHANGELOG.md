@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [1.0.1] - 2025-03-20
+
+### Fixed
+
+- `pip install minplascalc` was not working for version 0.7.0 and 1.0.0.
+  Update the `[tool.hatch.build.targets.sdist]` section in `pyproject.toml` and move data back into the package ([#73](https://github.com/quinnreynolds/minplascalc/issues/73)).
+
 ## [1.0.0] - 2025-03-18
 
 ### Added
