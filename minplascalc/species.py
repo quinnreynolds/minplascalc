@@ -188,7 +188,7 @@ class Monatomic(Species):
         molar_mass: float,
         charge_number: int,
         ionisation_energy: float,
-        energylevels: list[tuple[float, float]],
+        energy_levels: list[tuple[float, float]],
         polarisability: float,
         multiplicity: float,
         effective_electrons: float | None,
@@ -213,7 +213,7 @@ class Monatomic(Species):
             Charge on the species (in integer units of the fundamental charge).
         ionisation_energy : float
             Ionisation energy of the species, in :math:`\text{J}`.
-        energylevels : list[tuple[float, float]]
+        energy_levels : list[tuple[float, float]]
             Atomic energy level data - each entry in the list contains a pair
             of values giving the level's quantum number and its energy
             respectively, with energy in :math:`\text{J}`.
@@ -253,7 +253,7 @@ class Monatomic(Species):
         )
 
         self.ionisation_energy = ionisation_energy
-        self.energylevels = deepcopy(energylevels)
+        self.energy_levels = deepcopy(energy_levels)
         self.sources = deepcopy(sources)
 
     def __repr__(self):
@@ -262,7 +262,7 @@ class Monatomic(Species):
             f"stoichiometry={self.stoichiometry},"
             f"molar_mass={self.molar_mass},charge_number={self.charge_number},"
             f"ionisation_energy={self.ionisation_energy},"
-            f"energylevels={self.energylevels},"
+            f"energy_levels={self.energy_levels},"
             f"polarisability={self.polarisability},"
             f"multiplicity={self.multiplicity},"
             f"effective_electrons={self.effective_electrons},"
@@ -281,7 +281,7 @@ class Monatomic(Species):
             f"Molar mass: {self.molar_mass} kg/mol\n"
             f"Charge number: {self.charge_number}\n"
             f"Ionisation energy: {self.ionisation_energy} J\n"
-            f"Energy levels: {len(self.energylevels)}\n"
+            f"Energy levels: {len(self.energy_levels)}\n"
             f"Polarisability: {self.polarisability} m^3\n"
             f"Multiplicity: {self.multiplicity}\n"
             f"Effective valence electrons: {self.effective_electrons}\n"
@@ -336,7 +336,7 @@ class Monatomic(Species):
         # Calculate the electronic partition function.
         electron_partition_function = 0.0
 
-        for J_i, E_i in self.energylevels:
+        for J_i, E_i in self.energy_levels:
             if E_i < (self.ionisation_energy - dE):
                 # Only include energy levels below the ionisation energy.
                 g_i = 2 * J_i + 1  # Degeneracy of the energy level.
@@ -399,7 +399,7 @@ class Monatomic(Species):
 
         # Calculate the electronic energy.
         electronic_energy = 0.0
-        for J_i, E_i in self.energylevels:
+        for J_i, E_i in self.energy_levels:
             if E_i < (self.ionisation_energy - dE):
                 # Only include energy levels below the ionisation energy.
                 g_i = 2 * J_i + 1  # Degeneracy of the energy level.
@@ -1162,7 +1162,7 @@ def from_file(datafile: str | Path) -> Monatomic | Diatomic | Polyatomic:
             species_data["molar_mass"],
             species_data["charge_number"],
             species_data["ionisation_energy"],
-            species_data["energylevels"],
+            species_data["energy_levels"],
             species_data["polarisability"],
             species_data["multiplicity"],
             species_data["effective_electrons"],
