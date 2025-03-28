@@ -11,7 +11,7 @@
     "electron_cross_section": null,
     "emission_lines": [],
     "ionisation_energy": 2.340780062274e-19,
-    "energylevels": [
+    "energy_levels": [
         [
             0.5,
             0
