@@ -55,25 +55,20 @@ urls = {"Homepage" = "https://github.com/quinnreynolds/minplascalc"}
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "minplascalc/*.py",
-  "minplascalc/data/*/*.json",
-  "minplascalc/data/demo/nist/*"
+  "src/minplascalc/*.py",
+  "src/minplascalc/data/*/*.json",
+  "src/minplascalc/data/demo/nist/*"
 ]
-
-[tool.hatch.build.targets.wheel]
-packages = [
-  "minplascalc"
-]
+packages = ["src/minplascalc"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.version]
-path = "minplascalc/__init__.py"
+path = "src/minplascalc/__init__.py"
 
 [tool.ruff]
 indent-width = 4
-# See https://github.com/quinnreynolds/minplascalc/pull/66#discussion_r1986715810
 line-length = 79
 
 [tool.ruff.lint]
@@ -95,8 +90,8 @@ select = [
 ]
 
 [tool.ruff.lint.pycodestyle]
-# See https://github.com/quinnreynolds/minplascalc/pull/66#discussion_r1986715810
 max-line-length = 79
 
 [tool.ruff.lint.pydocstyle]
-convention = "numpy"  # See https://numpydoc.readthedocs.io/en/latest/format.html
+# See https://numpydoc.readthedocs.io/en/latest/format.html
+convention = "numpy"
