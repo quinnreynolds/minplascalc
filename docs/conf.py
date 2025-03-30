@@ -54,7 +54,7 @@ autodoc_inherit_docstrings = False  # https://www.sphinx-doc.org/en/master/usage
 # autodoc_typehints = "both"  # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#confval-autodoc_typehints
 
 # autoapi configuration
-autoapi_dirs = ["../minplascalc"]
+autoapi_dirs = ["../src/minplascalc"]
 autoapi_ignore = ["*/version.py"]
 autoapi_options = [  # https://sphinx-autoapi.readthedocs.io/en/latest/reference/config.html#confval-autoapi_options
     "members",
