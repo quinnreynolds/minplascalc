@@ -2356,6 +2356,31 @@ def qhat(mixture: "LTE") -> np.ndarray:
     Q24 = Qij_mix(mixture, 2, 4)
     Q33 = Qij_mix(mixture, 3, 3)
 
+    qhat00 = qhat00_jit(Q11, Q22, masses, nb_species, number_densities)
+
+    qhat01 = qhat01_jit(
+        Q11, Q12, Q22, Q23, masses, nb_species, number_densities
+    )
+
+    qhat11 = qhat11_jit(
+        Q11, Q12, Q13, Q22, Q23, Q24, Q33, masses, nb_species, number_densities
+    )
+
+    # Equation A21 of [Devoto1966]_.
+    qhat10 = masses[np.newaxis, :] / masses[:, np.newaxis] * qhat01
+
+    qq = np.block(
+        [
+            [qhat00, qhat01],
+            [qhat10, qhat11],
+        ]
+    )
+
+    return qq
+
+
+@njit
+def qhat00_jit(Q11, Q22, masses, nb_species, number_densities):
     # Equation A19 of [Devoto1966]_.
     qhat00 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -2374,7 +2399,11 @@ def qhat(mixture: "LTE") -> np.ndarray:
             qhat00[i, j] = (
                 8 * number_densities[i] * (masses[i] / masses[j]) * sumval
             )
+    return qhat00
 
+
+@njit
+def qhat01_jit(Q11, Q12, Q22, Q23, masses, nb_species, number_densities):
     # Equation A20 of [Devoto1966]_.
     qhat01 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -2395,7 +2424,13 @@ def qhat(mixture: "LTE") -> np.ndarray:
             qhat01[i, j] = (
                 8 * number_densities[i] * (masses[i] / masses[j]) ** 2 * sumval
             )
+    return qhat01
 
+
+@njit
+def qhat11_jit(
+    Q11, Q12, Q13, Q22, Q23, Q24, Q33, masses, nb_species, number_densities
+):
     # Equation A22 of [Devoto1966]_.
     qhat11 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -2425,18 +2460,7 @@ def qhat(mixture: "LTE") -> np.ndarray:
             qhat11[i, j] = (
                 8 * number_densities[i] * (masses[i] / masses[j]) ** 2 * sumval
             )
-
-    # Equation A21 of [Devoto1966]_.
-    qhat10 = masses[np.newaxis, :] / masses[:, np.newaxis] * qhat01
-
-    qq = np.block(
-        [
-            [qhat00, qhat01],
-            [qhat10, qhat11],
-        ]
-    )
-
-    return qq
+    return qhat11
 
 
 ### Transport property calculations ###########################################
