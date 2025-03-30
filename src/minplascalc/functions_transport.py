@@ -2427,10 +2427,7 @@ def qhat(mixture: "LTE") -> np.ndarray:
             )
 
     # Equation A21 of [Devoto1966]_.
-    qhat10 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            qhat10[i, j] = masses[j] / masses[i] * qhat01[i, j]
+    qhat10 = masses[np.newaxis, :] / masses[:, np.newaxis] * qhat01
 
     qq = np.block(
         [
