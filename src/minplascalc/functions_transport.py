@@ -2422,14 +2422,12 @@ def DTi(mixture: "LTE") -> float:
     masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
 
     qq = q(mixture)
-
-    inverse_q = np.linalg.inv(qq)
     b_vec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
     # Only the first element is non-zero
     b_vec[nb_species : 2 * nb_species] = (
         -15 / 2 * np.sqrt(np.pi) * number_densities
     )
-    aflat = inverse_q.dot(b_vec)
+    aflat = np.linalg.solve(qq, b_vec)
     aip = aflat.reshape(4, nb_species)
 
     return (
@@ -2499,14 +2497,13 @@ def viscosity(mixture: "LTE") -> float:
 
     qqhat = qhat(mixture)
 
-    inverse_qhat = np.linalg.inv(qqhat)
     b_vec = np.zeros(2 * nb_species)  # 2 for 2nd order approximation
     b_vec[:nb_species] = (
         5
         * number_densities
         * np.sqrt(2 * np.pi * masses / (u.k_b * mixture.T))
     )
-    bflat = inverse_qhat.dot(b_vec)
+    bflat = np.linalg.solve(qqhat, b_vec)
     bip = bflat.reshape(2, nb_species)
 
     return 0.5 * u.k_b * mixture.T * np.sum(number_densities * bip[0])
@@ -2707,12 +2704,11 @@ def thermal_conductivity(
     # Solve equation 5 of [Devoto1966]_ to get the `a` matrix.
     qq = q(mixture)
 
-    inverse_q = np.linalg.inv(qq)
     b_vec = np.zeros(4 * nb_species)
     b_vec[nb_species : 2 * nb_species] = (
         -15 / 2 * np.sqrt(np.pi) * number_densities
     )
-    aflat = inverse_q.dot(b_vec)
+    aflat = np.linalg.solve(qq, b_vec)
     aip = aflat.reshape(4, nb_species)
     # Equation 13 of [Devoto1966]_.
     k_dash = (
