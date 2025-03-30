@@ -3,9 +3,9 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numba import njit
-from scipy import constants  # type: ignore
-from scipy.special import gamma  # type: ignore
+from numba import njit  # type: ignore[import-untyped]
+from scipy import constants  # type: ignore[import-untyped]
+from scipy.special import gamma  # type: ignore[import-untyped]
 
 from minplascalc import units as u
 
