@@ -2432,20 +2432,11 @@ def qhat(mixture: "LTE") -> np.ndarray:
         for j in range(nb_species):
             qhat10[i, j] = masses[j] / masses[i] * qhat01[i, j]
 
-    qq = np.zeros((2 * nb_species, 2 * nb_species))
-
-    qq[0 * nb_species : 1 * nb_species, 0 * nb_species : 1 * nb_species] = (
-        qhat00
-    )
-    qq[0 * nb_species : 1 * nb_species, 1 * nb_species : 2 * nb_species] = (
-        qhat01
-    )
-
-    qq[1 * nb_species : 2 * nb_species, 0 * nb_species : 1 * nb_species] = (
-        qhat10
-    )
-    qq[1 * nb_species : 2 * nb_species, 1 * nb_species : 2 * nb_species] = (
-        qhat11
+    qq = np.block(
+        [
+            [qhat00, qhat01],
+            [qhat10, qhat11],
+        ]
     )
 
     return qq
