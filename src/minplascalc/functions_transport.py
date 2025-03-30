@@ -2105,41 +2105,25 @@ def q(mixture: "LTE") -> np.ndarray:
                 * sumval
             )
 
+    mass_ratio = masses[np.newaxis, :] / masses[:, np.newaxis]
+
     # Equation A5 of [Devoto1966]_.
-    q10 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            q10[i, j] = masses[j] / masses[i] * q01[i, j]
+    q10 = mass_ratio * q01
 
     # Equation A8 of [Devoto1966]_.
-    q20 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            q20[i, j] = (masses[j] / masses[i]) ** 2 * q02[i, j]
+    q20 = mass_ratio**2 * q02
 
     # Equation A10 of [Devoto1966]_.
-    q21 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            q21[i, j] = masses[j] / masses[i] * q12[i, j]
+    q21 = mass_ratio * q12
 
     # Equation A13 of [Devoto1966]_.
-    q30 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            q30[i, j] = (masses[j] / masses[i]) ** 3 * q03[i, j]
+    q30 = mass_ratio**3 * q03
 
     # Equation A15 of [Devoto1966]_.
-    q31 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            q31[i, j] = (masses[j] / masses[i]) ** 2 * q13[i, j]
+    q31 = mass_ratio**2 * q13
 
     # Equation A17 of [Devoto1966]_.
-    q32 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            q32[i, j] = masses[j] / masses[i] * q23[i, j]
+    q32 = mass_ratio * q23
 
     # Combine the q-matrix elements into a single matrix.
     qq = np.block(
