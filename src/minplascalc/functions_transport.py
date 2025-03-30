@@ -2142,27 +2142,14 @@ def q(mixture: "LTE") -> np.ndarray:
             q32[i, j] = masses[j] / masses[i] * q23[i, j]
 
     # Combine the q-matrix elements into a single matrix.
-    qq = np.zeros((4 * nb_species, 4 * nb_species))
-
-    qq[0 * nb_species : 1 * nb_species, 0 * nb_species : 1 * nb_species] = q00
-    qq[0 * nb_species : 1 * nb_species, 1 * nb_species : 2 * nb_species] = q01
-    qq[0 * nb_species : 1 * nb_species, 2 * nb_species : 3 * nb_species] = q02
-    qq[0 * nb_species : 1 * nb_species, 3 * nb_species : 4 * nb_species] = q03
-
-    qq[1 * nb_species : 2 * nb_species, 0 * nb_species : 1 * nb_species] = q10
-    qq[1 * nb_species : 2 * nb_species, 1 * nb_species : 2 * nb_species] = q11
-    qq[1 * nb_species : 2 * nb_species, 2 * nb_species : 3 * nb_species] = q12
-    qq[1 * nb_species : 2 * nb_species, 3 * nb_species : 4 * nb_species] = q13
-
-    qq[2 * nb_species : 3 * nb_species, 0 * nb_species : 1 * nb_species] = q20
-    qq[2 * nb_species : 3 * nb_species, 1 * nb_species : 2 * nb_species] = q21
-    qq[2 * nb_species : 3 * nb_species, 2 * nb_species : 3 * nb_species] = q22
-    qq[2 * nb_species : 3 * nb_species, 3 * nb_species : 4 * nb_species] = q23
-
-    qq[3 * nb_species : 4 * nb_species, 0 * nb_species : 1 * nb_species] = q30
-    qq[3 * nb_species : 4 * nb_species, 1 * nb_species : 2 * nb_species] = q31
-    qq[3 * nb_species : 4 * nb_species, 2 * nb_species : 3 * nb_species] = q32
-    qq[3 * nb_species : 4 * nb_species, 3 * nb_species : 4 * nb_species] = q33
+    qq = np.block(
+        [
+            [q00, q01, q02, q03],
+            [q10, q11, q12, q13],
+            [q20, q21, q22, q23],
+            [q30, q31, q32, q33],
+        ]
+    )
 
     return qq
 
