@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+from numba import njit
 from scipy import constants  # type: ignore
 from scipy.special import gamma  # type: ignore
 
@@ -1076,6 +1077,7 @@ def sum2(s: int) -> float:
     return np.sum(1 / np.arange(1, s + 2) ** 2)
 
 
+@njit
 def delta(i: int, j: int) -> int:
     """Kronecker delta.
 
@@ -1715,6 +1717,124 @@ def q(mixture: "LTE") -> np.ndarray:
     Q35 = Qij_mix(mixture, 3, 5)
     Q44 = Qij_mix(mixture, 4, 4)
 
+    q00 = q00_jit(Q11, masses, nb_species, number_densities)
+
+    q01 = q01_jit(Q11, Q12, masses, nb_species, number_densities)
+
+    q11 = q11_jit(Q11, Q12, Q13, Q22, masses, nb_species, number_densities)
+
+    q02 = q02_jit(Q11, Q12, Q13, masses, nb_species, number_densities)
+
+    q12 = q12_jit(
+        Q11, Q12, Q13, Q14, Q22, Q23, masses, nb_species, number_densities
+    )
+
+    q22 = q22_jit(
+        Q11,
+        Q12,
+        Q13,
+        Q14,
+        Q15,
+        Q22,
+        Q23,
+        Q24,
+        Q33,
+        masses,
+        nb_species,
+        number_densities,
+    )
+
+    q03 = q03_jit(Q11, Q12, Q13, Q14, masses, nb_species, number_densities)
+
+    q13 = q13_jit(
+        Q11,
+        Q12,
+        Q13,
+        Q14,
+        Q15,
+        Q22,
+        Q23,
+        Q24,
+        masses,
+        nb_species,
+        number_densities,
+    )
+
+    q23 = q23_jit(
+        Q11,
+        Q12,
+        Q13,
+        Q14,
+        Q15,
+        Q16,
+        Q22,
+        Q23,
+        Q24,
+        Q25,
+        Q33,
+        Q34,
+        masses,
+        nb_species,
+        number_densities,
+    )
+
+    q33 = q33_jit(
+        Q11,
+        Q12,
+        Q13,
+        Q14,
+        Q15,
+        Q16,
+        Q17,
+        Q22,
+        Q23,
+        Q24,
+        Q25,
+        Q26,
+        Q33,
+        Q34,
+        Q35,
+        Q44,
+        masses,
+        nb_species,
+        number_densities,
+    )
+
+    mass_ratio = masses[np.newaxis, :] / masses[:, np.newaxis]
+
+    # Equation A5 of [Devoto1966]_.
+    q10 = mass_ratio * q01
+
+    # Equation A8 of [Devoto1966]_.
+    q20 = mass_ratio**2 * q02
+
+    # Equation A10 of [Devoto1966]_.
+    q21 = mass_ratio * q12
+
+    # Equation A13 of [Devoto1966]_.
+    q30 = mass_ratio**3 * q03
+
+    # Equation A15 of [Devoto1966]_.
+    q31 = mass_ratio**2 * q13
+
+    # Equation A17 of [Devoto1966]_.
+    q32 = mass_ratio * q23
+
+    # Combine the q-matrix elements into a single matrix.
+    qq = np.block(
+        [
+            [q00, q01, q02, q03],
+            [q10, q11, q12, q13],
+            [q20, q21, q22, q23],
+            [q30, q31, q32, q33],
+        ]
+    )
+
+    return qq
+
+
+@njit
+def q00_jit(Q11, masses, nb_species, number_densities):
     # Equation A3 of [Devoto1966]_.
     q00 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1733,7 +1853,11 @@ def q(mixture: "LTE") -> np.ndarray:
                 ) ** (1 / 2) / masses[i] * (1 - delta(i, l))
                 sumval += term1 * Q11[i, l] * term2
             q00[i, j] = 8 * sumval
+    return q00
 
+
+@njit
+def q01_jit(Q11, Q12, masses, nb_species, number_densities):
     # Equation A4 of [Devoto1966]_.
     q01 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1755,7 +1879,66 @@ def q(mixture: "LTE") -> np.ndarray:
                 * (masses[i] / masses[j]) ** (3 / 2)
                 * sumval
             )
+    return q01
 
+
+@njit
+def q02_jit(Q11, Q12, Q13, masses, nb_species, number_densities):
+    # Equation A7 of [Devoto1966]_.
+    q02 = np.zeros((nb_species, nb_species))
+    for i in range(nb_species):
+        for j in range(nb_species):
+            sumval = 0
+            for l in range(nb_species):
+                term1 = (
+                    number_densities[l]
+                    * masses[l] ** (5 / 2)
+                    / (masses[i] + masses[l]) ** (5 / 2)
+                )
+                term2 = (delta(i, j) - delta(j, l)) * (
+                    35 / 8 * Q11[i, l] - 21 / 2 * Q12[i, l] + 6 * Q13[i, l]
+                )
+                sumval += term1 * term2
+            q02[i, j] = (
+                8
+                * number_densities[i]
+                * (masses[i] / masses[j]) ** (5 / 2)
+                * sumval
+            )
+    return q02
+
+
+@njit
+def q03_jit(Q11, Q12, Q13, Q14, masses, nb_species, number_densities):
+    # Equation A12 of [Devoto1966]_.
+    q03 = np.zeros((nb_species, nb_species))
+    for i in range(nb_species):
+        for j in range(nb_species):
+            sumval = 0
+            for l in range(nb_species):
+                term1 = (
+                    number_densities[l]
+                    * masses[l] ** (7 / 2)
+                    / (masses[i] + masses[l]) ** (7 / 2)
+                )
+                term2 = (delta(i, j) - delta(j, l)) * (
+                    105 / 16 * Q11[i, l]
+                    - 189 / 8 * Q12[i, l]
+                    + 27 * Q13[i, l]
+                    - 10 * Q14[i, l]
+                )
+                sumval += term1 * term2
+            q03[i, j] = (
+                8
+                * number_densities[i]
+                * (masses[i] / masses[j]) ** (7 / 2)
+                * sumval
+            )
+    return q03
+
+
+@njit
+def q11_jit(Q11, Q12, Q13, Q22, masses, nb_species, number_densities):
     # Equation A6 of [Devoto1966]_.
     q11 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1784,29 +1967,13 @@ def q(mixture: "LTE") -> np.ndarray:
                 * (masses[i] / masses[j]) ** (3 / 2)
                 * sumval
             )
+    return q11
 
-    # Equation A7 of [Devoto1966]_.
-    q02 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            sumval = 0
-            for l in range(nb_species):
-                term1 = (
-                    number_densities[l]
-                    * masses[l] ** (5 / 2)
-                    / (masses[i] + masses[l]) ** (5 / 2)
-                )
-                term2 = (delta(i, j) - delta(j, l)) * (
-                    35 / 8 * Q11[i, l] - 21 / 2 * Q12[i, l] + 6 * Q13[i, l]
-                )
-                sumval += term1 * term2
-            q02[i, j] = (
-                8
-                * number_densities[i]
-                * (masses[i] / masses[j]) ** (5 / 2)
-                * sumval
-            )
 
+@njit
+def q12_jit(
+    Q11, Q12, Q13, Q14, Q22, Q23, masses, nb_species, number_densities
+):
     # Equation A9 of [Devoto1966]_.
     q12 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1840,7 +2007,74 @@ def q(mixture: "LTE") -> np.ndarray:
                 * (masses[i] / masses[j]) ** (5 / 2)
                 * sumval
             )
+    return q12
 
+
+@njit
+def q13_jit(
+    Q11,
+    Q12,
+    Q13,
+    Q14,
+    Q15,
+    Q22,
+    Q23,
+    Q24,
+    masses,
+    nb_species,
+    number_densities,
+):
+    # Equation A14 of [Devoto1966]_.
+    q13 = np.zeros((nb_species, nb_species))
+    for i in range(nb_species):
+        for j in range(nb_species):
+            sumval = 0
+            for l in range(nb_species):
+                term1 = (
+                    number_densities[l]
+                    * masses[l] ** (5 / 2)
+                    / (masses[i] + masses[l]) ** (9 / 2)
+                )
+                term2 = (delta(i, j) - delta(j, l)) * (
+                    105
+                    / 32
+                    * (18 * masses[j] ** 2 + 5 * masses[l] ** 2)
+                    * Q11[i, l]
+                    - 63
+                    / 4
+                    * (9 * masses[j] ** 2 + 5 * masses[l] ** 2)
+                    * Q12[i, l]
+                    + 81 * (masses[j] ** 2 + 2 * masses[l] ** 2) * Q13[i, l]
+                    - 160 * masses[l] ** 2 * Q14[i, l]
+                    + 60 * masses[l] ** 2 * Q15[i, l]
+                ) + (delta(i, j) + delta(j, l)) * masses[j] * masses[l] * (
+                    63 / 2 * Q22[i, l] - 72 * Q23[i, l] + 40 * Q24[i, l]
+                )
+                sumval += term1 * term2
+            q13[i, j] = (
+                8
+                * number_densities[i]
+                * (masses[i] / masses[j]) ** (7 / 2)
+                * sumval
+            )
+    return q13
+
+
+@njit
+def q22_jit(
+    Q11,
+    Q12,
+    Q13,
+    Q14,
+    Q15,
+    Q22,
+    Q23,
+    Q24,
+    Q33,
+    masses,
+    nb_species,
+    number_densities,
+):
     # Equation A11 of [Devoto1966]_.
     q22 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1890,66 +2124,27 @@ def q(mixture: "LTE") -> np.ndarray:
                 * (masses[i] / masses[j]) ** (5 / 2)
                 * sumval
             )
+    return q22
 
-    # Equation A12 of [Devoto1966]_.
-    q03 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            sumval = 0
-            for l in range(nb_species):
-                term1 = (
-                    number_densities[l]
-                    * masses[l] ** (7 / 2)
-                    / (masses[i] + masses[l]) ** (7 / 2)
-                )
-                term2 = (delta(i, j) - delta(j, l)) * (
-                    105 / 16 * Q11[i, l]
-                    - 189 / 8 * Q12[i, l]
-                    + 27 * Q13[i, l]
-                    - 10 * Q14[i, l]
-                )
-                sumval += term1 * term2
-            q03[i, j] = (
-                8
-                * number_densities[i]
-                * (masses[i] / masses[j]) ** (7 / 2)
-                * sumval
-            )
 
-    # Equation A14 of [Devoto1966]_.
-    q13 = np.zeros((nb_species, nb_species))
-    for i in range(nb_species):
-        for j in range(nb_species):
-            sumval = 0
-            for l in range(nb_species):
-                term1 = (
-                    number_densities[l]
-                    * masses[l] ** (5 / 2)
-                    / (masses[i] + masses[l]) ** (9 / 2)
-                )
-                term2 = (delta(i, j) - delta(j, l)) * (
-                    105
-                    / 32
-                    * (18 * masses[j] ** 2 + 5 * masses[l] ** 2)
-                    * Q11[i, l]
-                    - 63
-                    / 4
-                    * (9 * masses[j] ** 2 + 5 * masses[l] ** 2)
-                    * Q12[i, l]
-                    + 81 * (masses[j] ** 2 + 2 * masses[l] ** 2) * Q13[i, l]
-                    - 160 * masses[l] ** 2 * Q14[i, l]
-                    + 60 * masses[l] ** 2 * Q15[i, l]
-                ) + (delta(i, j) + delta(j, l)) * masses[j] * masses[l] * (
-                    63 / 2 * Q22[i, l] - 72 * Q23[i, l] + 40 * Q24[i, l]
-                )
-                sumval += term1 * term2
-            q13[i, j] = (
-                8
-                * number_densities[i]
-                * (masses[i] / masses[j]) ** (7 / 2)
-                * sumval
-            )
-
+@njit
+def q23_jit(
+    Q11,
+    Q12,
+    Q13,
+    Q14,
+    Q15,
+    Q16,
+    Q22,
+    Q23,
+    Q24,
+    Q25,
+    Q33,
+    Q34,
+    masses,
+    nb_species,
+    number_densities,
+):
     # Equation A16 of [Devoto1966]_.
     q23 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -2014,7 +2209,31 @@ def q(mixture: "LTE") -> np.ndarray:
                 * (masses[i] / masses[j]) ** (7 / 2)
                 * sumval
             )
+    return q23
 
+
+@njit
+def q33_jit(
+    Q11,
+    Q12,
+    Q13,
+    Q14,
+    Q15,
+    Q16,
+    Q17,
+    Q22,
+    Q23,
+    Q24,
+    Q25,
+    Q26,
+    Q33,
+    Q34,
+    Q35,
+    Q44,
+    masses,
+    nb_species,
+    number_densities,
+):
     # Equation A18 of [Devoto1966]_.
     q33 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -2104,38 +2323,7 @@ def q(mixture: "LTE") -> np.ndarray:
                 * (masses[i] / masses[j]) ** (7 / 2)
                 * sumval
             )
-
-    mass_ratio = masses[np.newaxis, :] / masses[:, np.newaxis]
-
-    # Equation A5 of [Devoto1966]_.
-    q10 = mass_ratio * q01
-
-    # Equation A8 of [Devoto1966]_.
-    q20 = mass_ratio**2 * q02
-
-    # Equation A10 of [Devoto1966]_.
-    q21 = mass_ratio * q12
-
-    # Equation A13 of [Devoto1966]_.
-    q30 = mass_ratio**3 * q03
-
-    # Equation A15 of [Devoto1966]_.
-    q31 = mass_ratio**2 * q13
-
-    # Equation A17 of [Devoto1966]_.
-    q32 = mass_ratio * q23
-
-    # Combine the q-matrix elements into a single matrix.
-    qq = np.block(
-        [
-            [q00, q01, q02, q03],
-            [q10, q11, q12, q13],
-            [q20, q21, q22, q23],
-            [q30, q31, q32, q33],
-        ]
-    )
-
-    return qq
+    return q33
 
 
 def qhat(mixture: "LTE") -> np.ndarray:
