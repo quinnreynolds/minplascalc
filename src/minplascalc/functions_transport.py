@@ -1718,19 +1718,19 @@ def q(mixture: "LTE") -> np.ndarray:
     Q35 = Qij_mix(mixture, 3, 5)
     Q44 = Qij_mix(mixture, 4, 4)
 
-    q00 = q00_jit(Q11, masses, nb_species, number_densities)
+    q00 = _q00_jit(Q11, masses, nb_species, number_densities)
 
-    q01 = q01_jit(Q11, Q12, masses, nb_species, number_densities)
+    q01 = _q01_jit(Q11, Q12, masses, nb_species, number_densities)
 
-    q11 = q11_jit(Q11, Q12, Q13, Q22, masses, nb_species, number_densities)
+    q11 = _q11_jit(Q11, Q12, Q13, Q22, masses, nb_species, number_densities)
 
-    q02 = q02_jit(Q11, Q12, Q13, masses, nb_species, number_densities)
+    q02 = _q02_jit(Q11, Q12, Q13, masses, nb_species, number_densities)
 
-    q12 = q12_jit(
+    q12 = _q12_jit(
         Q11, Q12, Q13, Q14, Q22, Q23, masses, nb_species, number_densities
     )
 
-    q22 = q22_jit(
+    q22 = _q22_jit(
         Q11,
         Q12,
         Q13,
@@ -1745,9 +1745,9 @@ def q(mixture: "LTE") -> np.ndarray:
         number_densities,
     )
 
-    q03 = q03_jit(Q11, Q12, Q13, Q14, masses, nb_species, number_densities)
+    q03 = _q03_jit(Q11, Q12, Q13, Q14, masses, nb_species, number_densities)
 
-    q13 = q13_jit(
+    q13 = _q13_jit(
         Q11,
         Q12,
         Q13,
@@ -1761,7 +1761,7 @@ def q(mixture: "LTE") -> np.ndarray:
         number_densities,
     )
 
-    q23 = q23_jit(
+    q23 = _q23_jit(
         Q11,
         Q12,
         Q13,
@@ -1779,7 +1779,7 @@ def q(mixture: "LTE") -> np.ndarray:
         number_densities,
     )
 
-    q33 = q33_jit(
+    q33 = _q33_jit(
         Q11,
         Q12,
         Q13,
@@ -1835,7 +1835,7 @@ def q(mixture: "LTE") -> np.ndarray:
 
 
 @njit
-def q00_jit(Q11, masses, nb_species, number_densities):
+def _q00_jit(Q11, masses, nb_species, number_densities):
     # Equation A3 of [Devoto1966]_.
     q00 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1858,7 +1858,7 @@ def q00_jit(Q11, masses, nb_species, number_densities):
 
 
 @njit
-def q01_jit(Q11, Q12, masses, nb_species, number_densities):
+def _q01_jit(Q11, Q12, masses, nb_species, number_densities):
     # Equation A4 of [Devoto1966]_.
     q01 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1884,7 +1884,7 @@ def q01_jit(Q11, Q12, masses, nb_species, number_densities):
 
 
 @njit
-def q02_jit(Q11, Q12, Q13, masses, nb_species, number_densities):
+def _q02_jit(Q11, Q12, Q13, masses, nb_species, number_densities):
     # Equation A7 of [Devoto1966]_.
     q02 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1910,7 +1910,7 @@ def q02_jit(Q11, Q12, Q13, masses, nb_species, number_densities):
 
 
 @njit
-def q03_jit(Q11, Q12, Q13, Q14, masses, nb_species, number_densities):
+def _q03_jit(Q11, Q12, Q13, Q14, masses, nb_species, number_densities):
     # Equation A12 of [Devoto1966]_.
     q03 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1939,7 +1939,7 @@ def q03_jit(Q11, Q12, Q13, Q14, masses, nb_species, number_densities):
 
 
 @njit
-def q11_jit(Q11, Q12, Q13, Q22, masses, nb_species, number_densities):
+def _q11_jit(Q11, Q12, Q13, Q22, masses, nb_species, number_densities):
     # Equation A6 of [Devoto1966]_.
     q11 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -1972,7 +1972,7 @@ def q11_jit(Q11, Q12, Q13, Q22, masses, nb_species, number_densities):
 
 
 @njit
-def q12_jit(
+def _q12_jit(
     Q11, Q12, Q13, Q14, Q22, Q23, masses, nb_species, number_densities
 ):
     # Equation A9 of [Devoto1966]_.
@@ -2012,7 +2012,7 @@ def q12_jit(
 
 
 @njit
-def q13_jit(
+def _q13_jit(
     Q11,
     Q12,
     Q13,
@@ -2062,7 +2062,7 @@ def q13_jit(
 
 
 @njit
-def q22_jit(
+def _q22_jit(
     Q11,
     Q12,
     Q13,
@@ -2129,7 +2129,7 @@ def q22_jit(
 
 
 @njit
-def q23_jit(
+def _q23_jit(
     Q11,
     Q12,
     Q13,
@@ -2214,7 +2214,7 @@ def q23_jit(
 
 
 @njit
-def q33_jit(
+def _q33_jit(
     Q11,
     Q12,
     Q13,
@@ -2357,13 +2357,13 @@ def qhat(mixture: "LTE") -> np.ndarray:
     Q24 = Qij_mix(mixture, 2, 4)
     Q33 = Qij_mix(mixture, 3, 3)
 
-    qhat00 = qhat00_jit(Q11, Q22, masses, nb_species, number_densities)
+    qhat00 = _qhat00_jit(Q11, Q22, masses, nb_species, number_densities)
 
-    qhat01 = qhat01_jit(
+    qhat01 = _qhat01_jit(
         Q11, Q12, Q22, Q23, masses, nb_species, number_densities
     )
 
-    qhat11 = qhat11_jit(
+    qhat11 = _qhat11_jit(
         Q11, Q12, Q13, Q22, Q23, Q24, Q33, masses, nb_species, number_densities
     )
 
@@ -2381,7 +2381,7 @@ def qhat(mixture: "LTE") -> np.ndarray:
 
 
 @njit
-def qhat00_jit(Q11, Q22, masses, nb_species, number_densities):
+def _qhat00_jit(Q11, Q22, masses, nb_species, number_densities):
     # Equation A19 of [Devoto1966]_.
     qhat00 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -2404,7 +2404,7 @@ def qhat00_jit(Q11, Q22, masses, nb_species, number_densities):
 
 
 @njit
-def qhat01_jit(Q11, Q12, Q22, Q23, masses, nb_species, number_densities):
+def _qhat01_jit(Q11, Q12, Q22, Q23, masses, nb_species, number_densities):
     # Equation A20 of [Devoto1966]_.
     qhat01 = np.zeros((nb_species, nb_species))
     for i in range(nb_species):
@@ -2429,7 +2429,7 @@ def qhat01_jit(Q11, Q12, Q22, Q23, masses, nb_species, number_densities):
 
 
 @njit
-def qhat11_jit(
+def _qhat11_jit(
     Q11, Q12, Q13, Q22, Q23, Q24, Q33, masses, nb_species, number_densities
 ):
     # Equation A22 of [Devoto1966]_.
