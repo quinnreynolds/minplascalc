@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+import scipy.linalg as scl  # type: ignore[import-untyped]
 from numba import njit  # type: ignore[import-untyped]
 from scipy import constants  # type: ignore[import-untyped]
 from scipy.special import gamma  # type: ignore[import-untyped]
@@ -2536,7 +2537,7 @@ def Dij(mixture: "LTE") -> np.ndarray:
     diffusion_matrix = np.zeros((nb_species, nb_species))
     qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
 
-    inverse_q = np.linalg.inv(qq)
+    lu_piv_q = scl.lu_factor(qq)
     b_vec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
 
     for i in range(nb_species):
@@ -2547,7 +2548,7 @@ def Dij(mixture: "LTE") -> np.ndarray:
                 [delta(h, i) - delta(h, j) for h in range(0, nb_species)]
             )
             b_vec[:nb_species] = 3 * np.sqrt(np.pi) * dij
-            cflat = inverse_q.dot(b_vec)
+            cflat = scl.lu_solve(lu_piv_q, b_vec)
             cip = cflat.reshape(4, nb_species)
 
             # Diffusion coefficient, equation 3 of [Devoto1966]_.
