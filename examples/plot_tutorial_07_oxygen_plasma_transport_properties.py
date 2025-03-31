@@ -69,7 +69,7 @@ total_emission_coefficient = []
 # composition of the plasma before the calculation of the properties.
 #
 # Note that execution of this calculation is fairly compute intensive and the
-# following code snippet may take several tens of selectrical_conductivitys to
+# following code snippet may take several tens of seconds to
 # complete.
 
 for T in temperatures:

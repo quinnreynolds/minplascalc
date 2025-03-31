@@ -645,7 +645,7 @@ class LTE:
         * :math:`M_i` is the molar mass of species :math:`i`,
           in :math:`\text{kg.mol}^{-1}`.
         """
-        number_densities = self.calculate_composition()  # particules/m^3
+        number_densities = self.calculate_composition()  # particles/m^3
         molar_masses = [sp.molar_mass for sp in self.species]  # kg/mol
         return (
             sum(n_i * M_i for n_i, M_i in zip(number_densities, molar_masses))
