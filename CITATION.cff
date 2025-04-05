@@ -1,0 +1,59 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: minplascalc
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Quinn
+    family-names: Reynolds
+    email: quinnr@mintek.co.za
+    affiliation: Mintek
+    orcid: 'https://orcid.org/0000-0002-5196-8586'
+  - given-names: Carl
+    family-names: Sandrock
+    email: carl.sandrock@gmail.com
+  - given-names: Pierre-Antoine
+    family-names: Goutier
+    email: pierre-antoine.goutier@centralesupelec.fr
+repository-code: 'https://github.com/quinnreynolds/minplascalc'
+abstract: >-
+  A simple set of tools in Python for doing calculations of
+  thermal plasma compositions and thermophysical properties
+  relevant to metallurgical problems.
+keywords:
+  - plasma physics
+  - metallurgy
+license: GPL-3.0
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Reynolds"
+    given-names: "Q. G."
+    orcid: "https://orcid.org/0000-0002-5196-8586"
+  - family-names: "Bowman"
+    given-names: "B."
+  - family-names: "Erwee"
+    given-names: "M. W."
+  - family-names: "Geldenhuys"
+    given-names: "I. J."
+  - family-names: "Sandrock"
+    given-names: "C."
+  - family-names: "Venter"
+    given-names: "G. A."
+  - family-names: "Xakalashe"
+    given-names: "B. S."
+  - family-names: "Zietsman"
+    given-names: "J."
+  doi: "10.17159/2411-9717/758/2025"
+  journal: "Journal of the Southern African Institute of Mining and Metallurgy"
+  month: 3
+  start: 129
+  end: 144
+  title: "Plasma soup for the pyrometallurgist’s soul"
+  issue: 3
+  volume: 125
+  year: 2025
