@@ -2751,7 +2751,7 @@ def electrical_conductivity(mixture: "LTE") -> float:
 
     The sum is over all ionic species in the mixture.
     """
-    if mixture.electrons_yn:
+    if mixture.species[-1].name == "e":
         charge_numbers = np.array([sp.charge_number for sp in mixture.species])
         number_densities = mixture.calculate_composition()
         masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
