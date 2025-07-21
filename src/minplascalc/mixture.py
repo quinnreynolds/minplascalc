@@ -84,6 +84,8 @@ class LTE:
         self.electrons_yn = electrons_yn
         if self.electrons_yn:
             self.__species = tuple(list(species) + [_sp.Electron()])
+        else:
+            self.__species = tuple(list(species))
 
         self.x0 = x0
         self.T = T
@@ -118,15 +120,19 @@ class LTE:
 
     @x0.setter
     def x0(self, x0):
-        if len(x0) == len(self.species) - 1:
+        if self.electrons_yn and (len(x0) == len(self.species) - 1):
             # Reset LTE composition flag.
             self.__isLTE = False
             # Add electron mole fraction, set to zero.
             self.__x0 = tuple(list(x0) + [0.0])
+        elif not self.electrons_yn and (len(x0) == len(self.species)):
+            # Reset LTE composition flag.
+            self.__isLTE = False
+            self.__x0 = tuple(list(x0))
         else:
             raise ValueError(
                 "Please specify constraint mole fractions for all "
-                "species except electrons."
+                "species (except electrons if electrons_yn is True)."
             )
 
     @property
@@ -155,12 +161,20 @@ class LTE:
         )
 
     def __str__(self):
-        return (
-            f"LTE mixture species: "
-            f"{tuple([sp.name for sp in self.species[:-1]])}\n"
-            f"Initial composition: {self.x0[:-1]}\n"
-            f"Temperature: {self.T} K\nPressure: {self.P} Pa"
-        )
+        if self.electrons_yn:
+            return (
+                f"LTE mixture species: "
+                f"{tuple([sp.name for sp in self.species[:-1]])}\n"
+                f"Initial composition: {self.x0[:-1]}\n"
+                f"Temperature: {self.T} K\nPressure: {self.P} Pa"
+            )
+        else:
+            return (
+                f"LTE mixture species: "
+                f"{tuple([sp.name for sp in self.species])}\n"
+                f"Initial composition: {self.x0}\n"
+                f"Temperature: {self.T} K\nPressure: {self.P} Pa"
+            )
 
     def __get_reference_energies(self) -> tuple[np.ndarray, np.ndarray]:
         r"""Calculate the reference energy values for all species.
