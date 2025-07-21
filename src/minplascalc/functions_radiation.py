@@ -113,7 +113,7 @@ def total_emission_coefficient(mix: "LTE") -> float:
     line_pre_constant = u.h * u.c / (4 * u.pi)
 
     # Iterate over species and their number densities
-    if mix.electrons_yn:
+    if mix.species[-1].name == "e":
         ndloc, sploc = nd[:-1], mix.species[:-1]
     else:
         ndloc, sploc = nd, mix.species
