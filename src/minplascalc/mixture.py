@@ -22,6 +22,7 @@ class LTE:
         x0: list[float],
         T: float,
         P: float,
+        electrons_yn: bool,
         gfe_initial_particles: float,
         gfe_rtol: float,
         gfe_max_iter: int,
@@ -37,7 +38,8 @@ class LTE:
         ----------
         species : list[_sp.Monatomic | _sp.Diatomic | _sp.Polyatomic]
             All species participating in the mixture (excluding electrons which
-            are added automatically), as minplascalc Species objects.
+            are added automatically if electrons_yn is true), as minplascalc Species
+            objects.
         x0 : list[float]
             Constraint mole fractions for each species, typically the
             room-temperature composition of the plasma-generating gas.
@@ -46,6 +48,9 @@ class LTE:
             LTE plasma temperature, in :math:`\text{K}`.
         P : float
             LTE plasma pressure, in :math:`\text{Pa}`.
+        electrons_yn: bool
+            True = include electrons in the species list and calculations.
+            False = do not include electrons.
         gfe_initial_particles : float
             Gibbs Free Energy minimiser solution control: Starting estimate for
             number of particles of each species. Typically O(1e20).
@@ -76,7 +81,9 @@ class LTE:
             raise ValueError("Lists species and x0 must be the same length.")
 
         # Add electron species to the species list.
-        self.__species = tuple(list(species) + [_sp.Electron()])
+        self.electrons_yn = electrons_yn
+        if self.electrons_yn:
+            self.__species = tuple(list(species) + [_sp.Electron()])
 
         self.x0 = x0
         self.T = T
@@ -235,42 +242,45 @@ class LTE:
             if sum(sp.stoichiometry.values()) >= 2:
                 E0[i] = -sp.dissociation_energy
 
-        # Calculate the effective charge number z*.
-        # The effective charge number is the sum of the square of the charge
-        # number of each species multiplied by the number density of that
-        # species.
-        charge_numbers = np.array([sp.charge_number for sp in self.species])
-        weighted_charge_sum_squared, weighted_charge_sum = 0.0, 0.0
-        for z_i, nd in zip(charge_numbers, number_densities):
-            if z_i > 0:  # Only consider positively charged species.
-                weighted_charge_sum += nd * z_i
-                weighted_charge_sum_squared += nd * z_i**2
-        z_star = weighted_charge_sum_squared / weighted_charge_sum
+        if self.electrons_yn:
+            # Calculate the effective charge number z*.
+            # The effective charge number is the sum of the square of the charge
+            # number of each species multiplied by the number density of that
+            # species.
+            charge_numbers = np.array(
+                [sp.charge_number for sp in self.species]
+            )
+            weighted_charge_sum_squared, weighted_charge_sum = 0.0, 0.0
+            for z_i, nd in zip(charge_numbers, number_densities):
+                if z_i > 0:  # Only consider positively charged species.
+                    weighted_charge_sum += nd * z_i
+                    weighted_charge_sum_squared += nd * z_i**2
+            z_star = weighted_charge_sum_squared / weighted_charge_sum
 
-        # Get the electron number density.
-        n_e = number_densities[-1]  # m^-3
+            # Get the electron number density.
+            n_e = number_densities[-1]  # m^-3
 
-        # Calculate the Debye sphere radius, to the power 3.
-        debye_pow3 = (
-            u.epsilon_0 * kbt / (4 * np.pi * (z_star + 1) * n_e * u.e**2)
-        ) ** (3 / 2)
+            # Calculate the Debye sphere radius, to the power 3.
+            debye_pow3 = (
+                u.epsilon_0 * kbt / (4 * np.pi * (z_star + 1) * n_e * u.e**2)
+            ) ** (3 / 2)
 
-        # Calculate the ionisation energy lowering for each (positively)
-        # charged species.
-        for i, charge_number in enumerate(charge_numbers):
-            if charge_number > 0:
-                # Electron are discarded, but so are every negatively charged
-                # species.
-                # TODO: Check if negative ions should be considered.
+            # Calculate the ionisation energy lowering for each (positively)
+            # charged species.
+            for i, charge_number in enumerate(charge_numbers):
+                if charge_number > 0:
+                    # Electron are discarded, but so are every negatively charged
+                    # species.
+                    # TODO: Check if negative ions should be considered.
 
-                # Calculate the ion-sphere radius, to the power 3.
-                ai_pow3 = 3 * charge_number / (4 * np.pi * n_e)
-                # Calculate the ionisation energy lowering.
-                dE[i] = (
-                    kbt
-                    * ((ai_pow3 / debye_pow3 + 1) ** (2 / 3) - 1)
-                    / (2 * (z_star + 1))
-                )
+                    # Calculate the ion-sphere radius, to the power 3.
+                    ai_pow3 = 3 * charge_number / (4 * np.pi * n_e)
+                    # Calculate the ionisation energy lowering.
+                    dE[i] = (
+                        kbt
+                        * ((ai_pow3 / debye_pow3 + 1) ** (2 / 3) - 1)
+                        / (2 * (z_star + 1))
+                    )
 
         # Get the neutral species.
         neutral_species = [sp for sp in self.species if sp.charge_number == 0]
@@ -407,7 +417,8 @@ class LTE:
 
         TODO: write how the minimisation is done.
         """
-        nb_species = len(self.species)  # It includes the electron species.
+        # If self.electrons_yn is true, self.species includes electrons.
+        nb_species = len(self.species)
         kbt = u.k_b * self.T
 
         # If the composition has already been calculated, return it.
@@ -477,29 +488,52 @@ class LTE:
         #   charge           0,
         # ]
         #
-        minimiser_dof = nb_species + len(elements) + 1
-        gfe_matrix = np.zeros((minimiser_dof, minimiser_dof))
-        gfe_vector = np.zeros(minimiser_dof)
-        # The first nb_species rows and columns are for the species.
-        # The next len(self._elements) rows and columns are for the elements.
-        # The last row and column are for the charge neutrality.
-        A_matrix_constraints = np.zeros((len(self.species), len(elements) + 1))
-        A_matrix_constraints_transpose = np.zeros(
-            (len(elements) + 1, len(self.species))
-        )
-        b_vector_constraints = np.zeros(len(elements) + 1)
+        if self.electrons_yn:
+            minimiser_dof = nb_species + len(elements) + 1
+            gfe_matrix = np.zeros((minimiser_dof, minimiser_dof))
+            gfe_vector = np.zeros(minimiser_dof)
+            # The first nb_species rows and columns are for the species.
+            # The next len(self._elements) rows and columns are for the elements.
+            # The last row and column are for the charge neutrality.
+            A_matrix_constraints = np.zeros(
+                (len(self.species), len(elements) + 1)
+            )
+            A_matrix_constraints_transpose = np.zeros(
+                (len(elements) + 1, len(self.species))
+            )
+            b_vector_constraints = np.zeros(len(elements) + 1)
 
-        for i, element in enumerate(elements):
-            stoichiometric_coefficients = element["stoich_coeff"]
-            assert isinstance(stoichiometric_coefficients, list)
-            for j, sc in enumerate(stoichiometric_coefficients):
-                A_matrix_constraints[j, i] = sc
-                A_matrix_constraints_transpose[i, j] = sc
-            b_vector_constraints[i] = element["N_tot"]
+            for i, element in enumerate(elements):
+                stoichiometric_coefficients = element["stoich_coeff"]
+                assert isinstance(stoichiometric_coefficients, list)
+                for j, sc in enumerate(stoichiometric_coefficients):
+                    A_matrix_constraints[j, i] = sc
+                    A_matrix_constraints_transpose[i, j] = sc
+                b_vector_constraints[i] = element["N_tot"]
 
-        for j, qc in enumerate(sp.charge_number for sp in self.species):
-            A_matrix_constraints[j, -1] = qc
-            A_matrix_constraints_transpose[-1, j] = qc
+            for j, qc in enumerate(sp.charge_number for sp in self.species):
+                A_matrix_constraints[j, -1] = qc
+                A_matrix_constraints_transpose[-1, j] = qc
+        else:
+            minimiser_dof = nb_species + len(elements)
+            gfe_matrix = np.zeros((minimiser_dof, minimiser_dof))
+            gfe_vector = np.zeros(minimiser_dof)
+            # The first nb_species rows and columns are for the species.
+            # The next len(self._elements) rows and columns are for the elements.
+            # No charge neutrality in this case because there are no electrons.
+            A_matrix_constraints = np.zeros((len(self.species), len(elements)))
+            A_matrix_constraints_transpose = np.zeros(
+                (len(elements), len(self.species))
+            )
+            b_vector_constraints = np.zeros(len(elements))
+
+            for i, element in enumerate(elements):
+                stoichiometric_coefficients = element["stoich_coeff"]
+                assert isinstance(stoichiometric_coefficients, list)
+                for j, sc in enumerate(stoichiometric_coefficients):
+                    A_matrix_constraints[j, i] = sc
+                    A_matrix_constraints_transpose[i, j] = sc
+                b_vector_constraints[i] = element["N_tot"]
 
         gfe_matrix[:nb_species, nb_species:] = A_matrix_constraints
         gfe_matrix[nb_species:, :nb_species] = A_matrix_constraints_transpose
@@ -895,7 +929,7 @@ class LTE:
 
 
 def lte_from_names(
-    names: list[str], x0: list[float], T: float, P: float
+    names: list[str], x0: list[float], T: float, P: float, electrons_yn: True
 ) -> LTE:
     r"""Create a LTE mixture from a list of species names.
 
@@ -914,6 +948,8 @@ def lte_from_names(
         LTE plasma temperature, in :math:`\text{K}`.
     P : float
         LTE plasma pressure, in :math:`\text{Pa}`.
+    electrons_yn: bool
+        Whether or not to add electrons to the species list (default: True)
 
     Returns
     -------
@@ -925,4 +961,4 @@ def lte_from_names(
             "include them in your species list."
         )
     species = [_sp.from_name(name) for name in names]
-    return LTE(species, x0, T, P, 1e20, 1e-10, 1000)
+    return LTE(species, x0, T, P, electrons_yn, 1e20, 1e-10, 1000)
