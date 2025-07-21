@@ -946,7 +946,11 @@ class LTE:
 
 
 def lte_from_names(
-    names: list[str], x0: list[float], T: float, P: float, electrons_yn: True
+    names: list[str],
+    x0: list[float],
+    T: float,
+    P: float,
+    electrons_yn: bool = True,
 ) -> LTE:
     r"""Create a LTE mixture from a list of species names.
 
