@@ -156,7 +156,8 @@ class LTE:
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(species={self.species},"
-            f"x0={self.x0},T={self.T},P={self.P},gfe_initial_particles={self.gfe_initial_particles},"
+            f"x0={self.x0},T={self.T},P={self.P},electrons_yn={self.electrons_yn},"
+            f"gfe_initial_particles={self.gfe_initial_particles},"
             f"gfe_rtol={self.gfe_rtol},gfe_max_iter={self.gfe_max_iter})"
         )
 
@@ -165,6 +166,7 @@ class LTE:
             return (
                 f"LTE mixture species: "
                 f"{tuple([sp.name for sp in self.species[:-1]])}\n"
+                f"Electrons included: {self.electrons_yn}\n"
                 f"Initial composition: {self.x0[:-1]}\n"
                 f"Temperature: {self.T} K\nPressure: {self.P} Pa"
             )
@@ -172,6 +174,7 @@ class LTE:
             return (
                 f"LTE mixture species: "
                 f"{tuple([sp.name for sp in self.species])}\n"
+                f"Electrons included: {self.electrons_yn}\n"
                 f"Initial composition: {self.x0}\n"
                 f"Temperature: {self.T} K\nPressure: {self.P} Pa"
             )
