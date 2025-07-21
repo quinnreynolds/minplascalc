@@ -73,8 +73,8 @@ class LTE:
         # Check for electron species in the species list.
         if "e" in [sp.name for sp in species]:
             raise ValueError(
-                "Electrons are added automatically, please don't "
-                "include them in your species list."
+                "Electrons are added automatically if electrons_yn is True, please "
+                "don't include them in your species list."
             )
         # Check equal length of species and constraint mole fractions lists.
         if len(species) != len(x0):

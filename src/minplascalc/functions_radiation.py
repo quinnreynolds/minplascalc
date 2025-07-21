@@ -113,7 +113,11 @@ def total_emission_coefficient(mix: "LTE") -> float:
     line_pre_constant = u.h * u.c / (4 * u.pi)
 
     # Iterate over species and their number densities
-    for nv, species in zip(nd[:-1], mix.species[:-1]):
+    if mix.electrons_yn:
+        ndloc, sploc = nd[:-1], mix.species[:-1]
+    else:
+        ndloc, sploc = nd, mix.species
+    for nv, species in zip(ndloc, sploc):
         # Calculate the internal partition function of the species at the given
         # temperature.
         Qi = species.internal_partition_function(mix.T, 0)
