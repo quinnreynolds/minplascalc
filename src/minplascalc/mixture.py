@@ -38,8 +38,7 @@ class LTE:
         ----------
         species : list[_sp.Monatomic | _sp.Diatomic | _sp.Polyatomic]
             All species participating in the mixture (excluding electrons which
-            are added automatically if electrons_yn is true), as minplascalc Species
-            objects.
+            are added automatically), as minplascalc Species objects.
         x0 : list[float]
             Constraint mole fractions for each species, typically the
             room-temperature composition of the plasma-generating gas.
@@ -49,8 +48,7 @@ class LTE:
         P : float
             LTE plasma pressure, in :math:`\text{Pa}`.
         electrons_yn: bool
-            True = include electrons in the species list and calculations.
-            False = do not include electrons.
+            Whether or not to add electrons to the species list.
         gfe_initial_particles : float
             Gibbs Free Energy minimiser solution control: Starting estimate for
             number of particles of each species. Typically O(1e20).
@@ -73,7 +71,7 @@ class LTE:
         # Check for electron species in the species list.
         if "e" in [sp.name for sp in species]:
             raise ValueError(
-                "Electrons are added automatically if electrons_yn is True, please "
+                "Electrons are added automatically, please "
                 "don't include them in your species list."
             )
         # Check equal length of species and constraint mole fractions lists.
@@ -81,8 +79,7 @@ class LTE:
             raise ValueError("Lists species and x0 must be the same length.")
 
         # Add electron species to the species list.
-        self.electrons_yn = electrons_yn
-        if self.electrons_yn:
+        if electrons_yn:
             self.__species = tuple(list(species) + [_sp.Electron()])
         else:
             self.__species = tuple(list(species))
@@ -120,19 +117,18 @@ class LTE:
 
     @x0.setter
     def x0(self, x0):
-        if self.electrons_yn and (len(x0) == len(self.species) - 1):
-            # Reset LTE composition flag.
+        if self.species[-1].name == "e" and len(x0) == len(self.species) - 1:
+            # Reset LTE composition flag
             self.__isLTE = False
             # Add electron mole fraction, set to zero.
             self.__x0 = tuple(list(x0) + [0.0])
-        elif not self.electrons_yn and (len(x0) == len(self.species)):
-            # Reset LTE composition flag.
+        elif self.species[-1].name != "e" and len(x0) == len(self.species):
             self.__isLTE = False
             self.__x0 = tuple(list(x0))
         else:
             raise ValueError(
                 "Please specify constraint mole fractions for all "
-                "species (except electrons if electrons_yn is True)."
+                "species (except electrons)."
             )
 
     @property
@@ -156,28 +152,18 @@ class LTE:
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(species={self.species},"
-            f"x0={self.x0},T={self.T},P={self.P},electrons_yn={self.electrons_yn},"
+            f"x0={self.x0},T={self.T},P={self.P},"
             f"gfe_initial_particles={self.gfe_initial_particles},"
             f"gfe_rtol={self.gfe_rtol},gfe_max_iter={self.gfe_max_iter})"
         )
 
     def __str__(self):
-        if self.electrons_yn:
-            return (
-                f"LTE mixture species: "
-                f"{tuple([sp.name for sp in self.species[:-1]])}\n"
-                f"Electrons included: {self.electrons_yn}\n"
-                f"Initial composition: {self.x0[:-1]}\n"
-                f"Temperature: {self.T} K\nPressure: {self.P} Pa"
-            )
-        else:
-            return (
-                f"LTE mixture species: "
-                f"{tuple([sp.name for sp in self.species])}\n"
-                f"Electrons included: {self.electrons_yn}\n"
-                f"Initial composition: {self.x0}\n"
-                f"Temperature: {self.T} K\nPressure: {self.P} Pa"
-            )
+        return (
+            f"LTE mixture species: "
+            f"{tuple([sp.name for sp in self.species[:-1]])}\n"
+            f"Initial composition: {self.x0[:-1]}\n"
+            f"Temperature: {self.T} K\nPressure: {self.P} Pa"
+        )
 
     def __get_reference_energies(self) -> tuple[np.ndarray, np.ndarray]:
         r"""Calculate the reference energy values for all species.
@@ -259,7 +245,7 @@ class LTE:
             if sum(sp.stoichiometry.values()) >= 2:
                 E0[i] = -sp.dissociation_energy
 
-        if self.electrons_yn:
+        if self.species[-1].name == "e":
             # Calculate the effective charge number z*.
             # The effective charge number is the sum of the square of the charge
             # number of each species multiplied by the number density of that
@@ -434,7 +420,6 @@ class LTE:
 
         TODO: write how the minimisation is done.
         """
-        # If self.electrons_yn is true, self.species includes electrons.
         nb_species = len(self.species)
         kbt = u.k_b * self.T
 
@@ -505,52 +490,35 @@ class LTE:
         #   charge           0,
         # ]
         #
-        if self.electrons_yn:
+        if self.species[-1].name == "e":
             minimiser_dof = nb_species + len(elements) + 1
-            gfe_matrix = np.zeros((minimiser_dof, minimiser_dof))
-            gfe_vector = np.zeros(minimiser_dof)
-            # The first nb_species rows and columns are for the species.
-            # The next len(self._elements) rows and columns are for the elements.
-            # The last row and column are for the charge neutrality.
-            A_matrix_constraints = np.zeros(
-                (len(self.species), len(elements) + 1)
-            )
-            A_matrix_constraints_transpose = np.zeros(
-                (len(elements) + 1, len(self.species))
-            )
-            b_vector_constraints = np.zeros(len(elements) + 1)
+            constraints_dof = len(elements) + 1
+        else:
+            minimiser_dof = nb_species + len(elements)
+            constraints_dof = len(elements)
+        gfe_matrix = np.zeros((minimiser_dof, minimiser_dof))
+        gfe_vector = np.zeros(minimiser_dof)
+        # The first nb_species rows and columns are for the species.
+        # The next len(self._elements) rows and columns are for the elements.
+        # The last row and column are for the charge neutrality.
+        A_matrix_constraints = np.zeros((len(self.species), constraints_dof))
+        A_matrix_constraints_transpose = np.zeros(
+            (constraints_dof, len(self.species))
+        )
+        b_vector_constraints = np.zeros(constraints_dof)
 
-            for i, element in enumerate(elements):
-                stoichiometric_coefficients = element["stoich_coeff"]
-                assert isinstance(stoichiometric_coefficients, list)
-                for j, sc in enumerate(stoichiometric_coefficients):
-                    A_matrix_constraints[j, i] = sc
-                    A_matrix_constraints_transpose[i, j] = sc
-                b_vector_constraints[i] = element["N_tot"]
+        for i, element in enumerate(elements):
+            stoichiometric_coefficients = element["stoich_coeff"]
+            assert isinstance(stoichiometric_coefficients, list)
+            for j, sc in enumerate(stoichiometric_coefficients):
+                A_matrix_constraints[j, i] = sc
+                A_matrix_constraints_transpose[i, j] = sc
+            b_vector_constraints[i] = element["N_tot"]
 
+        if self.species[-1].name == "e":
             for j, qc in enumerate(sp.charge_number for sp in self.species):
                 A_matrix_constraints[j, -1] = qc
                 A_matrix_constraints_transpose[-1, j] = qc
-        else:
-            minimiser_dof = nb_species + len(elements)
-            gfe_matrix = np.zeros((minimiser_dof, minimiser_dof))
-            gfe_vector = np.zeros(minimiser_dof)
-            # The first nb_species rows and columns are for the species.
-            # The next len(self._elements) rows and columns are for the elements.
-            # No charge neutrality in this case because there are no electrons.
-            A_matrix_constraints = np.zeros((len(self.species), len(elements)))
-            A_matrix_constraints_transpose = np.zeros(
-                (len(elements), len(self.species))
-            )
-            b_vector_constraints = np.zeros(len(elements))
-
-            for i, element in enumerate(elements):
-                stoichiometric_coefficients = element["stoich_coeff"]
-                assert isinstance(stoichiometric_coefficients, list)
-                for j, sc in enumerate(stoichiometric_coefficients):
-                    A_matrix_constraints[j, i] = sc
-                    A_matrix_constraints_transpose[i, j] = sc
-                b_vector_constraints[i] = element["N_tot"]
 
         gfe_matrix[:nb_species, nb_species:] = A_matrix_constraints
         gfe_matrix[nb_species:, :nb_species] = A_matrix_constraints_transpose
@@ -970,7 +938,7 @@ def lte_from_names(
     P : float
         LTE plasma pressure, in :math:`\text{Pa}`.
     electrons_yn: bool
-        Whether or not to add electrons to the species list (default: True)
+        Whether or not to include electrons in the calculation (default True).
 
     Returns
     -------
