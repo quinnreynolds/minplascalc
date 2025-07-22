@@ -158,12 +158,20 @@ class LTE:
         )
 
     def __str__(self):
-        return (
-            f"LTE mixture species: "
-            f"{tuple([sp.name for sp in self.species[:-1]])}\n"
-            f"Initial composition: {self.x0[:-1]}\n"
-            f"Temperature: {self.T} K\nPressure: {self.P} Pa"
-        )
+        if self.species[-1].name == "e":
+            return (
+                f"LTE mixture species: "
+                f"{tuple([sp.name for sp in self.species[:-1]])}\n"
+                f"Initial composition: {self.x0[:-1]}\n"
+                f"Temperature: {self.T} K\nPressure: {self.P} Pa"
+            )
+        else:
+            return (
+                f"LTE mixture species: "
+                f"{tuple([sp.name for sp in self.species])}\n"
+                f"Initial composition: {self.x0}\n"
+                f"Temperature: {self.T} K\nPressure: {self.P} Pa"
+            )
 
     def __get_reference_energies(self) -> tuple[np.ndarray, np.ndarray]:
         r"""Calculate the reference energy values for all species.
