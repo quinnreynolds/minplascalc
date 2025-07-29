@@ -12,7 +12,7 @@ from minplascalc import functions_radiation, functions_transport
 from minplascalc import species as _sp
 from minplascalc import units as u
 
-__all__ = ["lte_from_names", "LTE"]
+__all__ = ["lte_from_names", "LTE", "LTEWithoutElectrons"]
 
 
 class LTE:
@@ -22,7 +22,6 @@ class LTE:
         x0: list[float],
         T: float,
         P: float,
-        electrons_yn: bool,
         gfe_initial_particles: float,
         gfe_rtol: float,
         gfe_max_iter: int,
@@ -47,8 +46,6 @@ class LTE:
             LTE plasma temperature, in :math:`\text{K}`.
         P : float
             LTE plasma pressure, in :math:`\text{Pa}`.
-        electrons_yn: bool
-            Whether or not to add electrons to the species list.
         gfe_initial_particles : float
             Gibbs Free Energy minimiser solution control: Starting estimate for
             number of particles of each species. Typically O(1e20).
@@ -79,10 +76,7 @@ class LTE:
             raise ValueError("Lists species and x0 must be the same length.")
 
         # Add electron species to the species list.
-        if electrons_yn:
-            self.__species = tuple(list(species) + [_sp.Electron()])
-        else:
-            self.__species = tuple(list(species))
+        self.__species = self._setup_species_list(species)
 
         self.x0 = x0
         self.T = T
@@ -117,19 +111,9 @@ class LTE:
 
     @x0.setter
     def x0(self, x0):
-        if self.species[-1].name == "e" and len(x0) == len(self.species) - 1:
-            # Reset LTE composition flag
-            self.__isLTE = False
-            # Add electron mole fraction, set to zero.
-            self.__x0 = tuple(list(x0) + [0.0])
-        elif self.species[-1].name != "e" and len(x0) == len(self.species):
-            self.__isLTE = False
-            self.__x0 = tuple(list(x0))
-        else:
-            raise ValueError(
-                "Please specify constraint mole fractions for all "
-                "species (except electrons)."
-            )
+        self._validate_x0_length(x0)
+        self.__isLTE = False
+        self.__x0 = self._format_x0(x0)
 
     @property
     def T(self):
@@ -158,20 +142,104 @@ class LTE:
         )
 
     def __str__(self):
-        if self.species[-1].name == "e":
-            return (
-                f"LTE mixture species: "
-                f"{tuple([sp.name for sp in self.species[:-1]])}\n"
-                f"Initial composition: {self.x0[:-1]}\n"
-                f"Temperature: {self.T} K\nPressure: {self.P} Pa"
-            )
+        species_str, x0_str = self._format_species_string()
+        return (
+            f"LTE mixture species: {species_str}\n"
+            f"Initial composition: {x0_str}\n"
+            f"Temperature: {self.T} K\nPressure: {self.P} Pa"
+        )
+
+    def _setup_species_list(
+        self,
+        species: list[_sp.Monatomic | _sp.Diatomic | _sp.Polyatomic],
+    ) -> tuple:
+        """Set up the species list, adding electrons by default."""
+        return tuple(list(species) + [_sp.Electron()])
+
+    def _validate_x0_length(self, x0: list[float]) -> None:
+        """Validate constraint mole fractions length (electrons case)."""
+        if len(x0) == len(self.species) - 1:
+            return  # Valid: x0 for all species except electrons
         else:
-            return (
-                f"LTE mixture species: "
-                f"{tuple([sp.name for sp in self.species])}\n"
-                f"Initial composition: {self.x0}\n"
-                f"Temperature: {self.T} K\nPressure: {self.P} Pa"
+            raise ValueError(
+                "Please specify constraint mole fractions for all "
+                "species (except electrons)."
             )
+
+    def _format_x0(self, x0: list[float]) -> tuple[float, ...]:
+        """Format x0 for electrons case."""
+        # Add electron mole fraction, set to zero
+        return tuple(list(x0) + [0.0])
+
+    def _format_species_string(self) -> tuple[tuple, tuple]:
+        """Format species and x0 strings for display (electrons case)."""
+        species_tuple = tuple([sp.name for sp in self.species[:-1]])
+        x0_tuple = self.x0[:-1]
+        return species_tuple, x0_tuple
+
+    def _get_constraint_dimensions(
+        self, elements_count: int
+    ) -> tuple[int, int]:
+        """Calculate matrix dimensions for solver (electrons case)."""
+        nb_species = len(self.species)
+        minimiser_dof = (
+            nb_species + elements_count + 1
+        )  # +1 for charge constraint
+        constraints_dof = elements_count + 1
+        return minimiser_dof, constraints_dof
+
+    def _setup_charge_constraints(
+        self, A_matrix: np.ndarray, A_matrix_transpose: np.ndarray
+    ) -> None:
+        """Set up charge neutrality constraints (electrons case)."""
+        for j, qc in enumerate(sp.charge_number for sp in self.species):
+            A_matrix[j, -1] = qc
+            A_matrix_transpose[-1, j] = qc
+
+    def _calculate_ionization_lowering(
+        self, number_densities: np.ndarray
+    ) -> np.ndarray:
+        """Calculate ionization energy lowering (electrons case)."""
+        nb_species = len(self.species)
+        kbt = u.k_b * self.T
+        dE = np.zeros(nb_species)
+
+        # Calculate the effective charge number z*.
+        charge_numbers = np.array([sp.charge_number for sp in self.species])
+        weighted_charge_sum_squared, weighted_charge_sum = 0.0, 0.0
+        for z_i, nd in zip(charge_numbers, number_densities):
+            if z_i > 0:  # Only consider positively charged species.
+                weighted_charge_sum += nd * z_i
+                weighted_charge_sum_squared += nd * z_i**2
+        z_star = weighted_charge_sum_squared / weighted_charge_sum
+
+        # Get the electron number density.
+        n_e = number_densities[-1]  # m^-3
+
+        # Calculate the Debye sphere radius, to the power 3.
+        debye_pow3 = (
+            u.epsilon_0 * kbt / (4 * np.pi * (z_star + 1) * n_e * u.e**2)
+        ) ** (3 / 2)
+
+        # Calculate ionisation energy lowering for each positive ion.
+        for i, charge_number in enumerate(charge_numbers):
+            if charge_number > 0:
+                # Calculate the ion-sphere radius, to the power 3.
+                ai_pow3 = 3 * charge_number / (4 * np.pi * n_e)
+                # Calculate the ionisation energy lowering.
+                dE[i] = (
+                    kbt
+                    * ((ai_pow3 / debye_pow3 + 1) ** (2 / 3) - 1)
+                    / (2 * (z_star + 1))
+                )
+
+        return dE
+
+    def _get_species_for_iteration(
+        self, number_densities: np.ndarray
+    ) -> tuple[np.ndarray, list]:
+        """Get species and densities for iteration (electrons case)."""
+        return number_densities[:-1], self.species[:-1]
 
     def __get_reference_energies(self) -> tuple[np.ndarray, np.ndarray]:
         r"""Calculate the reference energy values for all species.
@@ -253,45 +321,8 @@ class LTE:
             if sum(sp.stoichiometry.values()) >= 2:
                 E0[i] = -sp.dissociation_energy
 
-        if self.species[-1].name == "e":
-            # Calculate the effective charge number z*.
-            # The effective charge number is the sum of the square of the charge
-            # number of each species multiplied by the number density of that
-            # species.
-            charge_numbers = np.array(
-                [sp.charge_number for sp in self.species]
-            )
-            weighted_charge_sum_squared, weighted_charge_sum = 0.0, 0.0
-            for z_i, nd in zip(charge_numbers, number_densities):
-                if z_i > 0:  # Only consider positively charged species.
-                    weighted_charge_sum += nd * z_i
-                    weighted_charge_sum_squared += nd * z_i**2
-            z_star = weighted_charge_sum_squared / weighted_charge_sum
-
-            # Get the electron number density.
-            n_e = number_densities[-1]  # m^-3
-
-            # Calculate the Debye sphere radius, to the power 3.
-            debye_pow3 = (
-                u.epsilon_0 * kbt / (4 * np.pi * (z_star + 1) * n_e * u.e**2)
-            ) ** (3 / 2)
-
-            # Calculate the ionisation energy lowering for each (positively)
-            # charged species.
-            for i, charge_number in enumerate(charge_numbers):
-                if charge_number > 0:
-                    # Electron are discarded, but so are every negatively charged
-                    # species.
-                    # TODO: Check if negative ions should be considered.
-
-                    # Calculate the ion-sphere radius, to the power 3.
-                    ai_pow3 = 3 * charge_number / (4 * np.pi * n_e)
-                    # Calculate the ionisation energy lowering.
-                    dE[i] = (
-                        kbt
-                        * ((ai_pow3 / debye_pow3 + 1) ** (2 / 3) - 1)
-                        / (2 * (z_star + 1))
-                    )
+        # Calculate ionization energy lowering (electron-containing only)
+        dE = self._calculate_ionization_lowering(number_densities)
 
         # Get the neutral species.
         neutral_species = [sp for sp in self.species if sp.charge_number == 0]
@@ -498,12 +529,9 @@ class LTE:
         #   charge           0,
         # ]
         #
-        if self.species[-1].name == "e":
-            minimiser_dof = nb_species + len(elements) + 1
-            constraints_dof = len(elements) + 1
-        else:
-            minimiser_dof = nb_species + len(elements)
-            constraints_dof = len(elements)
+        minimiser_dof, constraints_dof = self._get_constraint_dimensions(
+            len(elements)
+        )
         gfe_matrix = np.zeros((minimiser_dof, minimiser_dof))
         gfe_vector = np.zeros(minimiser_dof)
         # The first nb_species rows and columns are for the species.
@@ -523,10 +551,9 @@ class LTE:
                 A_matrix_constraints_transpose[i, j] = sc
             b_vector_constraints[i] = element["N_tot"]
 
-        if self.species[-1].name == "e":
-            for j, qc in enumerate(sp.charge_number for sp in self.species):
-                A_matrix_constraints[j, -1] = qc
-                A_matrix_constraints_transpose[-1, j] = qc
+        self._setup_charge_constraints(
+            A_matrix_constraints, A_matrix_constraints_transpose
+        )
 
         gfe_matrix[:nb_species, nb_species:] = A_matrix_constraints
         gfe_matrix[nb_species:, :nb_species] = A_matrix_constraints_transpose
@@ -905,6 +932,10 @@ class LTE:
         float
             Electrical conductivity, in :math:`\text{S.m}^{-1}`.
         """
+        return self._calculate_electrical_conductivity()
+
+    def _calculate_electrical_conductivity(self) -> float:
+        """Template method for electrical conductivity calculation."""
         return functions_transport.electrical_conductivity(self)
 
     def calculate_total_emission_coefficient(self) -> float:
@@ -919,6 +950,69 @@ class LTE:
             Total radiation emission coefficient, in :math:`\text{W.m}^{-3}`.
         """
         return functions_radiation.total_emission_coefficient(self)
+
+
+class LTEWithoutElectrons(LTE):
+    """LTE mixture class specifically for cases without electrons."""
+
+    def _setup_species_list(
+        self,
+        species: list[_sp.Monatomic | _sp.Diatomic | _sp.Polyatomic],
+    ) -> tuple:
+        """Set up the species list without adding electrons."""
+        return tuple(list(species))
+
+    def _validate_x0_length(self, x0: list[float]) -> None:
+        """Validate constraint mole fractions length (no electrons case)."""
+        if len(x0) == len(self.species):
+            return  # Valid: x0 for all species (no electrons)
+        else:
+            raise ValueError(
+                "Please specify constraint mole fractions for all species."
+            )
+
+    def _format_x0(self, x0: list[float]) -> tuple[float, ...]:
+        """Format x0 for no electrons case."""
+        return tuple(list(x0))
+
+    def _format_species_string(self) -> tuple[tuple, tuple]:
+        """Format species and x0 strings for display (no electrons case)."""
+        species_tuple = tuple([sp.name for sp in self.species])
+        x0_tuple = self.x0
+        return species_tuple, x0_tuple
+
+    def _get_constraint_dimensions(
+        self, elements_count: int
+    ) -> tuple[int, int]:
+        """Calculate matrix dimensions for solver (no electrons case)."""
+        nb_species = len(self.species)
+        minimiser_dof = nb_species + elements_count
+        constraints_dof = elements_count
+        return minimiser_dof, constraints_dof
+
+    def _setup_charge_constraints(
+        self, A_matrix: np.ndarray, A_matrix_transpose: np.ndarray
+    ) -> None:
+        """Set up charge neutrality constraints (no electrons case)."""
+        # No charge constraints needed without electrons
+        pass
+
+    def _calculate_ionization_lowering(
+        self, number_densities: np.ndarray
+    ) -> np.ndarray:
+        """Calculate ionization energy lowering (no electrons case)."""
+        nb_species = len(self.species)
+        return np.zeros(nb_species)  # No ionization lowering without electrons
+
+    def _get_species_for_iteration(
+        self, number_densities: np.ndarray
+    ) -> tuple[np.ndarray, list]:
+        """Get species and densities for iteration (no electrons case)."""
+        return number_densities, self.species
+
+    def _calculate_electrical_conductivity(self) -> float:
+        """Electrical conductivity is zero without electrons."""
+        return 0.0
 
 
 def lte_from_names(
@@ -958,4 +1052,8 @@ def lte_from_names(
             "include them in your species list."
         )
     species = [_sp.from_name(name) for name in names]
-    return LTE(species, x0, T, P, electrons_yn, 1e20, 1e-10, 1000)
+
+    if electrons_yn:
+        return LTE(species, x0, T, P, 1e20, 1e-10, 1000)
+    else:
+        return LTEWithoutElectrons(species, x0, T, P, 1e20, 1e-10, 1000)

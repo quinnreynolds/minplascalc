@@ -2751,29 +2751,28 @@ def electrical_conductivity(mixture: "LTE") -> float:
 
     The sum is over all ionic species in the mixture.
     """
-    if mixture.species[-1].name == "e":
-        charge_numbers = np.array([sp.charge_number for sp in mixture.species])
-        number_densities = mixture.calculate_composition()
-        masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
-        rho = mixture.calculate_density()
+    # This function should only be called for electron-containing mixtures
+    # Non-electron mixtures should return 0 via their template method override
+    charge_numbers = np.array([sp.charge_number for sp in mixture.species])
+    number_densities = mixture.calculate_composition()
+    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    rho = mixture.calculate_density()
 
-        D1 = Dij(mixture)[-1, :]
-        n_tot = np.sum(number_densities)
+    D1 = Dij(mixture)[-1, :]
+    n_tot = np.sum(number_densities)
 
-        sum_val = 0.0
-        for charge_number, D1j, mj, nj in zip(
-            charge_numbers, D1, masses, number_densities
-        ):
-            # TODO: Check if this is correct. Electrons should be discarded.
-            # TODO: Check if this is correct. Neutral species should be discarded
-            # (but ok, since they have 0 charge).
-            sum_val += nj * mj * charge_number * D1j
+    sum_val = 0.0
+    for charge_number, D1j, mj, nj in zip(
+        charge_numbers, D1, masses, number_densities
+    ):
+        # TODO: Check if this is correct. Electrons should be discarded.
+        # TODO: Check if this is correct. Neutral species should be discarded
+        # (but ok, since they have 0 charge).
+        sum_val += nj * mj * charge_number * D1j
 
-        pre_mult = u.e**2 * n_tot / (rho * u.k_b * mixture.T)
+    pre_mult = u.e**2 * n_tot / (rho * u.k_b * mixture.T)
 
-        return pre_mult * sum_val
-    else:
-        return 0
+    return pre_mult * sum_val
 
 
 def thermal_conductivity(

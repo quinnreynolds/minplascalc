@@ -112,11 +112,8 @@ def total_emission_coefficient(mix: "LTE") -> float:
     # Calculate the pre-constant of the emission line.
     line_pre_constant = u.h * u.c / (4 * u.pi)
 
-    # Iterate over species and their number densities
-    if mix.species[-1].name == "e":
-        ndloc, sploc = nd[:-1], mix.species[:-1]
-    else:
-        ndloc, sploc = nd, mix.species
+    # Iterate over species and their number densities (excluding electrons)
+    ndloc, sploc = mix._get_species_for_iteration(nd)
     for nv, species in zip(ndloc, sploc):
         # Calculate the internal partition function of the species at the given
         # temperature.
