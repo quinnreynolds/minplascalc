@@ -1696,9 +1696,10 @@ def q(mixture: "LTE") -> np.ndarray:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()  # m^-3
+    # kg
     masses = np.array(
         [species.molar_mass / u.N_a for species in mixture.species]
-    )  # kg
+    )
 
     # Calculate the collision integrals for the mixture.
     Q11 = Qij_mix(mixture, 1, 1)

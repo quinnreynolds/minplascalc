@@ -89,9 +89,8 @@ class LTE:
             False  # Flag to indicate if LTE composition has been calculated.
         )
 
-        self.__Ni: np.ndarray = np.zeros(
-            len(self.species)
-        )  # Number of particles of each species.
+        # Number of particles of each species.
+        self.__Ni: np.ndarray = np.zeros(len(self.species))
 
     @property
     def species(self):
@@ -220,9 +219,8 @@ class LTE:
         N_i: np.ndarray = self.__Ni  # Number of particles of each species.
         N_tot = N_i.sum()  # Total number of particles in the plasma.
         V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
-        number_densities = (
-            N_i / V
-        )  # Number density of each species, in particles/m3.
+        # Number density of each species, in particles/m3.
+        number_densities = N_i / V
 
         # Initialise arrays for reference energy and ionisation energy
         # lowering.
@@ -527,17 +525,15 @@ class LTE:
             governor_factor = governor_factors[
                 governor_iters
             ]  # Relaxation factor.
-            relative_tolerance = (
-                self.gfe_rtol * 10
-            )  # Initial relative tolerance.
+            # Initial relative tolerance.
+            relative_tolerance = self.gfe_rtol * 10
             minimiser_iters = 0  # Iteration counter for the minimiser.
 
             while relative_tolerance > self.gfe_rtol:
                 # Calculate reference energy and ionisation energy lowering.
                 self.__E0, self.__dE = self.__get_reference_energies()
-                N_tot = (
-                    self.__Ni.sum()
-                )  # Total number of particles in the plasma.
+                # Total number of particles in the plasma.
+                N_tot = self.__Ni.sum()
                 V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
 
                 #  gfe_matrix[:nb_species, :nb_species] = [
@@ -647,10 +643,11 @@ class LTE:
         """
         number_densities = self.calculate_composition()  # particles/m^3
         molar_masses = [sp.molar_mass for sp in self.species]  # kg/mol
+        # kg/m3 = (particules/m^3 * kg/mol) / (particules/mol)
         return (
             sum(n_i * M_i for n_i, M_i in zip(number_densities, molar_masses))
             / u.N_a
-        )  # kg/m3 = (particules/m^3 * kg/mol) / (particules/mol)
+        )
 
     def calculate_species_enthalpies(self) -> np.ndarray:
         r"""Calculate the LTE enthalpy for each component in the plasma.
@@ -753,18 +750,15 @@ class LTE:
         density = self.calculate_density()  # kg/m3
 
         mass_enthalpies = self.calculate_species_enthalpies()  # J/kg
-        masses = np.array(
-            [sp.molar_mass / u.N_a for sp in self.species]
-        )  # kg/particle
+        # kg/particle
+        masses = np.array([sp.molar_mass / u.N_a for sp in self.species])
         enthalpies = mass_enthalpies * masses  # J/particle
 
         # Get the species with the lowest reference energy.
-        i_min = np.argmin(
-            self.__E0
-        )  # Index of the species with the lowest reference energy.
-        h_mol_0 = (
-            self.__E0[i_min] / self.species[i_min].molar_mass
-        )  # J/(kg/mol)
+        # Index of the species with the lowest reference energy.
+        i_min = np.argmin(self.__E0)
+        # J/(kg/mol)
+        h_mol_0 = self.__E0[i_min] / self.species[i_min].molar_mass
 
         weighted_enthalpy = sum(
             n_i * (h_i - h_mol_0 * M_i)
