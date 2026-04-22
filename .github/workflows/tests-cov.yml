@@ -22,8 +22,6 @@ jobs:
       contents: write  # To save the coverage report.
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.pull_request.head.sha }}
     - name: Install the latest version of uv.
       uses: astral-sh/setup-uv@v5
       with:
