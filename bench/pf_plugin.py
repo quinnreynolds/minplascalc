@@ -22,6 +22,16 @@ def pytest_configure(config):
 
         config._mpc_undos.append(collision_cache.patch())
         print("[pf_plugin] collision-parameter cache ENABLED")
+    if "memo" in parts:
+        import qij_memo
+
+        config._mpc_undos.append(qij_memo.patch())
+        print("[pf_plugin] Qij_mix memoisation ENABLED")
+    if "analytic" in parts:
+        import q_analytic_dropin
+
+        config._mpc_undos.append(q_analytic_dropin.patch())
+        print("[pf_plugin] analytic (l,s) derivative ENABLED")
 
 
 def pytest_unconfigure(config):

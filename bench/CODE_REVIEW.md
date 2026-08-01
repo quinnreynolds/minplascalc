@@ -228,9 +228,13 @@ Three observations:
    expression, so the temperature derivative in eq. 18 can be taken
    analytically instead of by finite difference — removing the recursion
    entirely *and* being more accurate.
-1. The step is a hardcoded **±0.5 K absolute**, which is 5e-4 relative at
-   1000 K but 2e-5 at 25000 K. It is an undocumented magic number that makes
-   the truncation error temperature-dependent.
+1. ~~The step is a hardcoded ±0.5 K magic number.~~ **Corrected:** it is a
+   unit-step central difference — ±0.5 is chosen so the `2h` divisor equals
+   1 and can be omitted. It is at or near optimal; the nested difference is
+   round-off limited at ~1e-9 regardless of step. See
+   [ANALYTIC_RECURSION.md](ANALYTIC_RECURSION.md), which derives the
+   recursion, shows it is exact, and implements the analytic derivative
+   (1.36x on its own, all 55 tests passing).
 
 ### 3.3 `__get_reference_energies` redoes structural work every Newton iteration
 
