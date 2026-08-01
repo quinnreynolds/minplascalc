@@ -7,7 +7,7 @@ from a unit-step finite difference to the exact one.
 """
 
 import numpy as np
-from q_analytic_derivative import BASE_S, omega_star_fn
+from q_analytic_compact import BASE_S, omega_star
 
 import minplascalc.functions_transport as ft
 from minplascalc import units as u
@@ -27,7 +27,8 @@ def Qnn_analytic(species_i, species_j, l, s, T):
     a = _fit_coeffs(ft.c_nn, l, s, beta_value)
     sigma = r_e * x0
     x = np.log(T * u.K_to_eV / epsilon_0)
-    omega_reduced = omega_star_fn(l, s)(x, *a)
+    s0 = BASE_S[l]
+    omega_reduced = omega_star(x, a, max(0, s - s0), s0)
     return omega_reduced * np.pi * sigma**2 * 1e-20
 
 
@@ -38,7 +39,8 @@ def Qin_analytic(species_i, species_j, l, s, T):
     a = _fit_coeffs(ft.c_in, l, s, beta_value)
     sigma = r_e * x0
     x = np.log(T * u.K_to_eV / epsilon_0)
-    omega_reduced = omega_star_fn(l, s)(x, *a)
+    s0 = BASE_S[l]
+    omega_reduced = omega_star(x, a, max(0, s - s0), s0)
     return omega_reduced * np.pi * sigma**2 * 1e-20
 
 

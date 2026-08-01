@@ -163,6 +163,75 @@ So the practical conclusion is the opposite of "tune the step": **±0.5 K is
 already at or near the optimum**, and the ~1e-9 floor cannot be improved by
 any choice of `h`. Only the analytic derivative removes it.
 
+## 3a. How hairy is the expression? (Not very, in the right basis)
+
+`sympy.simplify` failing was a symptom, not a verdict. Differentiating eq. 15
+as written -- in terms of `exp` -- produces a tree that `simplify` cannot
+untangle:
+
+| derivatives | raw `exp` basis | structured `P_k` | expanded `P_k` |
+|---:|---:|---:|---:|
+| 0 | 30 | 0 (`P_0 = 1`) | 0 |
+| 1 | 162 | **19** | 38 |
+| 2 | 601 | **100** | 311 |
+
+The fix is a change of basis. Each factor in eq. 15 is a logistic:
+
+```text
+   exp(u) / (exp(u) + exp(-u))  ==  1 / (1 + exp(-2u))  ==  sigma(2u)
+```
+
+so with `c = a0 + a1 x`, `k1 = 2/a3`, `k2 = 2/a6`:
+
+```text
+   g = ln Omega*  =  c * sigma_1  +  a4 * sigma_2
+```
+
+Sigmoids are closed under differentiation (`sigma' = k sigma (1 - sigma)`),
+so with `d_i = sigma_i (1 - sigma_i)` the derivatives stay finite and
+readable -- both verified against `sympy.diff`:
+
+```text
+   g'  =  a1 sigma_1  +  c k1 d1  +  a4 k2 d2
+
+   g'' =  2 a1 k1 d1
+          +  c k1^2 d1 (1 - 2 sigma_1)
+          +  a4 k2^2 d2 (1 - 2 sigma_2)
+```
+
+Factoring the common `exp(g)` out of `Omega*_(k) = exp(g) P_k`, the whole
+recursion is three lines:
+
+```text
+   P_0 = 1
+   P_1 = 1 + g' / (s0 + 2)
+   P_2 = P_1 + (g' P_1 + g'' / (s0 + 2)) / (s0 + 3)
+```
+
+**That is the entire implementation** -- `bench/q_analytic_compact.py`, about
+twenty lines of numpy with no symbolic dependency at runtime. It agrees with
+the sympy-lambdified version to **2.2e-14** across all (l, s, k) with
+randomised coefficients, and is 1.7x faster (2.94 us vs 4.93 us per call).
+
+Expanding `P_2` into an explicit polynomial in `sigma_1, sigma_2` is possible
+but counterproductive: 100 operations becomes 311.
+
+The derivation is emitted as LaTeX by
+`q_analytic_symbolic.latex_derivation()` -- see
+[`analytic_recursion.tex`](analytic_recursion.tex), which compiles to a
+two-page note.
+
+### One deliberate numerical change
+
+The sigmoid rewrite is algebraically identical but not bit-identical: the two
+forms differ by **1 ULP** (4.5e-16 max relative over the range used). That is
+why non-recursed (l, s) values now differ by ~2e-16 rather than exactly zero.
+
+The trade is favourable: `exp(u)/(exp(u)+exp(-u))` overflows to `nan` for
+`u > ~710`, while `1/(1+exp(-2u))` saturates correctly to 1. The current
+inputs stay far from that, so this is robustness rather than a live bug fix
+(`bench/check_sigmoid_form.py`).
+
 ## 4. Cost and end-to-end effect
 
 Evaluations of the base fit per collision integral:
