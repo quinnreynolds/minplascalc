@@ -46,6 +46,8 @@ def main():
         wrap_module_fn(ft, "q"),
         wrap_module_fn(ft, "qhat"),
         wrap_module_fn(ft, "Qij_mix"),
+        wrap_module_fn(ft, "_Qij_mix"),
+        wrap_module_fn(ft, "collision_integrals"),
         wrap_module_fn(ft, "Dij"),
         wrap_module_fn(ft, "DTi"),
         wrap_method(mxmod.LTE, "calculate_composition"),
@@ -70,8 +72,15 @@ def main():
                 lambda: m.calculate_thermal_conductivity(),
             ),
         ]
-        keys = ["q", "qhat", "Qij_mix", "Dij", "DTi", "calculate_composition"]
-        print(f"  {'property':<28s}" + "".join(f"{k:>14s}" for k in keys))
+        keys = [
+            "q",
+            "qhat",
+            "collision_integrals",
+            "_Qij_mix",
+            "Dij",
+            "DTi",
+        ]
+        print(f"  {'property':<26s}" + "".join(f"{k:>21s}" for k in keys))
         for label, fn in props:
             m.T = 12000
             m.calculate_composition()
@@ -79,7 +88,7 @@ def main():
                 COUNTS[k] = 0
             fn()
             print(
-                f"  {label:<28s}" + "".join(f"{COUNTS[k]:>14d}" for k in keys)
+                f"  {label:<26s}" + "".join(f"{COUNTS[k]:>21d}" for k in keys)
             )
     finally:
         for u_ in undos:
