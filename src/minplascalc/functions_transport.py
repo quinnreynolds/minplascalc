@@ -2534,31 +2534,29 @@ def Dij(mixture: "LTE") -> np.ndarray:
 
     n_tot = np.sum(number_densities)  # m^-3
 
-    diffusion_matrix = np.zeros((nb_species, nb_species))
     qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
-
     lu_piv_q = scl.lu_factor(qq)
-    b_vec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
 
-    for i in range(nb_species):
-        for j in range(nb_species):
-            # TODO: Check if this is correct
-            # Equation 6 of [Devoto1966]_.
-            dij = np.array(
-                [delta(h, i) - delta(h, j) for h in range(0, nb_species)]
-            )
-            b_vec[:nb_species] = 3 * np.sqrt(np.pi) * dij
-            cflat = scl.lu_solve(lu_piv_q, b_vec)
-            cip = cflat.reshape(4, nb_species)
+    # Equation 6 of [Devoto1966]_.  The right-hand side for the pair (i, j)
+    # is 3 sqrt(pi) (e_i - e_j) in its first nb_species entries, so the
+    # nb_species**2 right-hand sides span only an nb_species-dimensional
+    # space.  Solving once against the unit vectors therefore gives every
+    # c^{ji} by subtraction, instead of one solve per pair.
+    b_matrix = np.zeros((4 * nb_species, nb_species))
+    b_matrix[:nb_species, :] = 3 * np.sqrt(np.pi) * np.eye(nb_species)
+    c_unit = scl.lu_solve(lu_piv_q, b_matrix)[:nb_species]
 
-            # Diffusion coefficient, equation 3 of [Devoto1966]_.
-            diffusion_matrix[i, j] = (
-                rho
-                * number_densities[i]
-                / (2 * n_tot * masses[j])
-                * np.sqrt(2 * u.k_b * mixture.T / masses[i])
-                * cip[0, i]
-            )
+    # c_i0^{ji} for the pair (i, j) is c_unit[i, i] - c_unit[i, j].
+    cip0 = np.diag(c_unit)[:, np.newaxis] - c_unit
+
+    # Diffusion coefficient, equation 3 of [Devoto1966]_.
+    diffusion_matrix = (
+        rho
+        * number_densities[:, np.newaxis]
+        / (2 * n_tot * masses[np.newaxis, :])
+        * np.sqrt(2 * u.k_b * mixture.T / masses)[:, np.newaxis]
+        * cip0
+    )
 
     return diffusion_matrix
 
@@ -2759,14 +2757,10 @@ def electrical_conductivity(mixture: "LTE") -> float:
     D1 = Dij(mixture)[-1, :]
     n_tot = np.sum(number_densities)
 
-    sum_val = 0.0
-    for charge_number, D1j, mj, nj in zip(
-        charge_numbers, D1, masses, number_densities
-    ):
-        # TODO: Check if this is correct. Electrons should be discarded.
-        # TODO: Check if this is correct. Neutral species should be discarded
-        # (but ok, since they have 0 charge).
-        sum_val += nj * mj * charge_number * D1j
+    # TODO: Check if this is correct. Electrons should be discarded.
+    # TODO: Check if this is correct. Neutral species should be discarded
+    # (but ok, since they have 0 charge).
+    sum_val = number_densities @ (masses * charge_numbers * D1)
 
     pre_mult = u.e**2 * n_tot / (rho * u.k_b * mixture.T)
 
@@ -2948,13 +2942,11 @@ def thermal_conductivity(
 
     locDij = Dij(mixture)
 
-    krxn_enth = 0.0
-    for j in range(nb_species):
-        for i in range(nb_species):
-            # TODO: This looks like the first term in the first parenthesis of
-            # 18 of [Devoto1966]_.
-            # TODO: Check if it is correct.
-            krxn_enth += masses[j] * masses[i] * hv[i] * locDij[i, j] * dxdT[j]
+    # TODO: This looks like the first term in the first parenthesis of
+    # 18 of [Devoto1966]_.
+    # TODO: Check if it is correct.
+    # sum_ij (m_i h_i) D_ij (m_j dx_j/dT), a bilinear form in locDij.
+    krxn_enth = (masses * hv) @ locDij @ (masses * dxdT)
     krxn_enth *= -(n_tot**2) / rho
 
     ### reactional tk components - thermal diffusion term ###
