@@ -232,6 +232,72 @@ The trade is favourable: `exp(u)/(exp(u)+exp(-u))` overflows to `nan` for
 inputs stay far from that, so this is robustness rather than a live bug fix
 (`bench/check_sigmoid_form.py`).
 
+## 3b. Would hyperbolic functions be better? (No)
+
+An exact identity connects all three writings of the logistic factor:
+
+```text
+   exp(u)/(exp(u)+exp(-u))  ==  1/(1+exp(-2u))  ==  (1 + tanh(u))/2
+```
+
+(`sympy.simplify` cannot close the tanh case unaided -- it needs
+`.rewrite(exp)` first, which is why a naive check reports `False`.)
+
+The tanh form is attractive on paper: it is the only one that keeps the
+code's own `u = (x-a2)/a3` with no factor-of-two relabelling, and `tanh` is
+a single libm call. It is also worth asking because hyperbolic forms often
+*are* more stable.
+
+Here they are not. **The range actually reached is |u| \<= 5.85** (measured
+over all species pairs and 1000-25000 K; `u2` only reaches 3.39), against
+tanh saturation at |u| ~ 18 and `exp` overflow at u ~ 709 -- so no form is
+under stress. Where they differ is the tails, checked against 50-digit
+mpmath:
+
+| u | exact | `exp` (current) | `1/(1+exp(-2u))` | `(1+tanh u)/2` |
+|---:|---|---:|---:|---:|
+| -40 | 1.80e-35 | 7.8e-17 | 7.0e-17 | **1.0e+00** |
+| -20 | 4.25e-18 | 2.5e-17 | 2.5e-17 | **1.0e+00** |
+| -5.85 | 8.29e-06 | 4.7e-17 | 4.7e-17 | 3.7e-12 |
+| +5.85 | 0.999992 | 8.0e-17 | 3.1e-17 | 3.1e-17 |
+| +800 | 1.0 | **nan** | 0.0 | 0.0 |
+
+**tanh is the only form that fails in the left tail.** Reconstructing a
+near-zero value as `(1 + t)/2` when `t -> -1` is catastrophic cancellation;
+the sigmoid computes the same number as `1/(1+e^{|2u|})` with full relative
+precision. Since the quantity is probability-like on `[0,1]`, the sigmoid is
+its natural stable parameterisation and tanh throws away the bottom of the
+range.
+
+Speed agrees: sigmoid 2.96 us, tanh 3.68 us, current `exp` 4.14 us per call.
+
+### The one place hyperbolic looked promising -- and still isn't
+
+The derivative factor `d = sigma(1-sigma) = sech^2(u)/4` *does* cancel as
+`sigma -> 1`. At the top of the real range (u = 5.85) the algebraic form
+carries 3.7e-12 relative error against 9.3e-17 for `1/(4 cosh^2 u)`, and
+past u ~ 18 it collapses to exactly zero. That looked like a free win.
+
+It is not, because the error it avoids is proportional to `d` itself and so
+never reaches the answer. Both variants of the full `Omega*` agree with a
+50-digit reference to the same figure:
+
+| |u| range | `d = s(1-s)` | `d = sech^2/4` |
+|---|---:|---:|
+| \<= 5.85 (real) | 3.12e-16 | 3.12e-16 |
+| \<= 12 | 3.39e-16 | 3.39e-16 |
+| \<= 25 | 4.39e-16 | 4.39e-16 |
+| \<= 60 | 5.67e-16 | 5.67e-16 |
+
+and `sech^2` costs 36% more (4.16 vs 3.05 us). I adopted it on the strength
+of the intermediate error and then reverted it on the strength of the
+end-to-end measurement; the reasoning is recorded in a comment in
+`q_analytic_compact.py` so it does not get re-tried.
+
+**Conclusion: keep `1/(1+exp(-2u))`.** It is correct in both tails, the
+fastest of the three, and the only one that never returns `nan`
+(`bench/check_tanh_form.py`).
+
 ## 4. Cost and end-to-end effect
 
 Evaluations of the base fit per collision integral:

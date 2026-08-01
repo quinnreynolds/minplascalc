@@ -61,6 +61,12 @@ def omega_star(x, a, k, s0):
     float
         :math:`\\Omega^{\\star}`.
     """
+    # Note: d_i is written algebraically as sigma_i (1 - sigma_i) rather
+    # than the equivalent sech^2(u_i)/4.  The hyperbolic form is a more
+    # accurate *intermediate* (it does not cancel as sigma -> 1), but the
+    # error it avoids is proportional to d_i itself, so it never reaches
+    # the result: both agree with a 50-digit reference to 3.1e-16 over the
+    # range used, and sech^2 costs 36% more. See check_tanh_form.py.
     a0, a1, a2, a3, a4, a5, a6 = a
     k1, k2 = 2 / a3, 2 / a6
     c = a0 + a1 * x
