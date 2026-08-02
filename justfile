@@ -21,8 +21,9 @@ tests-cov:
 	uv run coverage-badge -o coverage/coverage.svg
 
 # See https://mypy.readthedocs.io/en/stable/command_line.html for more information.
+# bench/ is benchmarking and prototype code, not part of the package.
 type-check:
-	uv run mypy . --exclude docs
+	uv run mypy . --exclude docs --exclude bench
 
 # See https://www.sphinx-doc.org/en/master/man/sphinx-build.html for more information.
 [working-directory: 'docs']

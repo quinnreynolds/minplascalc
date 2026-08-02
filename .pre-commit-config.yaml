@@ -45,3 +45,5 @@ repos:
   rev: v8.23.3
   hooks:
   - id: gitleaks
+    # bench/ is benchmarking and prototype code, not part of the package.
+    exclude: ^bench/
