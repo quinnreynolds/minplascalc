@@ -159,6 +159,13 @@ class Species(BaseSpecies):
         self.electron_cross_section = electron_cross_section
         self.emission_lines = emission_lines
 
+        # Emission line data as columns, for the vectorised sum in
+        # functions_radiation: wavelength (m), g*A (s^-1), upper state
+        # energy (J).  Shaped (3, n) so each row is contiguous.
+        self._emission_line_columns = (
+            np.array(emission_lines, dtype=np.float64).reshape(-1, 3).T.copy()
+        )
+
         self.ionisation_energy: float
         r"""Ionisation energy of the species in :math:`\text{J}`."""
 
