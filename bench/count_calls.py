@@ -46,7 +46,7 @@ def main():
         wrap_module_fn(ft, "q"),
         wrap_module_fn(ft, "qhat"),
         wrap_module_fn(ft, "Qij_mix"),
-        wrap_module_fn(ft, "_Qij_mix"),
+        wrap_module_fn(ft, "_pair_integrals"),
         wrap_module_fn(ft, "collision_integrals"),
         wrap_module_fn(ft, "Dij"),
         wrap_module_fn(ft, "DTi"),
@@ -76,7 +76,7 @@ def main():
             "q",
             "qhat",
             "collision_integrals",
-            "_Qij_mix",
+            "_pair_integrals",
             "Dij",
             "DTi",
         ]

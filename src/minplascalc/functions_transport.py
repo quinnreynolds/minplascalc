@@ -1,7 +1,6 @@
 """Functions for transport properties calculations."""
 
 from typing import TYPE_CHECKING
-from weakref import WeakKeyDictionary
 
 import numpy as np
 import scipy.linalg as scl  # type: ignore[import-untyped]
@@ -1639,36 +1638,18 @@ def Qij(
         raise ValueError("Unknown collision type")
 
 
-#: The (l, s) pairs needed by the transport property calculations.
-#: ``qhat()`` needs {(1,1), (1,2), (1,3), (2,2), (2,3), (2,4), (3,3)}, which
-#: is a subset of what ``q()`` needs, so one evaluation serves both.
+#: The (l, s) pairs needed by :func:`q`.
 LS_PAIRS = (
     (1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7),
     (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
     (3, 3), (3, 4), (3, 5), (4, 4),
 )  # fmt: skip
 
-#: Collision integrals for the most recently seen state of each mixture.
-#: Keyed weakly on the mixture so entries disappear with it, and holding one
-#: state per mixture so a temperature sweep does not accumulate.
-_collision_integrals_cache: "WeakKeyDictionary[LTE, tuple]" = (
-    WeakKeyDictionary()
-)
-
-
-def _mixture_state(mixture: "LTE") -> tuple:
-    """State key for the collision integrals.
-
-    Deliberately the same three attributes whose setters reset the
-    mixture's own ``__isLTE`` composition flag: the species list is
-    immutable (its setter raises), and the ``gfe_*`` solver controls are
-    excluded because they do not invalidate the composition cache either.
-    Keying on them here would only rebuild the collision integrals from a
-    composition that is itself stale, so this cache is valid exactly when
-    the composition it is built from is.
-    """
-    return (mixture.T, mixture.P, mixture.x0)
-
+#: The (l, s) pairs needed by :func:`qhat` -- a subset of :data:`LS_PAIRS`,
+#: so a set computed for ``q()`` can be reused by ``qhat()``.
+QHAT_LS_PAIRS = (
+    (1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (2, 4), (3, 3),
+)  # fmt: skip
 
 #: Distinct energy-moment orders appearing in :data:`LS_PAIRS`.
 _S_VALUES = tuple(sorted({s for _, s in LS_PAIRS}))
@@ -1746,6 +1727,7 @@ def _pair_integrals(
     species_j: "Species",
     n_j: float,
     T: float,
+    ls_pairs: tuple[tuple[int, int], ...],
 ) -> dict[tuple[int, int], float]:
     """Every (l, s) collision integral for a single species pair.
 
@@ -1776,15 +1758,15 @@ def _pair_integrals(
             / (s * (s + 1))
             * b0_sq
             * (cl - _QC_C2[l - 1] - 2 * egamma + _PSICONST[s])
-            for l, s in LS_PAIRS
+            for l, s in ls_pairs
         }
 
     if species_j.name == "e":
         by_s = _qe_pair(species_i, T)
-        return {(l, s): by_s[s] for l, s in LS_PAIRS}
+        return {(l, s): by_s[s] for l, s in ls_pairs}
     if species_i.name == "e":
         by_s = _qe_pair(species_j, T)
-        return {(l, s): by_s[s] for l, s in LS_PAIRS}
+        return {(l, s): by_s[s] for l, s in ls_pairs}
 
     if z_i == 0 and z_j == 0:
         sigma, epsilon_0, beta_array = _nn_pair_parameters(
@@ -1792,7 +1774,7 @@ def _pair_integrals(
         )
         return {
             (l, s): _omega_fit(c_nn, sigma, epsilon_0, beta_array, l, s, T)
-            for l, s in LS_PAIRS
+            for l, s in ls_pairs
         }
 
     if z_i == 0:
@@ -1810,7 +1792,7 @@ def _pair_integrals(
 
     sigma, epsilon_0, beta_array = _in_pair_parameters(ion, neutral)
     out = {}
-    for l, s in LS_PAIRS:
+    for l, s in ls_pairs:
         if qtr_by_s is not None and l % 2 == 1:
             out[(l, s)] = qtr_by_s[s]
         else:
@@ -1820,7 +1802,10 @@ def _pair_integrals(
     return out
 
 
-def collision_integrals(mixture: "LTE") -> dict[tuple[int, int], np.ndarray]:
+def collision_integrals(
+    mixture: "LTE",
+    ls_pairs: tuple[tuple[int, int], ...] = LS_PAIRS,
+) -> dict[tuple[int, int], np.ndarray]:
     r"""Collision integral matrices for every (l, s) in :data:`LS_PAIRS`.
 
     The four transport properties each need collision integrals at the same
@@ -1833,21 +1818,19 @@ def collision_integrals(mixture: "LTE") -> dict[tuple[int, int], np.ndarray]:
     ----------
     mixture : LTE
         Mixture of species.
+    ls_pairs : tuple[tuple[int, int], ...], optional
+        Which (l, s) pairs to evaluate.  Defaults to :data:`LS_PAIRS`, the
+        set :func:`q` needs; :func:`qhat` asks for the smaller
+        :data:`QHAT_LS_PAIRS`.
 
     Returns
     -------
     dict[tuple[int, int], np.ndarray]
-        Collision integral matrix for each (l, s) pair.  The arrays are
-        shared with other callers and are marked read-only.
+        Collision integral matrix for each requested (l, s) pair.
     """
-    key = _mixture_state(mixture)
-    cached = _collision_integrals_cache.get(mixture)
-    if cached is not None and cached[0] == key:
-        return cached[1]
-
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()  # in m^-3
-    values = {ls: np.zeros((nb_species, nb_species)) for ls in LS_PAIRS}
+    values = {ls: np.zeros((nb_species, nb_species)) for ls in ls_pairs}
 
     # Species pairs outermost, moments innermost: the potential parameters
     # are a property of the pair, so this derives them once each rather than
@@ -1858,19 +1841,21 @@ def collision_integrals(mixture: "LTE") -> dict[tuple[int, int], np.ndarray]:
         for j, (ndj, species_j) in enumerate(
             zip(number_densities, mixture.species)
         ):
-            pair = _pair_integrals(species_i, ndi, species_j, ndj, mixture.T)
+            pair = _pair_integrals(
+                species_i, ndi, species_j, ndj, mixture.T, ls_pairs
+            )
             for ls, value in pair.items():
                 values[ls][i, j] = value
 
-    for Q in values.values():
-        Q.setflags(write=False)  # shared; mutation would corrupt other users
-
-    _collision_integrals_cache[mixture] = (key, values)
     return values
 
 
 def Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
     """Calculate the collision integral matrix for a mixture of species.
+
+    For the full set used by the transport properties, prefer
+    :func:`collision_integrals`, which derives each species pair's
+    potential parameters once instead of once per (l, s).
 
     Parameters
     ----------
@@ -1884,17 +1869,8 @@ def Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
     Returns
     -------
     np.ndarray
-        Collision integral matrix.  For the (l, s) pairs used by the
-        transport calculations this is served from
-        :func:`collision_integrals` and is read-only.
+        Collision integral matrix.
     """
-    if (l, s) in LS_PAIRS:
-        return collision_integrals(mixture)[(l, s)]
-    return _Qij_mix(mixture, l, s)
-
-
-def _Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
-    """Evaluate one collision integral matrix, without caching."""
     # Square matrix to store the collision integrals.
     Q_values = np.zeros((len(mixture.species), len(mixture.species)))
     # Get the number densities of the species in the mixture.
@@ -1919,13 +1895,20 @@ def _Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
 ### q-matrix calculations #####################################################
 
 
-def q(mixture: "LTE") -> np.ndarray:
+def q(
+    mixture: "LTE",
+    Q: dict[tuple[int, int], np.ndarray] | None = None,
+) -> np.ndarray:
     """Calculate the q-matrix for a mixture of species.
 
     Parameters
     ----------
     mixture : LTE
         Mixture of species.
+    Q : dict[tuple[int, int], np.ndarray], optional
+        Collision integrals from :func:`collision_integrals`.  Pass this to
+        reuse a set already computed for the same mixture state; by default
+        they are computed here.
 
     Returns
     -------
@@ -1943,9 +1926,8 @@ def q(mixture: "LTE") -> np.ndarray:
         [species.molar_mass / u.N_a for species in mixture.species]
     )  # kg
 
-    # Collision integrals for the mixture, computed once per state and
-    # shared with qhat() and with the other property calculations.
-    Q = collision_integrals(mixture)
+    if Q is None:
+        Q = collision_integrals(mixture)
     Q11, Q12, Q13, Q14 = Q[1, 1], Q[1, 2], Q[1, 3], Q[1, 4]
     Q15, Q16, Q17 = Q[1, 5], Q[1, 6], Q[1, 7]
     Q22, Q23, Q24 = Q[2, 2], Q[2, 3], Q[2, 4]
@@ -2562,13 +2544,20 @@ def _q33_jit(
     return q33
 
 
-def qhat(mixture: "LTE") -> np.ndarray:
+def qhat(
+    mixture: "LTE",
+    Q: dict[tuple[int, int], np.ndarray] | None = None,
+) -> np.ndarray:
     """Calculate the qhat-matrix for a mixture of species.
 
     Parameters
     ----------
     mixture : LTE
         Mixture of species.
+    Q : dict[tuple[int, int], np.ndarray], optional
+        Collision integrals from :func:`collision_integrals`.  Pass this to
+        reuse a set already computed for the same mixture state; by default
+        they are computed here.
 
     Returns
     -------
@@ -2584,8 +2573,10 @@ def qhat(mixture: "LTE") -> np.ndarray:
     number_densities = mixture.calculate_composition()
     masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
 
-    # Shared with q(); qhat()'s (l, s) set is a subset of q()'s.
-    Q = collision_integrals(mixture)
+    # qhat()'s (l, s) set is a subset of q()'s, so a set computed for q()
+    # can be reused here.
+    if Q is None:
+        Q = collision_integrals(mixture, QHAT_LS_PAIRS)
     Q11, Q12, Q13 = Q[1, 1], Q[1, 2], Q[1, 3]
     Q22, Q23, Q24 = Q[2, 2], Q[2, 3], Q[2, 4]
     Q33 = Q[3, 3]
@@ -2700,7 +2691,7 @@ def _qhat11_jit(
 ### Transport property calculations ###########################################
 
 
-def Dij(mixture: "LTE") -> np.ndarray:
+def Dij(mixture: "LTE", qq: np.ndarray | None = None) -> np.ndarray:
     r"""Diffusion coefficients.
 
     Diffusion coefficents, calculation per [Devoto1966]_ (eq. 3 and eq. 6).
@@ -2710,6 +2701,9 @@ def Dij(mixture: "LTE") -> np.ndarray:
     ----------
     mixture : LTE
         Mixture of species.
+    qq : np.ndarray, optional
+        q-matrix from :func:`q` for this mixture state.  Pass it to avoid
+        rebuilding it; by default it is computed here.
 
     Returns
     -------
@@ -2767,7 +2761,8 @@ def Dij(mixture: "LTE") -> np.ndarray:
 
     n_tot = np.sum(number_densities)  # m^-3
 
-    qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
+    if qq is None:
+        qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
     lu_piv_q = scl.lu_factor(qq)
 
     # Equation 6 of [Devoto1966]_.  The right-hand side for the pair (i, j)
@@ -2794,7 +2789,7 @@ def Dij(mixture: "LTE") -> np.ndarray:
     return diffusion_matrix
 
 
-def DTi(mixture: "LTE") -> float:
+def DTi(mixture: "LTE", qq: np.ndarray | None = None) -> float:
     r"""Thermal diffusion coefficients.
 
     Thermal diffusion coefficents, calculation per [Devoto1966]_
@@ -2804,6 +2799,9 @@ def DTi(mixture: "LTE") -> float:
     ----------
     mixture : LTE
         Mixture of species.
+    qq : np.ndarray, optional
+        q-matrix from :func:`q` for this mixture state.  Pass it to avoid
+        rebuilding it; by default it is computed here.
 
     Returns
     -------
@@ -2853,7 +2851,8 @@ def DTi(mixture: "LTE") -> float:
     number_densities = mixture.calculate_composition()
     masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
 
-    qq = q(mixture)
+    if qq is None:
+        qq = q(mixture)
     b_vec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
     # Only the first element is non-zero
     b_vec[nb_species : 2 * nb_species] = (
@@ -3130,6 +3129,9 @@ def thermal_conductivity(
 
     ### translational tk components ###
     # Solve equation 5 of [Devoto1966]_ to get the `a` matrix.
+    # This q-matrix is reused by DTi and Dij below: the temperature and
+    # composition are the same for all three (the +/- dT excursions further
+    # down restore T before Dij is called).
     qq = q(mixture)
 
     b_vec = np.zeros(4 * nb_species)
@@ -3154,7 +3156,7 @@ def thermal_conductivity(
         # TODO: This looks like the second term in the second parenthesis of 18
         # of [Devoto1966]_.
         # TODO: Check if it is correct. Where are the term n² and rho?
-        locDTi = DTi(mixture)
+        locDTi = DTi(mixture, qq=qq)
         kdt = np.sum(hv * locDTi / mixture.T)
     else:
         kdt = 0
@@ -3173,7 +3175,7 @@ def thermal_conductivity(
     x_negative = n_negative / np.sum(n_negative)
     dxdT = (x_positive - x_negative) / (2 * rel_delta_T * mixture.T)
 
-    locDij = Dij(mixture)
+    locDij = Dij(mixture, qq=qq)
 
     # TODO: This looks like the first term in the first parenthesis of
     # 18 of [Devoto1966]_.
