@@ -249,12 +249,15 @@ reusing the ordering removes 0.5 s of the 48 s profiled sweep (~2%).
 
 - `Polyatomic.internal_partition_function` (`species.py:921-927`) builds a
   Python list inside `np.prod`; `wi_e` is short so this is cosmetic.
-- The `governor_factors = np.linspace(0.9, 0.1, 9)` relaxation ladder
-  (`mixture.py:522`) restarts the whole minimisation from
-  `gfe_initial_particles` on each failure rather than warm-starting from the
-  best iterate reached. Not a hot path in the current tests, but it is why
-  low-temperature compositions cost 182 Newton iterations against 24-32 at
-  high temperature.
+- ~~The `governor_factors` ladder restarts the minimisation from
+  `gfe_initial_particles` on each failure.~~ **Corrected:** it does not.
+  `__Ni` is initialised once at `mixture.py:511`, *before* the governor
+  loop, so a step-down warm-starts from the last iterate with a tighter
+  step cap. What *is* discarded is the previous temperature's answer: every
+  `calculate_composition()` call restarts from `gfe_initial_particles`, so a
+  sweep never warm-starts across T. That is why low-temperature compositions
+  cost 182 Newton iterations against 24-32 at high temperature. See
+  `bench/check_minimiser.py` and the notes on issue #16.
 
 ______________________________________________________________________
 
