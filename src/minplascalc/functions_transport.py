@@ -1176,6 +1176,101 @@ def Qe(species_i: "Species", l: int, s: int, T: float) -> float:
     )
 
 
+def _needs_recursion(l: int, s: int) -> bool:
+    """Whether (l, s) is above the tabulated fit and needs eq. 18."""
+    return (
+        (l == 1 and s >= 6)
+        or (l == 2 and s >= 5)
+        or (l == 3 and s >= 4)
+        or (l == 4 and s >= 5)
+    )
+
+
+def _omega_fit(
+    table: np.ndarray,
+    sigma: float,
+    epsilon_0: float,
+    beta_array: np.ndarray,
+    l: int,
+    s: int,
+    T: float,
+) -> float:
+    r"""Collision integral from the eq. 15/16 fit, given pair parameters.
+
+    The equilibrium distance, binding energy and beta parameter depend only
+    on the species pair, never on (l, s), so they are derived once by the
+    caller and passed in here.  This is the shared core of :func:`Qnn` and
+    :func:`Qin`; ``table`` selects which coefficient set applies.
+
+    Parameters
+    ----------
+    table : np.ndarray
+        Fit coefficients, ``c_nn`` or ``c_in``.
+    sigma : float
+        :math:`\sigma = r_e x_0`, in :math:`\text{Angstrom}`.
+    epsilon_0 : float
+        Binding energy, in :math:`\text{eV}`.
+    beta_array : np.ndarray
+        ``[1, beta, beta**2]``, for evaluating eq. 16.
+    l, s : int
+        Angular and energy moment orders.
+    T : float
+        Temperature, in :math:`\text{K}`.
+
+    Returns
+    -------
+    float
+        Collision integral.
+    """
+    if _needs_recursion(l, s):
+        # Eq. 18 of [Laricchiuta2007]_, as a unit-step central difference.
+        negT, posT = T - 0.5, T + 0.5
+        return _omega_fit(
+            table, sigma, epsilon_0, beta_array, l, s - 1, T
+        ) + T / (s + 1) * (
+            _omega_fit(table, sigma, epsilon_0, beta_array, l, s - 1, posT)
+            - _omega_fit(table, sigma, epsilon_0, beta_array, l, s - 1, negT)
+        )
+
+    # Evaluate the polynomial coefficients a (eq. 16 of [Laricchiuta2007]_).
+    a = table[l - 1, s - 1] @ beta_array
+    # Compute T* (eq. 12) and x (paragraph above eq. 16).
+    x = np.log(T * u.K_to_eV / epsilon_0)
+    # Reduced collision integral (eq. 15).
+    lnS1 = (
+        (a[0] + a[1] * x)
+        * np.exp((x - a[2]) / a[3])
+        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
+    )
+    lnS2 = (
+        a[4]
+        * np.exp((x - a[5]) / a[6])
+        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
+    )
+    # Dimensional collision integral (paragraph above eq. 17).
+    return np.exp(lnS1 + lnS2) * np.pi * sigma**2 * 1e-20
+
+
+def _nn_pair_parameters(
+    species_i: "Species", species_j: "Species"
+) -> tuple[float, float, np.ndarray]:
+    """Neutral-neutral parameters that do not depend on (l, s)."""
+    r_e, epsilon_0 = pot_parameters_neut_neut(species_i, species_j)
+    beta_value = beta(species_i, species_j)
+    sigma = r_e * x0_neut_neut(beta_value)
+    return sigma, epsilon_0, np.array([1.0, beta_value, beta_value**2])
+
+
+def _in_pair_parameters(
+    species_ion: "Species", species_neutral: "Species"
+) -> tuple[float, float, np.ndarray]:
+    """Ion-neutral parameters that do not depend on (l, s)."""
+    r_e, epsilon_0 = pot_parameters_ion_neut(species_ion, species_neutral)
+    beta_value = beta(species_ion, species_neutral)
+    sigma = r_e * x0_ion_neut(beta_value)
+    return sigma, epsilon_0, np.array([1.0, beta_value, beta_value**2])
+
+
 def Qnn(
     species_i: "Species",
     species_j: "Species",
@@ -1241,54 +1336,8 @@ def Qnn(
     where :math:`\epsilon` is the binding energy, defined in eq. 7 of
     [Laricchiuta2007]_.
     """
-    if (
-        (l == 1 and s >= 6)
-        or (l == 2 and s >= 5)
-        or (l == 3 and s >= 4)
-        or (l == 4 and s >= 5)
-    ):
-        # Eq. 18 of [Laricchiuta2007]_.
-        # Recursion relation for the collision integral.
-        negT, posT = T - 0.5, T + 0.5
-        return Qnn(species_i, species_j, l, s - 1, T) + T / (s + 1) * (
-            Qnn(species_i, species_j, l, s - 1, posT)
-            - Qnn(species_i, species_j, l, s - 1, negT)
-        )
-    # Get the equilibrium distance r_e and binding energy epsilon_0.
-    # (eq. 6 and 7 of [Laricchiuta2007]).
-    r_e, epsilon_0 = pot_parameters_neut_neut(species_i, species_j)
-    # Calculate the beta parameter (eq. 5 of [Laricchiuta2007]).
-    beta_value = beta(species_i, species_j)
-    # Calculate the x0 parameter (eq. 17 of [Laricchiuta2007]).
-    x0 = x0_neut_neut(beta_value)
-    # Evaluate the polynomial coefficients a (eq. 16 of [Laricchiuta2007]_).
-    beta_array = np.array([1, beta_value, beta_value**2], dtype=np.float64)
-    a = np.dot(
-        c_nn[l - 1, s - 1],
-        beta_array,
-        out=np.zeros((7,), dtype=np.float64),
-    )
-    # Get the parameter sigma (Paragraph above eq. 13 of [Laricchiuta2007]).
-    sigma = r_e * x0
-    # Compute T* (eq. 12 of [Laricchiuta2007]).
-    T_star = T * u.K_to_eV / epsilon_0
-    # Calculate the parameter x (Paragraph above eq. 16 of [Laricchiuta2007]).
-    x = np.log(T_star)
-    # Calculate the reduced collision integral (eq. 15 of [Laricchiuta2007]).
-    lnS1 = (
-        (a[0] + a[1] * x)
-        * np.exp((x - a[2]) / a[3])
-        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
-    )
-    lnS2 = (
-        a[4]
-        * np.exp((x - a[5]) / a[6])
-        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
-    )
-    omega_reduced = np.exp(lnS1 + lnS2)
-    # Dimensional collision integral (Paragraph above eq. 17).
-    omega = omega_reduced * np.pi * sigma**2 * 1e-20  # TODO: why pi?
-    return omega
+    sigma, epsilon_0, beta_array = _nn_pair_parameters(species_i, species_j)
+    return _omega_fit(c_nn, sigma, epsilon_0, beta_array, l, s, T)
 
 
 def Qin(
@@ -1356,54 +1405,8 @@ def Qin(
     where :math:`\epsilon` is the binding energy, defined in eq. 10 of
     [Laricchiuta2007]_.
     """
-    if (
-        (l == 1 and s >= 6)
-        or (l == 2 and s >= 5)
-        or (l == 3 and s >= 4)
-        or (l == 4 and s >= 5)
-    ):
-        # Eq. 18 of [Laricchiuta2007]_.
-        # Recursion relation for the collision integral.
-        negT, posT = T - 0.5, T + 0.5
-        return Qin(species_i, species_j, l, s - 1, T) + T / (s + 1) * (
-            Qin(species_i, species_j, l, s - 1, posT)
-            - Qin(species_i, species_j, l, s - 1, negT)
-        )
-    # Get the equilibrium distance r_e and binding energy epsilon_0.
-    # (eq. 9 and 10 of [Laricchiuta2007]).
-    r_e, epsilon_0 = pot_parameters_ion_neut(species_i, species_j)
-    # Calculate the beta parameter (eq. 5 of [Laricchiuta2007]).
-    beta_value = beta(species_i, species_j)
-    # Calculate the x0 parameter (eq. 17 of [Laricchiuta2007]).
-    x0 = x0_ion_neut(beta_value)
-    # Evaluate the polynomial coefficients a (eq. 16 of [Laricchiuta2007]_).
-    beta_array = np.array([1, beta_value, beta_value**2], dtype=np.float64)
-    a = np.dot(
-        c_in[l - 1, s - 1],
-        beta_array,
-        out=np.zeros((7,), dtype=np.float64),
-    )
-    # Get the parameter sigma (Paragraph above eq. 13 of [Laricchiuta2007]).
-    sigma = r_e * x0
-    # Compute T* (eq. 12 of [Laricchiuta2007]).
-    T_star = T * u.K_to_eV / epsilon_0
-    # Calculate the parameter x (Paragraph above eq. 16 of [Laricchiuta2007]).
-    x = np.log(T_star)
-    # Calculate the reduced collision integral (eq. 15 of [Laricchiuta2007]).
-    lnS1 = (
-        (a[0] + a[1] * x)
-        * np.exp((x - a[2]) / a[3])
-        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
-    )
-    lnS2 = (
-        a[4]
-        * np.exp((x - a[5]) / a[6])
-        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
-    )
-    omega_reduced = np.exp(lnS1 + lnS2)
-    # Dimensional collision integral (Paragraph above eq. 17).
-    omega = omega_reduced * np.pi * sigma**2 * 1e-20  # TODO: why pi?
-    return omega
+    sigma, epsilon_0, beta_array = _in_pair_parameters(species_i, species_j)
+    return _omega_fit(c_in, sigma, epsilon_0, beta_array, l, s, T)
 
 
 def Qtr(
@@ -1667,6 +1670,156 @@ def _mixture_state(mixture: "LTE") -> tuple:
     return (mixture.T, mixture.P, mixture.x0)
 
 
+#: Distinct energy-moment orders appearing in :data:`LS_PAIRS`.
+_S_VALUES = tuple(sorted({s for _, s in LS_PAIRS}))
+
+#: Coefficients of eq. 5 of [Devoto1967]_, indexed by l - 1.
+_QC_C1 = (4.0, 12.0, 12.0, 16.0)
+_QC_C2 = (1 / 2, 1.0, 7 / 6, 4 / 3)
+
+#: psi(s), zeta_1(s) and zeta_2(s) are pure functions of a small integer.
+_PSICONST = {s: psiconst(s) for s in _S_VALUES}
+_SUM1 = {s: sum1(s) for s in _S_VALUES}
+_SUM2 = {s: sum2(s) for s in _S_VALUES}
+
+
+def _qe_pair(species_neutral: "Species", T: float) -> dict[int, float]:
+    """Electron-neutral integrals for every s, keyed by s.
+
+    ``Qe`` does not depend on l, so only the distinct s values are
+    evaluated.
+    """
+    cross_section = species_neutral.electron_cross_section
+    if isinstance(cross_section, (tuple, list)):
+        D1, D2, D3, D4 = cross_section
+    elif isinstance(cross_section, float):
+        D1, D2, D3, D4 = cross_section, 0, 0, 0
+    else:
+        raise ValueError("Invalid electron cross section data.")
+
+    tau = np.sqrt(2 * u.m_e * u.k_b * T) / u.hbar
+    tau_pow = tau**D3
+    tau_sq = D4 * tau**2 + 1
+    out = {}
+    for s in _S_VALUES:
+        barg = D3 / 2 + s + 2
+        out[s] = D1 + D2 * tau_pow * gamma(barg) / (
+            gamma(s + 2) * tau_sq**barg
+        )
+    return out
+
+
+def _qtr_pair(
+    species_i: "Species", species_j: "Species", T: float
+) -> dict[int, float]:
+    """Resonant charge transfer integrals for every s, keyed by s.
+
+    ``Qtr`` does not depend on l, and A, B and the molar mass depend only
+    on the pair.
+    """
+    if species_i.charge_number < species_j.charge_number:
+        lower = species_i
+    else:
+        lower = species_j
+    a = A(lower.ionisation_energy)
+    b = B(lower.ionisation_energy)
+    ln_term = np.log(4 * u.R * T / lower.molar_mass)
+
+    out = {}
+    for s in _S_VALUES:
+        zeta_1, zeta_2 = _SUM1[s], _SUM2[s]
+        cterm = np.pi**2 / 6 - zeta_2 + zeta_1**2
+        # Same as eq. 12 of [Devoto1967], with rearranged terms.
+        out[s] = (
+            a**2
+            - zeta_1 * a * b
+            + (b / 2) ** 2 * cterm
+            + (b / 2) ** 2 * ln_term**2
+            + (zeta_1 * b**2 / 2 - a * b) * ln_term
+        )
+    return out
+
+
+def _pair_integrals(
+    species_i: "Species",
+    n_i: float,
+    species_j: "Species",
+    n_j: float,
+    T: float,
+) -> dict[tuple[int, int], float]:
+    """Every (l, s) collision integral for a single species pair.
+
+    The interaction-potential parameters -- equilibrium distance, binding
+    energy, beta, the Coulomb logarithm, the resonant-transfer constants --
+    depend on the species pair and on T, but never on (l, s).  Deriving them
+    here, outside the moment loop, means they are computed once per pair
+    instead of once per pair per (l, s).
+
+    The dispatch mirrors :func:`Qij` exactly, including that an ion-neutral
+    pair of the same stoichiometry uses resonant charge transfer for odd l
+    and the ion-neutral fit for even l.
+
+    Raises
+    ------
+    ValueError
+        If the collision type is unknown.
+    """
+    z_i, z_j = species_i.charge_number, species_j.charge_number
+
+    if z_i != 0 and z_j != 0:
+        # Coulomb: b_0^2 and the Coulomb logarithm are (l, s)-independent.
+        b0_sq = (ke * z_i * z_j * u.e**2 / (2 * u.k_b * T)) ** 2
+        cl = cl_charged(species_i, species_j, n_i, n_j, T) + np.log(2)
+        return {
+            (l, s): _QC_C1[l - 1]
+            * np.pi
+            / (s * (s + 1))
+            * b0_sq
+            * (cl - _QC_C2[l - 1] - 2 * egamma + _PSICONST[s])
+            for l, s in LS_PAIRS
+        }
+
+    if species_j.name == "e":
+        by_s = _qe_pair(species_i, T)
+        return {(l, s): by_s[s] for l, s in LS_PAIRS}
+    if species_i.name == "e":
+        by_s = _qe_pair(species_j, T)
+        return {(l, s): by_s[s] for l, s in LS_PAIRS}
+
+    if z_i == 0 and z_j == 0:
+        sigma, epsilon_0, beta_array = _nn_pair_parameters(
+            species_i, species_j
+        )
+        return {
+            (l, s): _omega_fit(c_nn, sigma, epsilon_0, beta_array, l, s, T)
+            for l, s in LS_PAIRS
+        }
+
+    if z_i == 0:
+        ion, neutral = species_j, species_i
+    elif z_j == 0:
+        ion, neutral = species_i, species_j
+    else:
+        raise ValueError("Unknown collision type")
+
+    resonant = (
+        species_i.stoichiometry == species_j.stoichiometry
+        and abs(z_i - z_j) == 1
+    )
+    qtr_by_s = _qtr_pair(species_i, species_j, T) if resonant else None
+
+    sigma, epsilon_0, beta_array = _in_pair_parameters(ion, neutral)
+    out = {}
+    for l, s in LS_PAIRS:
+        if qtr_by_s is not None and l % 2 == 1:
+            out[(l, s)] = qtr_by_s[s]
+        else:
+            out[(l, s)] = _omega_fit(
+                c_in, sigma, epsilon_0, beta_array, l, s, T
+            )
+    return out
+
+
 def collision_integrals(mixture: "LTE") -> dict[tuple[int, int], np.ndarray]:
     r"""Collision integral matrices for every (l, s) in :data:`LS_PAIRS`.
 
@@ -1692,11 +1845,25 @@ def collision_integrals(mixture: "LTE") -> dict[tuple[int, int], np.ndarray]:
     if cached is not None and cached[0] == key:
         return cached[1]
 
-    values = {}
-    for l, s in LS_PAIRS:
-        Q = _Qij_mix(mixture, l, s)
+    nb_species = len(mixture.species)
+    number_densities = mixture.calculate_composition()  # in m^-3
+    values = {ls: np.zeros((nb_species, nb_species)) for ls in LS_PAIRS}
+
+    # Species pairs outermost, moments innermost: the potential parameters
+    # are a property of the pair, so this derives them once each rather than
+    # once per (l, s).
+    for i, (ndi, species_i) in enumerate(
+        zip(number_densities, mixture.species)
+    ):
+        for j, (ndj, species_j) in enumerate(
+            zip(number_densities, mixture.species)
+        ):
+            pair = _pair_integrals(species_i, ndi, species_j, ndj, mixture.T)
+            for ls, value in pair.items():
+                values[ls][i, j] = value
+
+    for Q in values.values():
         Q.setflags(write=False)  # shared; mutation would corrupt other users
-        values[(l, s)] = Q
 
     _collision_integrals_cache[mixture] = (key, values)
     return values
