@@ -1,5 +1,9 @@
 # The (l, s) recursion, analytically — and what l and s actually mean
 
+> Snapshot taken **2026-08-01**, against `main` at `43bff40`. Findings
+> describe the code as it stood then; several were acted on in the same
+> branch, so check `git log` before treating any item here as outstanding.
+
 Resolves the two `TODO` questions in the `Qnn` / `Qin` / `Qij` docstrings,
 and replaces the recursive finite difference in eq. 18 with the closed-form
 derivative, derived with sympy.
@@ -106,7 +110,7 @@ return Q(..., s - 1, T) + T / (s + 1) * (Q(..., s - 1, posT) - Q(..., s - 1, neg
 Note there is no division by the step: the +/-0.5 is chosen so that
 `2h = 1` exactly and the divisor can be omitted. This is a **unit-step
 central difference**, not an arbitrary tolerance — I mischaracterised it as
-a magic number in `CODE_REVIEW.md` §3.2; that is corrected below.
+a magic number in `CODE_REVIEW_2026-08-01.md` §3.2; that is corrected below.
 
 Because `Omega*` is a closed-form function of `x = ln T*` and
 `T d/dT = d/dx`, the derivative is available exactly. Applying
@@ -326,7 +330,7 @@ roundoff**. Viscosity is *exactly* unchanged, because `qhat`'s seven (l, s)
 pairs `{11,12,13,22,23,24,33}` contain none that trigger the recursion — so
 the viscosity path never touched the finite difference in the first place.
 
-## 5. Corrections to `CODE_REVIEW.md` §3.2
+## 5. Corrections to `CODE_REVIEW_2026-08-01.md` §3.2
 
 - The ±0.5 K step is **not** an untuned magic number. It is a unit-step
   central difference, chosen so the `2h` divisor is 1 and can be omitted.

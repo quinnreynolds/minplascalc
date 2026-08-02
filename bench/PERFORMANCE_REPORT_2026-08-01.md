@@ -1,5 +1,9 @@
 # minplascalc performance: evidence for issue #82
 
+> Snapshot taken **2026-08-01**, against `main` at `43bff40`. Findings
+> describe the code as it stood then; several were acted on in the same
+> branch, so check `git log` before treating any item here as outstanding.
+
 Investigation of four proposed approaches to speeding up minplascalc, with
 measurements. All numbers are from this machine (Darwin 25.5.0, Python
 3.11.6, numpy 2.1.3, numba 0.61.0, scipy 1.15.2, pytensor 3.0.7). Wall-clock

@@ -1,5 +1,9 @@
 # minplascalc: redundancy, library-routine and low-hanging-fruit review
 
+> Snapshot taken **2026-08-01**, against `main` at `43bff40`. Findings
+> describe the code as it stood then; several were acted on in the same
+> branch, so check `git log` before treating any item here as outstanding.
+
 A whole-repository pass over `src/minplascalc/` looking for three things:
 mathematical redundancy that numpy contractions express better, manual
 implementations that a library routine already does, and cheap wins.
@@ -109,7 +113,7 @@ rather than positional.
 
 ### 1.6 The q/qhat assembly
 
-Already characterised in `bench/PERFORMANCE_REPORT.md`: exact numpy
+Already characterised in `bench/PERFORMANCE_REPORT_2026-08-01.md`: exact numpy
 vectorisations of all ten q-elements exist in `bench/q_vectorised.py` and
 agree to 1.4e-15, but they are **4% slower than the njit loops at 16 species**
 and 8.7x slower at 6. Adopt them if you prefer how they read — not for speed.
@@ -232,7 +236,7 @@ Three observations:
    unit-step central difference — ±0.5 is chosen so the `2h` divisor equals
    1 and can be omitted. It is at or near optimal; the nested difference is
    round-off limited at ~1e-9 regardless of step. See
-   [ANALYTIC_RECURSION.md](ANALYTIC_RECURSION.md), which derives the
+   [ANALYTIC_RECURSION_2026-08-01.md](ANALYTIC_RECURSION_2026-08-01.md), which derives the
    recursion, shows it is exact, and implements the analytic derivative
    (1.36x on its own, all 55 tests passing).
 
