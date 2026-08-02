@@ -1862,13 +1862,17 @@ def collision_integrals(
     mixture: "LTE",
     ls_pairs: tuple[tuple[int, int], ...] = LS_PAIRS,
 ) -> dict[tuple[int, int], np.ndarray]:
-    r"""Collision integral matrices for every (l, s) in :data:`LS_PAIRS`.
+    r"""Collision integral matrices for the requested (l, s) pairs.
 
-    The four transport properties each need collision integrals at the same
-    mixture state, and ``thermal_conductivity`` alone reaches ``q()`` three
-    times (directly, via ``DTi`` and via ``Dij``).  Evaluating them together
-    and caching on the mixture state means each (l, s) is computed once per
-    state instead of once per caller.
+    Evaluated together, species pairs outermost and moments innermost, so
+    that each pair's interaction-potential parameters -- equilibrium
+    distance, binding energy, beta, the Coulomb logarithm -- are derived
+    once for the pair rather than once per (l, s).
+
+    Nothing is cached.  Callers that need the same set more than once
+    should evaluate it here and pass it on: :func:`q` and :func:`qhat` both
+    accept it as ``Q``, and :func:`q`'s result can in turn be passed to
+    :func:`Dij` and :func:`DTi` as ``qq``.
 
     Parameters
     ----------
