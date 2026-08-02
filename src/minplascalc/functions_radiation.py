@@ -114,8 +114,9 @@ def total_emission_coefficient(mix: "LTE") -> float:
 
     beta = 1 / (u.k_b * mix.T)  # Inverse temperature, in J^-1.
 
-    # Iterate over species and their number densities
-    for nv, species in zip(nd[:-1], mix.species[:-1]):
+    # Iterate over species and their number densities (excluding electrons)
+    ndloc, sploc = mix._get_species_for_iteration(nd)
+    for nv, species in zip(ndloc, sploc):
         # Wavelength, g*A and upper state energy for every line at once.
         wavelength, gA, Ek = species._emission_line_columns
         if wavelength.size == 0:
