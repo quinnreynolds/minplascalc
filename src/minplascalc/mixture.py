@@ -78,6 +78,16 @@ class LTE:
         # Add electron species to the species list.
         self.__species = tuple(list(species) + [_sp.Electron()])
 
+        # Per-species constants. The species tuple is immutable (its setter
+        # raises), so these are derived once here rather than rebuilt by
+        # every property calculation that needs them.
+        self.__masses = np.array(
+            [sp.molar_mass / u.N_a for sp in self.__species]
+        )
+        self.__charge_numbers = np.array(
+            [sp.charge_number for sp in self.__species]
+        )
+
         self.x0 = x0
         self.T = T
         self.P = P
@@ -104,6 +114,16 @@ class LTE:
             "Mixture object if you wish to change the plasma "
             "species."
         )
+
+    @property
+    def masses(self) -> np.ndarray:
+        r"""Mass of each species, in :math:`\text{kg.particle}^{-1}`."""
+        return self.__masses
+
+    @property
+    def charge_numbers(self) -> np.ndarray:
+        """Charge number of each species, in units of the electron charge."""
+        return self.__charge_numbers
 
     @property
     def x0(self):
@@ -239,7 +259,7 @@ class LTE:
         # The effective charge number is the sum of the square of the charge
         # number of each species multiplied by the number density of that
         # species.
-        charge_numbers = np.array([sp.charge_number for sp in self.species])
+        charge_numbers = self.charge_numbers
         weighted_charge_sum_squared, weighted_charge_sum = 0.0, 0.0
         for z_i, nd in zip(charge_numbers, number_densities):
             if z_i > 0:  # Only consider positively charged species.
@@ -707,11 +727,8 @@ class LTE:
             for u_i, E0_i in zip(internal_energies, self.__E0)
         ]  # J/particle
 
-        masses = [
-            sp.molar_mass / u.N_a for sp in self.species
-        ]  # (kg/mol) / (particle/mol) = kg/particle
-
-        return np.array(enthalpies) / np.array(masses)  # J/kg
+        # (kg/mol) / (particle/mol) = kg/particle
+        return np.array(enthalpies) / self.masses  # J/kg
 
     def calculate_enthalpy(self) -> float:
         r"""Calculate the LTE enthalpy of the plasma.
@@ -753,9 +770,7 @@ class LTE:
         density = self.calculate_density()  # kg/m3
 
         mass_enthalpies = self.calculate_species_enthalpies()  # J/kg
-        masses = np.array(
-            [sp.molar_mass / u.N_a for sp in self.species]
-        )  # kg/particle
+        masses = self.masses  # kg/particle
         enthalpies = mass_enthalpies * masses  # J/particle
 
         # Get the species with the lowest reference energy.

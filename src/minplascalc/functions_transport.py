@@ -1922,9 +1922,7 @@ def q(
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()  # m^-3
-    masses = np.array(
-        [species.molar_mass / u.N_a for species in mixture.species]
-    )  # kg
+    masses = mixture.masses  # kg
 
     if Q is None:
         Q = collision_integrals(mixture)
@@ -2571,7 +2569,7 @@ def qhat(
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
 
     # qhat()'s (l, s) set is a subset of q()'s, so a set computed for q()
     # can be reused here.
@@ -2756,7 +2754,7 @@ def Dij(mixture: "LTE", qq: np.ndarray | None = None) -> np.ndarray:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()  # m^-3
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])  # kg
+    masses = mixture.masses  # kg
     rho = mixture.calculate_density()  # kg/m^3
 
     n_tot = np.sum(number_densities)  # m^-3
@@ -2849,7 +2847,7 @@ def DTi(mixture: "LTE", qq: np.ndarray | None = None) -> float:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
 
     if qq is None:
         qq = q(mixture)
@@ -2924,7 +2922,7 @@ def viscosity(mixture: "LTE") -> float:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
 
     qqhat = qhat(mixture)
 
@@ -2981,9 +2979,9 @@ def electrical_conductivity(mixture: "LTE") -> float:
 
     The sum is over all ionic species in the mixture.
     """
-    charge_numbers = np.array([sp.charge_number for sp in mixture.species])
+    charge_numbers = mixture.charge_numbers
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
     rho = mixture.calculate_density()
 
     D1 = Dij(mixture)[-1, :]
@@ -3117,7 +3115,7 @@ def thermal_conductivity(
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
     n_tot = np.sum(number_densities)
     rho = mixture.calculate_density()
     hv = mixture.calculate_species_enthalpies()
