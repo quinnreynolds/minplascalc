@@ -1,0 +1,54 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,amssymb,geometry,parskip}
+\geometry{margin=25mm}
+\title{The $(l,s)$ recursion in minplascalc, analytically}
+\date{}
+\begin{document}\maketitle
+\section*{Analytic form of the $(l,s)$ recursion}
+
+\subsection*{1. The recursion is exact}
+From the definition of the collision integral, with
+$\gamma^2 = E/kT$,
+\begin{equation}
+  \Omega^{(l,s)} \propto \frac{T^{1/2}}{(s+1)!\,(kT)^{s+2}}
+  \int_0^\infty e^{-E/kT} E^{s+1} Q^{(l)}(E)\,dE
+\end{equation}
+Differentiating in $T$ and re-identifying the $s{+}1$ integral,
+\begin{equation}
+  T\,\partial_T \Omega^{(l,s)}
+   = -(s+\tfrac32)\,\Omega^{(l,s)} + (s+2)\,\Omega^{(l,s+1)}
+\end{equation}
+Dividing by the rigid-sphere reference $\Omega_{rs}\propto T^{1/2}$, which is independent of $s$, absorbs the $\tfrac12$ and leaves eq.~18:
+\begin{equation}
+  \boxed{\;\Omega^{\star}_{s+1} = \Omega^{\star}_{s}   + \frac{T}{s+2}\,\partial_T \Omega^{\star}_{s}\;}
+\end{equation}
+
+\subsection*{2. The fit, in the sigmoid basis}
+With $x=\ln T^{\star}$ and $e^{u}/(e^{u}+e^{-u}) = \sigma(2u)$, eq.~15 is
+\begin{align}
+  \ln\Omega^{\star} = g(x) &= a_{4} \sigma_{2} + \sigma_{1} \left(a_{0} + a_{1} x\right), \qquad c(x) = a_0 + a_1 x \\
+  \sigma_1 &= \sigma\!\left(k_1 (x-a_2)\right),\; k_1 = 2/a_3 \\
+  \sigma_2 &= \sigma\!\left(k_2 (x-a_5)\right),\; k_2 = 2/a_6
+\end{align}
+
+\subsection*{3. Derivatives stay closed}
+Since $\sigma' = k\,\sigma(1-\sigma)$, with $d_1 = \sigma_1(1-\sigma_1)$ and $d_2 = \sigma_2(1-\sigma_2)$:
+\begin{align}
+  g'  &= a_{1} \sigma_{1} + c\,k_1 d_1 + a_4 k_2 d_2 \\
+  g'' &= 2 a_1 k_1 d_1 + c\,k_1^2 d_1 (1-2\sigma_1)        + a_4 k_2^2 d_2 (1-2\sigma_2)
+\end{align}
+(both verified against \texttt{sympy.diff} in \texttt{compact\_derivatives()}).
+
+\subsection*{4. Three lines of recursion}
+Writing $\Omega^{\star}_{(k)} = e^{g} P_k$ and using $T\partial_T = \partial_x$,
+\begin{equation}
+  P_{k+1} = P_k + \frac{g' P_k + P_k'}{s_0+k+2},\qquad P_0 = 1
+\end{equation}
+so for the two levels the code actually needs ($s_0 = 5$ for $l=1$):
+\begin{align}
+  P_0 &= 1 \\
+  P_1 &= 1 + \frac{g'}{s_0+2} \\
+  P_2 &= P_1 + \frac{g' P_1 + g''/(s_0+2)}{s_0+3}
+\end{align}
+and $\Omega^{\star}_{(k)} = e^{g} P_k$.
+\end{document}

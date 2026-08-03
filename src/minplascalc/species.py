@@ -159,6 +159,13 @@ class Species(BaseSpecies):
         self.electron_cross_section = electron_cross_section
         self.emission_lines = emission_lines
 
+        # Emission line data as columns, for the vectorised sum in
+        # functions_radiation: wavelength (m), g*A (s^-1), upper state
+        # energy (J).  Shaped (3, n) so each row is contiguous.
+        self._emission_line_columns = (
+            np.array(emission_lines, dtype=np.float64).reshape(-1, 3).T.copy()
+        )
+
         self.ionisation_energy: float
         r"""Ionisation energy of the species in :math:`\text{J}`."""
 
@@ -172,12 +179,17 @@ class Species(BaseSpecies):
             default is None in which case the Species' name attribute will be
             used for the file name, and it will be saved to the cwd.
         """
-        if datafile:
-            with open(datafile, "w") as f:
-                json.dump(self.__dict__, f, indent=4)
-        else:
-            with open(self.name + ".json", "w") as f:
-                json.dump(self.__dict__, f, indent=4)
+        # Underscore-prefixed attributes are derived caches (for example the
+        # precomputed energy-level arrays) rather than species data, and are
+        # not part of the on-disk schema.
+        data = {
+            key: value
+            for key, value in self.__dict__.items()
+            if not key.startswith("_")
+        }
+        path = datafile if datafile else self.name + ".json"
+        with open(path, "w") as f:
+            json.dump(data, f, indent=4)
 
 
 class Monatomic(Species):
@@ -256,6 +268,17 @@ class Monatomic(Species):
         self.energy_levels = deepcopy(energy_levels)
         self.sources = deepcopy(sources)
 
+        # Degeneracies g_i = 2 J_i + 1 and level energies E_i as contiguous
+        # arrays, so the electronic sums are one vectorised exp and one dot
+        # product rather than a Python loop over several hundred levels.
+        # Built here because energy_levels is fixed at construction.
+        self._degeneracies = np.array(
+            [2 * J_i + 1 for J_i, _ in self.energy_levels], dtype=np.float64
+        )
+        self._level_energies = np.array(
+            [E_i for _, E_i in self.energy_levels], dtype=np.float64
+        )
+
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(name={self.name},"
@@ -333,19 +356,14 @@ class Monatomic(Species):
         """
         beta = 1 / (u.k_b * T)  # Inverse temperature, in J^-1.
 
-        # Calculate the electronic partition function.
-        electron_partition_function = 0.0
+        # Only include energy levels below the lowered ionisation energy.
+        # Levels above it are zeroed rather than skipped, so the sum does
+        # not depend on the order of energy_levels.
+        below = self._level_energies < (self.ionisation_energy - dE)
 
-        for J_i, E_i in self.energy_levels:
-            if E_i < (self.ionisation_energy - dE):
-                # Only include energy levels below the ionisation energy.
-                g_i = 2 * J_i + 1  # Degeneracy of the energy level.
-                electron_partition_function += g_i * np.exp(-beta * E_i)
-            else:
-                # Stop summing when the ionisation energy is reached.
-                break
-
-        return electron_partition_function
+        return float(
+            (self._degeneracies * below) @ np.exp(-beta * self._level_energies)
+        )
 
     def internal_energy(self, T: float, dE: float) -> float:
         r"""Calculate the internal energy of an atomic species.
@@ -397,16 +415,14 @@ class Monatomic(Species):
         # Calculate the translational energy.
         translational_energy = 3 / 2 * u.k_b * T
 
-        # Calculate the electronic energy.
-        electronic_energy = 0.0
-        for J_i, E_i in self.energy_levels:
-            if E_i < (self.ionisation_energy - dE):
-                # Only include energy levels below the ionisation energy.
-                g_i = 2 * J_i + 1  # Degeneracy of the energy level.
-                electronic_energy += g_i * E_i * np.exp(-beta * E_i)
-            else:
-                # Stop summing when the ionisation energy is reached.
-                break
+        # Calculate the electronic energy.  As in
+        # internal_partition_function, levels at or above the lowered
+        # ionisation energy are zeroed rather than terminating the sum.
+        below = self._level_energies < (self.ionisation_energy - dE)
+        electronic_energy = float(
+            (self._degeneracies * self._level_energies * below)
+            @ np.exp(-beta * self._level_energies)
+        )
 
         electronic_energy /= self.internal_partition_function(T, dE)
         return translational_energy + electronic_energy

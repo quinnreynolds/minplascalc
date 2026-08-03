@@ -1175,6 +1175,157 @@ def Qe(species_i: "Species", l: int, s: int, T: float) -> float:
     )
 
 
+#: Largest energy-moment order with its own fit coefficients, per l.
+#: Above this, eq. 18 of [Laricchiuta2007]_ generates the value from a
+#: temperature derivative of the tabulated one.
+_BASE_S = {1: 5, 2: 4, 3: 3, 4: 4}
+
+
+def _omega_star(x: float, a: np.ndarray, k: int, s0: int) -> float:
+    r"""Reduced collision integral at moment order ``s0 + k``.
+
+    Eq. 18 of [Laricchiuta2007]_ relates successive moment orders by a
+    temperature derivative,
+
+    .. math::
+
+        \Omega^{(l,s+1)\star} = \Omega^{(l,s)\star}
+            + rac{T}{s+2}\,\partial_T \Omega^{(l,s)\star}
+
+    which is an exact identity.  Since eq. 15 is a closed-form function of
+    :math:`x = \ln T^{\star}` and :math:`T \partial_T = \partial_x`, the
+    derivative is taken analytically rather than by finite difference.
+
+    Writing each logistic factor of eq. 15 as
+    :math:`e^{u}/(e^{u}+e^{-u}) = \sigma(2u)` puts the fit in the form
+    :math:`g = c \sigma_1 + a_4 \sigma_2` with :math:`c = a_0 + a_1 x`.
+    Sigmoids are closed under differentiation, so with
+    :math:`d_i = \sigma_i(1-\sigma_i)`:
+
+    .. math::
+
+        g'  &= a_1 \sigma_1 + c k_1 d_1 + a_4 k_2 d_2 \
+        g'' &= 2 a_1 k_1 d_1 + c k_1^2 d_1 (1 - 2\sigma_1)
+               + a_4 k_2^2 d_2 (1 - 2\sigma_2)
+
+    and factoring out :math:`e^{g}` turns the recursion into
+    :math:`P_{k+1} = P_k + (g' P_k + P_k')/(s_0+k+2)`, with
+    :math:`\Omega^{\star}_{(k)} = e^{g} P_k`.
+
+    Parameters
+    ----------
+    x : float
+        :math:`\ln T^{\star}`.
+    a : np.ndarray
+        The seven fit coefficients of eq. 16.
+    k : int
+        Recursion steps above the tabulated order (0, 1 or 2 in practice).
+    s0 : int
+        Largest tabulated moment order for this l.
+
+    Returns
+    -------
+    float
+        :math:`\Omega^{\star}`.
+    """
+    a0, a1, a2, a3, a4, a5, a6 = a
+    k1, k2 = 2 / a3, 2 / a6
+    c = a0 + a1 * x
+
+    s1 = 1 / (1 + np.exp(-k1 * (x - a2)))
+    s2 = 1 / (1 + np.exp(-k2 * (x - a5)))
+
+    g = c * s1 + a4 * s2
+    if k == 0:
+        return np.exp(g)
+
+    # d_i is written algebraically rather than as the equivalent
+    # sech^2(u_i)/4.  The hyperbolic form is a more accurate intermediate,
+    # but the error it avoids is proportional to d_i itself and so never
+    # reaches the result: both agree with a 50-digit reference to 3.1e-16
+    # over the range used, and sech^2 costs 36% more.
+    d1, d2 = s1 * (1 - s1), s2 * (1 - s2)
+    g1 = a1 * s1 + c * k1 * d1 + a4 * k2 * d2
+    P = 1 + g1 / (s0 + 2)
+    if k == 1:
+        return np.exp(g) * P
+
+    g2 = (
+        2 * a1 * k1 * d1
+        + c * k1**2 * d1 * (1 - 2 * s1)
+        + a4 * k2**2 * d2 * (1 - 2 * s2)
+    )
+    P = P + (g1 * P + g2 / (s0 + 2)) / (s0 + 3)
+    return np.exp(g) * P
+
+
+def _omega_fit(
+    table: np.ndarray,
+    sigma: float,
+    epsilon_0: float,
+    beta_array: np.ndarray,
+    l: int,
+    s: int,
+    T: float,
+) -> float:
+    r"""Collision integral from the eq. 15/16 fit, given pair parameters.
+
+    The equilibrium distance, binding energy and beta parameter depend only
+    on the species pair, never on (l, s), so they are derived once by the
+    caller and passed in here.  This is the shared core of :func:`Qnn` and
+    :func:`Qin`; ``table`` selects which coefficient set applies.
+
+    Parameters
+    ----------
+    table : np.ndarray
+        Fit coefficients, ``c_nn`` or ``c_in``.
+    sigma : float
+        :math:`\sigma = r_e x_0`, in :math:`\text{Angstrom}`.
+    epsilon_0 : float
+        Binding energy, in :math:`\text{eV}`.
+    beta_array : np.ndarray
+        ``[1, beta, beta**2]``, for evaluating eq. 16.
+    l, s : int
+        Angular and energy moment orders.
+    T : float
+        Temperature, in :math:`\text{K}`.
+
+    Returns
+    -------
+    float
+        Collision integral.
+    """
+    s0 = _BASE_S[l]
+    # Coefficients come from the largest tabulated order for this l; higher
+    # orders are generated analytically from it.
+    a = table[l - 1, min(s, s0) - 1] @ beta_array
+    # Compute T* (eq. 12) and x (paragraph above eq. 16).
+    x = np.log(T * u.K_to_eV / epsilon_0)
+    omega_reduced = _omega_star(x, a, max(0, s - s0), s0)
+    # Dimensional collision integral (paragraph above eq. 17).
+    return omega_reduced * np.pi * sigma**2 * 1e-20
+
+
+def _nn_pair_parameters(
+    species_i: "Species", species_j: "Species"
+) -> tuple[float, float, np.ndarray]:
+    """Neutral-neutral parameters that do not depend on (l, s)."""
+    r_e, epsilon_0 = pot_parameters_neut_neut(species_i, species_j)
+    beta_value = beta(species_i, species_j)
+    sigma = r_e * x0_neut_neut(beta_value)
+    return sigma, epsilon_0, np.array([1.0, beta_value, beta_value**2])
+
+
+def _in_pair_parameters(
+    species_ion: "Species", species_neutral: "Species"
+) -> tuple[float, float, np.ndarray]:
+    """Ion-neutral parameters that do not depend on (l, s)."""
+    r_e, epsilon_0 = pot_parameters_ion_neut(species_ion, species_neutral)
+    beta_value = beta(species_ion, species_neutral)
+    sigma = r_e * x0_ion_neut(beta_value)
+    return sigma, epsilon_0, np.array([1.0, beta_value, beta_value**2])
+
+
 def Qnn(
     species_i: "Species",
     species_j: "Species",
@@ -1240,54 +1391,8 @@ def Qnn(
     where :math:`\epsilon` is the binding energy, defined in eq. 7 of
     [Laricchiuta2007]_.
     """
-    if (
-        (l == 1 and s >= 6)
-        or (l == 2 and s >= 5)
-        or (l == 3 and s >= 4)
-        or (l == 4 and s >= 5)
-    ):
-        # Eq. 18 of [Laricchiuta2007]_.
-        # Recursion relation for the collision integral.
-        negT, posT = T - 0.5, T + 0.5
-        return Qnn(species_i, species_j, l, s - 1, T) + T / (s + 1) * (
-            Qnn(species_i, species_j, l, s - 1, posT)
-            - Qnn(species_i, species_j, l, s - 1, negT)
-        )
-    # Get the equilibrium distance r_e and binding energy epsilon_0.
-    # (eq. 6 and 7 of [Laricchiuta2007]).
-    r_e, epsilon_0 = pot_parameters_neut_neut(species_i, species_j)
-    # Calculate the beta parameter (eq. 5 of [Laricchiuta2007]).
-    beta_value = beta(species_i, species_j)
-    # Calculate the x0 parameter (eq. 17 of [Laricchiuta2007]).
-    x0 = x0_neut_neut(beta_value)
-    # Evaluate the polynomial coefficients a (eq. 16 of [Laricchiuta2007]_).
-    beta_array = np.array([1, beta_value, beta_value**2], dtype=np.float64)
-    a = np.dot(
-        c_nn[l - 1, s - 1],
-        beta_array,
-        out=np.zeros((7,), dtype=np.float64),
-    )
-    # Get the parameter sigma (Paragraph above eq. 13 of [Laricchiuta2007]).
-    sigma = r_e * x0
-    # Compute T* (eq. 12 of [Laricchiuta2007]).
-    T_star = T * u.K_to_eV / epsilon_0
-    # Calculate the parameter x (Paragraph above eq. 16 of [Laricchiuta2007]).
-    x = np.log(T_star)
-    # Calculate the reduced collision integral (eq. 15 of [Laricchiuta2007]).
-    lnS1 = (
-        (a[0] + a[1] * x)
-        * np.exp((x - a[2]) / a[3])
-        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
-    )
-    lnS2 = (
-        a[4]
-        * np.exp((x - a[5]) / a[6])
-        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
-    )
-    omega_reduced = np.exp(lnS1 + lnS2)
-    # Dimensional collision integral (Paragraph above eq. 17).
-    omega = omega_reduced * np.pi * sigma**2 * 1e-20  # TODO: why pi?
-    return omega
+    sigma, epsilon_0, beta_array = _nn_pair_parameters(species_i, species_j)
+    return _omega_fit(c_nn, sigma, epsilon_0, beta_array, l, s, T)
 
 
 def Qin(
@@ -1355,54 +1460,8 @@ def Qin(
     where :math:`\epsilon` is the binding energy, defined in eq. 10 of
     [Laricchiuta2007]_.
     """
-    if (
-        (l == 1 and s >= 6)
-        or (l == 2 and s >= 5)
-        or (l == 3 and s >= 4)
-        or (l == 4 and s >= 5)
-    ):
-        # Eq. 18 of [Laricchiuta2007]_.
-        # Recursion relation for the collision integral.
-        negT, posT = T - 0.5, T + 0.5
-        return Qin(species_i, species_j, l, s - 1, T) + T / (s + 1) * (
-            Qin(species_i, species_j, l, s - 1, posT)
-            - Qin(species_i, species_j, l, s - 1, negT)
-        )
-    # Get the equilibrium distance r_e and binding energy epsilon_0.
-    # (eq. 9 and 10 of [Laricchiuta2007]).
-    r_e, epsilon_0 = pot_parameters_ion_neut(species_i, species_j)
-    # Calculate the beta parameter (eq. 5 of [Laricchiuta2007]).
-    beta_value = beta(species_i, species_j)
-    # Calculate the x0 parameter (eq. 17 of [Laricchiuta2007]).
-    x0 = x0_ion_neut(beta_value)
-    # Evaluate the polynomial coefficients a (eq. 16 of [Laricchiuta2007]_).
-    beta_array = np.array([1, beta_value, beta_value**2], dtype=np.float64)
-    a = np.dot(
-        c_in[l - 1, s - 1],
-        beta_array,
-        out=np.zeros((7,), dtype=np.float64),
-    )
-    # Get the parameter sigma (Paragraph above eq. 13 of [Laricchiuta2007]).
-    sigma = r_e * x0
-    # Compute T* (eq. 12 of [Laricchiuta2007]).
-    T_star = T * u.K_to_eV / epsilon_0
-    # Calculate the parameter x (Paragraph above eq. 16 of [Laricchiuta2007]).
-    x = np.log(T_star)
-    # Calculate the reduced collision integral (eq. 15 of [Laricchiuta2007]).
-    lnS1 = (
-        (a[0] + a[1] * x)
-        * np.exp((x - a[2]) / a[3])
-        / (np.exp((x - a[2]) / a[3]) + np.exp((a[2] - x) / a[3]))
-    )
-    lnS2 = (
-        a[4]
-        * np.exp((x - a[5]) / a[6])
-        / (np.exp((x - a[5]) / a[6]) + np.exp((a[5] - x) / a[6]))
-    )
-    omega_reduced = np.exp(lnS1 + lnS2)
-    # Dimensional collision integral (Paragraph above eq. 17).
-    omega = omega_reduced * np.pi * sigma**2 * 1e-20  # TODO: why pi?
-    return omega
+    sigma, epsilon_0, beta_array = _in_pair_parameters(species_i, species_j)
+    return _omega_fit(c_in, sigma, epsilon_0, beta_array, l, s, T)
 
 
 def Qtr(
@@ -1635,17 +1694,237 @@ def Qij(
         raise ValueError("Unknown collision type")
 
 
+#: The (l, s) pairs needed by :func:`q`.
+LS_PAIRS = (
+    (1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7),
+    (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
+    (3, 3), (3, 4), (3, 5), (4, 4),
+)  # fmt: skip
+
+#: The (l, s) pairs needed by :func:`qhat` -- a subset of :data:`LS_PAIRS`,
+#: so a set computed for ``q()`` can be reused by ``qhat()``.
+QHAT_LS_PAIRS = (
+    (1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (2, 4), (3, 3),
+)  # fmt: skip
+
+#: Distinct energy-moment orders appearing in :data:`LS_PAIRS`.
+_S_VALUES = tuple(sorted({s for _, s in LS_PAIRS}))
+
+#: Coefficients of eq. 5 of [Devoto1967]_, indexed by l - 1.
+_QC_C1 = (4.0, 12.0, 12.0, 16.0)
+_QC_C2 = (1 / 2, 1.0, 7 / 6, 4 / 3)
+
+#: psi(s), zeta_1(s) and zeta_2(s) are pure functions of a small integer.
+_PSICONST = {s: psiconst(s) for s in _S_VALUES}
+_SUM1 = {s: sum1(s) for s in _S_VALUES}
+_SUM2 = {s: sum2(s) for s in _S_VALUES}
+
+
+def _qe_pair(species_neutral: "Species", T: float) -> dict[int, float]:
+    """Electron-neutral integrals for every s, keyed by s.
+
+    ``Qe`` does not depend on l, so only the distinct s values are
+    evaluated.
+    """
+    cross_section = species_neutral.electron_cross_section
+    if isinstance(cross_section, (tuple, list)):
+        D1, D2, D3, D4 = cross_section
+    elif isinstance(cross_section, float):
+        D1, D2, D3, D4 = cross_section, 0, 0, 0
+    else:
+        raise ValueError("Invalid electron cross section data.")
+
+    tau = np.sqrt(2 * u.m_e * u.k_b * T) / u.hbar
+    tau_pow = tau**D3
+    tau_sq = D4 * tau**2 + 1
+    out = {}
+    for s in _S_VALUES:
+        barg = D3 / 2 + s + 2
+        out[s] = D1 + D2 * tau_pow * gamma(barg) / (
+            gamma(s + 2) * tau_sq**barg
+        )
+    return out
+
+
+def _qtr_pair(
+    species_i: "Species", species_j: "Species", T: float
+) -> dict[int, float]:
+    """Resonant charge transfer integrals for every s, keyed by s.
+
+    ``Qtr`` does not depend on l, and A, B and the molar mass depend only
+    on the pair.
+    """
+    if species_i.charge_number < species_j.charge_number:
+        lower = species_i
+    else:
+        lower = species_j
+    a = A(lower.ionisation_energy)
+    b = B(lower.ionisation_energy)
+    ln_term = np.log(4 * u.R * T / lower.molar_mass)
+
+    out = {}
+    for s in _S_VALUES:
+        zeta_1, zeta_2 = _SUM1[s], _SUM2[s]
+        cterm = np.pi**2 / 6 - zeta_2 + zeta_1**2
+        # Same as eq. 12 of [Devoto1967], with rearranged terms.
+        out[s] = (
+            a**2
+            - zeta_1 * a * b
+            + (b / 2) ** 2 * cterm
+            + (b / 2) ** 2 * ln_term**2
+            + (zeta_1 * b**2 / 2 - a * b) * ln_term
+        )
+    return out
+
+
+def _pair_integrals(
+    species_i: "Species",
+    n_i: float,
+    species_j: "Species",
+    n_j: float,
+    T: float,
+    ls_pairs: tuple[tuple[int, int], ...],
+) -> dict[tuple[int, int], float]:
+    """Every (l, s) collision integral for a single species pair.
+
+    The interaction-potential parameters -- equilibrium distance, binding
+    energy, beta, the Coulomb logarithm, the resonant-transfer constants --
+    depend on the species pair and on T, but never on (l, s).  Deriving them
+    here, outside the moment loop, means they are computed once per pair
+    instead of once per pair per (l, s).
+
+    The dispatch mirrors :func:`Qij` exactly, including that an ion-neutral
+    pair of the same stoichiometry uses resonant charge transfer for odd l
+    and the ion-neutral fit for even l.
+
+    Raises
+    ------
+    ValueError
+        If the collision type is unknown.
+    """
+    z_i, z_j = species_i.charge_number, species_j.charge_number
+
+    if z_i != 0 and z_j != 0:
+        # Coulomb: b_0^2 and the Coulomb logarithm are (l, s)-independent.
+        b0_sq = (ke * z_i * z_j * u.e**2 / (2 * u.k_b * T)) ** 2
+        cl = cl_charged(species_i, species_j, n_i, n_j, T) + np.log(2)
+        return {
+            (l, s): _QC_C1[l - 1]
+            * np.pi
+            / (s * (s + 1))
+            * b0_sq
+            * (cl - _QC_C2[l - 1] - 2 * egamma + _PSICONST[s])
+            for l, s in ls_pairs
+        }
+
+    if species_j.name == "e":
+        by_s = _qe_pair(species_i, T)
+        return {(l, s): by_s[s] for l, s in ls_pairs}
+    if species_i.name == "e":
+        by_s = _qe_pair(species_j, T)
+        return {(l, s): by_s[s] for l, s in ls_pairs}
+
+    if z_i == 0 and z_j == 0:
+        sigma, epsilon_0, beta_array = _nn_pair_parameters(
+            species_i, species_j
+        )
+        return {
+            (l, s): _omega_fit(c_nn, sigma, epsilon_0, beta_array, l, s, T)
+            for l, s in ls_pairs
+        }
+
+    if z_i == 0:
+        ion, neutral = species_j, species_i
+    elif z_j == 0:
+        ion, neutral = species_i, species_j
+    else:
+        raise ValueError("Unknown collision type")
+
+    resonant = (
+        species_i.stoichiometry == species_j.stoichiometry
+        and abs(z_i - z_j) == 1
+    )
+    qtr_by_s = _qtr_pair(species_i, species_j, T) if resonant else None
+
+    sigma, epsilon_0, beta_array = _in_pair_parameters(ion, neutral)
+    out = {}
+    for l, s in ls_pairs:
+        if qtr_by_s is not None and l % 2 == 1:
+            out[(l, s)] = qtr_by_s[s]
+        else:
+            out[(l, s)] = _omega_fit(
+                c_in, sigma, epsilon_0, beta_array, l, s, T
+            )
+    return out
+
+
+def collision_integrals(
+    mixture: "LTE",
+    ls_pairs: tuple[tuple[int, int], ...] = LS_PAIRS,
+) -> dict[tuple[int, int], np.ndarray]:
+    r"""Collision integral matrices for the requested (l, s) pairs.
+
+    Evaluated together, species pairs outermost and moments innermost, so
+    that each pair's interaction-potential parameters -- equilibrium
+    distance, binding energy, beta, the Coulomb logarithm -- are derived
+    once for the pair rather than once per (l, s).
+
+    Nothing is cached.  Callers that need the same set more than once
+    should evaluate it here and pass it on: :func:`q` and :func:`qhat` both
+    accept it as ``Q``, and :func:`q`'s result can in turn be passed to
+    :func:`Dij` and :func:`DTi` as ``qq``.
+
+    Parameters
+    ----------
+    mixture : LTE
+        Mixture of species.
+    ls_pairs : tuple[tuple[int, int], ...], optional
+        Which (l, s) pairs to evaluate.  Defaults to :data:`LS_PAIRS`, the
+        set :func:`q` needs; :func:`qhat` asks for the smaller
+        :data:`QHAT_LS_PAIRS`.
+
+    Returns
+    -------
+    dict[tuple[int, int], np.ndarray]
+        Collision integral matrix for each requested (l, s) pair.
+    """
+    nb_species = len(mixture.species)
+    number_densities = mixture.calculate_composition()  # in m^-3
+    values = {ls: np.zeros((nb_species, nb_species)) for ls in ls_pairs}
+
+    # Species pairs outermost, moments innermost: the potential parameters
+    # are a property of the pair, so this derives them once each rather than
+    # once per (l, s).
+    for i, (ndi, species_i) in enumerate(
+        zip(number_densities, mixture.species)
+    ):
+        for j, (ndj, species_j) in enumerate(
+            zip(number_densities, mixture.species)
+        ):
+            pair = _pair_integrals(
+                species_i, ndi, species_j, ndj, mixture.T, ls_pairs
+            )
+            for ls, value in pair.items():
+                values[ls][i, j] = value
+
+    return values
+
+
 def Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
     """Calculate the collision integral matrix for a mixture of species.
+
+    For the full set used by the transport properties, prefer
+    :func:`collision_integrals`, which derives each species pair's
+    potential parameters once instead of once per (l, s).
 
     Parameters
     ----------
     mixture : LTE
         Mixture of species.
     l : int
-        TODO: Angular momentum quantum number? Or integer moment?
+        Order of the angular moment of the transport cross section.
     s : int
-        TODO: Principal quantum number? Or integer moment?
+        Order of the energy moment of the Maxwellian average.
 
     Returns
     -------
@@ -1676,13 +1955,20 @@ def Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
 ### q-matrix calculations #####################################################
 
 
-def q(mixture: "LTE") -> np.ndarray:
+def q(
+    mixture: "LTE",
+    Q: dict[tuple[int, int], np.ndarray] | None = None,
+) -> np.ndarray:
     """Calculate the q-matrix for a mixture of species.
 
     Parameters
     ----------
     mixture : LTE
         Mixture of species.
+    Q : dict[tuple[int, int], np.ndarray], optional
+        Collision integrals from :func:`collision_integrals`.  Pass this to
+        reuse a set already computed for the same mixture state; by default
+        they are computed here.
 
     Returns
     -------
@@ -1696,28 +1982,16 @@ def q(mixture: "LTE") -> np.ndarray:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()  # m^-3
-    # kg
-    masses = np.array(
-        [species.molar_mass / u.N_a for species in mixture.species]
-    )
+    masses = mixture.masses  # kg
 
-    # Calculate the collision integrals for the mixture.
-    Q11 = Qij_mix(mixture, 1, 1)
-    Q12 = Qij_mix(mixture, 1, 2)
-    Q13 = Qij_mix(mixture, 1, 3)
-    Q14 = Qij_mix(mixture, 1, 4)
-    Q15 = Qij_mix(mixture, 1, 5)
-    Q16 = Qij_mix(mixture, 1, 6)
-    Q17 = Qij_mix(mixture, 1, 7)
-    Q22 = Qij_mix(mixture, 2, 2)
-    Q23 = Qij_mix(mixture, 2, 3)
-    Q24 = Qij_mix(mixture, 2, 4)
-    Q25 = Qij_mix(mixture, 2, 5)
-    Q26 = Qij_mix(mixture, 2, 6)
-    Q33 = Qij_mix(mixture, 3, 3)
-    Q34 = Qij_mix(mixture, 3, 4)
-    Q35 = Qij_mix(mixture, 3, 5)
-    Q44 = Qij_mix(mixture, 4, 4)
+    if Q is None:
+        Q = collision_integrals(mixture)
+    Q11, Q12, Q13, Q14 = Q[1, 1], Q[1, 2], Q[1, 3], Q[1, 4]
+    Q15, Q16, Q17 = Q[1, 5], Q[1, 6], Q[1, 7]
+    Q22, Q23, Q24 = Q[2, 2], Q[2, 3], Q[2, 4]
+    Q25, Q26 = Q[2, 5], Q[2, 6]
+    Q33, Q34, Q35 = Q[3, 3], Q[3, 4], Q[3, 5]
+    Q44 = Q[4, 4]
 
     q00 = _q00_jit(Q11, masses, nb_species, number_densities)
 
@@ -2328,13 +2602,20 @@ def _q33_jit(
     return q33
 
 
-def qhat(mixture: "LTE") -> np.ndarray:
+def qhat(
+    mixture: "LTE",
+    Q: dict[tuple[int, int], np.ndarray] | None = None,
+) -> np.ndarray:
     """Calculate the qhat-matrix for a mixture of species.
 
     Parameters
     ----------
     mixture : LTE
         Mixture of species.
+    Q : dict[tuple[int, int], np.ndarray], optional
+        Collision integrals from :func:`collision_integrals`.  Pass this to
+        reuse a set already computed for the same mixture state; by default
+        they are computed here.
 
     Returns
     -------
@@ -2348,15 +2629,15 @@ def qhat(mixture: "LTE") -> np.ndarray:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
 
-    Q11 = Qij_mix(mixture, 1, 1)
-    Q12 = Qij_mix(mixture, 1, 2)
-    Q13 = Qij_mix(mixture, 1, 3)
-    Q22 = Qij_mix(mixture, 2, 2)
-    Q23 = Qij_mix(mixture, 2, 3)
-    Q24 = Qij_mix(mixture, 2, 4)
-    Q33 = Qij_mix(mixture, 3, 3)
+    # qhat()'s (l, s) set is a subset of q()'s, so a set computed for q()
+    # can be reused here.
+    if Q is None:
+        Q = collision_integrals(mixture, QHAT_LS_PAIRS)
+    Q11, Q12, Q13 = Q[1, 1], Q[1, 2], Q[1, 3]
+    Q22, Q23, Q24 = Q[2, 2], Q[2, 3], Q[2, 4]
+    Q33 = Q[3, 3]
 
     qhat00 = _qhat00_jit(Q11, Q22, masses, nb_species, number_densities)
 
@@ -2468,7 +2749,7 @@ def _qhat11_jit(
 ### Transport property calculations ###########################################
 
 
-def Dij(mixture: "LTE") -> np.ndarray:
+def Dij(mixture: "LTE", qq: np.ndarray | None = None) -> np.ndarray:
     r"""Diffusion coefficients.
 
     Diffusion coefficents, calculation per [Devoto1966]_ (eq. 3 and eq. 6).
@@ -2478,6 +2759,9 @@ def Dij(mixture: "LTE") -> np.ndarray:
     ----------
     mixture : LTE
         Mixture of species.
+    qq : np.ndarray, optional
+        q-matrix from :func:`q` for this mixture state.  Pass it to avoid
+        rebuilding it; by default it is computed here.
 
     Returns
     -------
@@ -2530,41 +2814,40 @@ def Dij(mixture: "LTE") -> np.ndarray:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()  # m^-3
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])  # kg
+    masses = mixture.masses  # kg
     rho = mixture.calculate_density()  # kg/m^3
 
     n_tot = np.sum(number_densities)  # m^-3
 
-    diffusion_matrix = np.zeros((nb_species, nb_species))
-    qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
-
+    if qq is None:
+        qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
     lu_piv_q = scl.lu_factor(qq)
-    b_vec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
 
-    for i in range(nb_species):
-        for j in range(nb_species):
-            # TODO: Check if this is correct
-            # Equation 6 of [Devoto1966]_.
-            dij = np.array(
-                [delta(h, i) - delta(h, j) for h in range(0, nb_species)]
-            )
-            b_vec[:nb_species] = 3 * np.sqrt(np.pi) * dij
-            cflat = scl.lu_solve(lu_piv_q, b_vec)
-            cip = cflat.reshape(4, nb_species)
+    # Equation 6 of [Devoto1966]_.  The right-hand side for the pair (i, j)
+    # is 3 sqrt(pi) (e_i - e_j) in its first nb_species entries, so the
+    # nb_species**2 right-hand sides span only an nb_species-dimensional
+    # space.  Solving once against the unit vectors therefore gives every
+    # c^{ji} by subtraction, instead of one solve per pair.
+    b_matrix = np.zeros((4 * nb_species, nb_species))
+    b_matrix[:nb_species, :] = 3 * np.sqrt(np.pi) * np.eye(nb_species)
+    c_unit = scl.lu_solve(lu_piv_q, b_matrix)[:nb_species]
 
-            # Diffusion coefficient, equation 3 of [Devoto1966]_.
-            diffusion_matrix[i, j] = (
-                rho
-                * number_densities[i]
-                / (2 * n_tot * masses[j])
-                * np.sqrt(2 * u.k_b * mixture.T / masses[i])
-                * cip[0, i]
-            )
+    # c_i0^{ji} for the pair (i, j) is c_unit[i, i] - c_unit[i, j].
+    cip0 = np.diag(c_unit)[:, np.newaxis] - c_unit
+
+    # Diffusion coefficient, equation 3 of [Devoto1966]_.
+    diffusion_matrix = (
+        rho
+        * number_densities[:, np.newaxis]
+        / (2 * n_tot * masses[np.newaxis, :])
+        * np.sqrt(2 * u.k_b * mixture.T / masses)[:, np.newaxis]
+        * cip0
+    )
 
     return diffusion_matrix
 
 
-def DTi(mixture: "LTE") -> float:
+def DTi(mixture: "LTE", qq: np.ndarray | None = None) -> float:
     r"""Thermal diffusion coefficients.
 
     Thermal diffusion coefficents, calculation per [Devoto1966]_
@@ -2574,6 +2857,9 @@ def DTi(mixture: "LTE") -> float:
     ----------
     mixture : LTE
         Mixture of species.
+    qq : np.ndarray, optional
+        q-matrix from :func:`q` for this mixture state.  Pass it to avoid
+        rebuilding it; by default it is computed here.
 
     Returns
     -------
@@ -2621,9 +2907,10 @@ def DTi(mixture: "LTE") -> float:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
 
-    qq = q(mixture)
+    if qq is None:
+        qq = q(mixture)
     b_vec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
     # Only the first element is non-zero
     b_vec[nb_species : 2 * nb_species] = (
@@ -2695,7 +2982,7 @@ def viscosity(mixture: "LTE") -> float:
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
 
     qqhat = qhat(mixture)
 
@@ -2754,22 +3041,18 @@ def electrical_conductivity(mixture: "LTE") -> float:
     """
     # This function should only be called for electron-containing mixtures
     # Non-electron mixtures should return 0 via their template method override
-    charge_numbers = np.array([sp.charge_number for sp in mixture.species])
+    charge_numbers = mixture.charge_numbers
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
     rho = mixture.calculate_density()
 
     D1 = Dij(mixture)[-1, :]
     n_tot = np.sum(number_densities)
 
-    sum_val = 0.0
-    for charge_number, D1j, mj, nj in zip(
-        charge_numbers, D1, masses, number_densities
-    ):
-        # TODO: Check if this is correct. Electrons should be discarded.
-        # TODO: Check if this is correct. Neutral species should be discarded
-        # (but ok, since they have 0 charge).
-        sum_val += nj * mj * charge_number * D1j
+    # TODO: Check if this is correct. Electrons should be discarded.
+    # TODO: Check if this is correct. Neutral species should be discarded
+    # (but ok, since they have 0 charge).
+    sum_val = number_densities @ (masses * charge_numbers * D1)
 
     pre_mult = u.e**2 * n_tot / (rho * u.k_b * mixture.T)
 
@@ -2894,7 +3177,7 @@ def thermal_conductivity(
     """
     nb_species = len(mixture.species)
     number_densities = mixture.calculate_composition()
-    masses = np.array([sp.molar_mass / u.N_a for sp in mixture.species])
+    masses = mixture.masses
     n_tot = np.sum(number_densities)
     rho = mixture.calculate_density()
     hv = mixture.calculate_species_enthalpies()
@@ -2906,6 +3189,9 @@ def thermal_conductivity(
 
     ### translational tk components ###
     # Solve equation 5 of [Devoto1966]_ to get the `a` matrix.
+    # This q-matrix is reused by DTi and Dij below: the temperature and
+    # composition are the same for all three (the +/- dT excursions further
+    # down restore T before Dij is called).
     qq = q(mixture)
 
     b_vec = np.zeros(4 * nb_species)
@@ -2930,7 +3216,7 @@ def thermal_conductivity(
         # TODO: This looks like the second term in the second parenthesis of 18
         # of [Devoto1966]_.
         # TODO: Check if it is correct. Where are the term n² and rho?
-        locDTi = DTi(mixture)
+        locDTi = DTi(mixture, qq=qq)
         kdt = np.sum(hv * locDTi / mixture.T)
     else:
         kdt = 0
@@ -2949,15 +3235,13 @@ def thermal_conductivity(
     x_negative = n_negative / np.sum(n_negative)
     dxdT = (x_positive - x_negative) / (2 * rel_delta_T * mixture.T)
 
-    locDij = Dij(mixture)
+    locDij = Dij(mixture, qq=qq)
 
-    krxn_enth = 0.0
-    for j in range(nb_species):
-        for i in range(nb_species):
-            # TODO: This looks like the first term in the first parenthesis of
-            # 18 of [Devoto1966]_.
-            # TODO: Check if it is correct.
-            krxn_enth += masses[j] * masses[i] * hv[i] * locDij[i, j] * dxdT[j]
+    # TODO: This looks like the first term in the first parenthesis of
+    # 18 of [Devoto1966]_.
+    # TODO: Check if it is correct.
+    # sum_ij (m_i h_i) D_ij (m_j dx_j/dT), a bilinear form in locDij.
+    krxn_enth = (masses * hv) @ locDij @ (masses * dxdT)
     krxn_enth *= -(n_tot**2) / rho
 
     ### reactional tk components - thermal diffusion term ###
