@@ -11,50 +11,63 @@ freshly constructed (cold-started) mixture at the same conditions, to catch
 cases where a warm start converges to a plausible-looking but wrong answer.
 """
 
+from typing import NamedTuple
+
 import numpy as np
 import pytest
 
 import minplascalc as mpc
 
-SIMPLE_SPECIES = ["O2", "O2+", "O", "O-", "O+", "O++"]
-SIMPLE_X0 = [1, 0, 0, 0, 0, 0]
-SIMPLE_P = 101325
 
-COMPLEX_SPECIES = [
-    "O2",
-    "O2+",
-    "O",
-    "O+",
-    "O++",
-    "CO",
-    "CO+",
-    "C",
-    "C+",
-    "C++",
-    "SiO",
-    "SiO+",
-    "Si",
-    "Si+",
-    "Si++",
-]
-COMPLEX_X0 = [0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0]
-COMPLEX_P = 101325
+class MixtureCase(NamedTuple):
+    """A mixture specification to sweep, and where to start the sweep from."""
+
+    name: str
+    species: list[str]
+    x0: list[float]
+    P: float
+    T0: float
+
+    def new_mixture(self):
+        """Build a freshly constructed (cold-started) mixture at ``T0``."""
+        return mpc.mixture.lte_from_names(
+            self.species, x0=self.x0, T=self.T0, P=self.P
+        )
+
+
+SIMPLE = MixtureCase(
+    name="simple",
+    species=["O2", "O2+", "O", "O-", "O+", "O++"],
+    x0=[1, 0, 0, 0, 0, 0],
+    P=101325,
+    T0=1000,
+)
+
+COMPLEX = MixtureCase(
+    name="complex",
+    species=[
+        "O2",
+        "O2+",
+        "O",
+        "O+",
+        "O++",
+        "CO",
+        "CO+",
+        "C",
+        "C+",
+        "C++",
+        "SiO",
+        "SiO+",
+        "Si",
+        "Si+",
+        "Si++",
+    ],
+    x0=[0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0],
+    P=101325,
+    T0=10000,
+)
 
 CROSS_CHECK_RTOL = 1e-6
-
-
-@pytest.fixture
-def mixture_simple():
-    return mpc.mixture.lte_from_names(
-        SIMPLE_SPECIES, x0=SIMPLE_X0, T=1000, P=SIMPLE_P
-    )
-
-
-@pytest.fixture
-def mixture_complex():
-    return mpc.mixture.lte_from_names(
-        COMPLEX_SPECIES, x0=COMPLEX_X0, T=10000, P=COMPLEX_P
-    )
 
 
 def _assert_physically_sane(mixture):
@@ -68,9 +81,10 @@ def _assert_physically_sane(mixture):
     assert np.isfinite(mixture.calculate_enthalpy())
 
 
-def _assert_matches_cold_start(mixture, species, x0, P, T):
+def _assert_matches_cold_start(mixture, case, T):
     """Warm-started results should match a freshly solved mixture."""
-    cold = mpc.mixture.lte_from_names(species, x0=x0, T=T, P=P)
+    cold = case.new_mixture()
+    cold.T = T
 
     assert mixture.calculate_composition() == pytest.approx(
         cold.calculate_composition(), rel=CROSS_CHECK_RTOL
@@ -88,6 +102,7 @@ def _check_indices(temperatures):
     return {0, len(temperatures) // 2, len(temperatures) - 1}
 
 
+@pytest.mark.parametrize("case", [SIMPLE, COMPLEX], ids=lambda case: case.name)
 @pytest.mark.parametrize(
     "temperatures",
     [
@@ -96,31 +111,11 @@ def _check_indices(temperatures):
     ],
     ids=["ascending", "descending"],
 )
-def test_temperature_sweep_simple(mixture_simple, temperatures):
+def test_temperature_sweep(case, temperatures):
+    mixture = case.new_mixture()
     check_indices = _check_indices(temperatures)
     for i, T in enumerate(temperatures):
-        mixture_simple.T = T
-        _assert_physically_sane(mixture_simple)
+        mixture.T = T
+        _assert_physically_sane(mixture)
         if i in check_indices:
-            _assert_matches_cold_start(
-                mixture_simple, SIMPLE_SPECIES, SIMPLE_X0, SIMPLE_P, T
-            )
-
-
-@pytest.mark.parametrize(
-    "temperatures",
-    [
-        np.linspace(1000, 25000, 30),
-        np.linspace(25000, 1000, 30),
-    ],
-    ids=["ascending", "descending"],
-)
-def test_temperature_sweep_complex(mixture_complex, temperatures):
-    check_indices = _check_indices(temperatures)
-    for i, T in enumerate(temperatures):
-        mixture_complex.T = T
-        _assert_physically_sane(mixture_complex)
-        if i in check_indices:
-            _assert_matches_cold_start(
-                mixture_complex, COMPLEX_SPECIES, COMPLEX_X0, COMPLEX_P, T
-            )
+            _assert_matches_cold_start(mixture, case, T)
