@@ -104,7 +104,9 @@ how `d/dT` is evaluated:
 
 ```python
 negT, posT = T - 0.5, T + 0.5
-return Q(..., s - 1, T) + T / (s + 1) * (Q(..., s - 1, posT) - Q(..., s - 1, negT))
+return Q(..., s - 1, T) + T / (s + 1) * (
+    Q(..., s - 1, posT) - Q(..., s - 1, negT)
+)
 ```
 
 Note there is no division by the step: the +/-0.5 is chosen so that

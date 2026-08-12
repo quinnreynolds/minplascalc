@@ -73,6 +73,9 @@ path = "src/minplascalc/__init__.py"
 indent-width = 4
 line-length = 79
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
 exclude = [".venv"]
 ignore = [
