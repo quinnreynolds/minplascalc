@@ -38,7 +38,9 @@ inside a double loop — 256 solves for a 16-species mixture:
 ```python
 for i in range(nb_species):
     for j in range(nb_species):
-        dij = np.array([delta(h, i) - delta(h, j) for h in range(0, nb_species)])
+        dij = np.array(
+            [delta(h, i) - delta(h, j) for h in range(0, nb_species)]
+        )
         b_vec[:nb_species] = 3 * np.sqrt(np.pi) * dij
         cflat = scl.lu_solve(lu_piv_q, b_vec)
 ```
@@ -50,8 +52,8 @@ nb_species unit vectors gives everything:
 ```python
 B = np.zeros((4 * nb, nb))
 B[:nb, :] = 3 * np.sqrt(np.pi) * np.eye(nb)
-X = scl.lu_solve(lu_piv_q, B)          # one call, nb right-hand sides
-c0 = np.diag(X[:nb])[:, None] - X[:nb] # c^{ji}_{i0} for every (i, j)
+X = scl.lu_solve(lu_piv_q, B)  # one call, nb right-hand sides
+c0 = np.diag(X[:nb])[:, None] - X[:nb]  # c^{ji}_{i0} for every (i, j)
 ```
 
 Verified equal to 8e-16 at T = 2000/8000/12000/20000 K
@@ -74,7 +76,9 @@ Its accumulation loop is a dot product:
 
 ```python
 sum_val = 0.0
-for charge_number, D1j, mj, nj in zip(charge_numbers, D1, masses, number_densities):
+for charge_number, D1j, mj, nj in zip(
+    charge_numbers, D1, masses, number_densities
+):
     sum_val += nj * mj * charge_number * D1j
 ```
 
@@ -157,7 +161,9 @@ constant, recomputed 1600 times per `q()` between them, and both recompute
 `functions_transport.py:1265` and `1380`:
 
 ```python
-a = np.dot(c_nn[l - 1, s - 1], beta_array, out=np.zeros((7,), dtype=np.float64))
+a = np.dot(
+    c_nn[l - 1, s - 1], beta_array, out=np.zeros((7,), dtype=np.float64)
+)
 ```
 
 The `out=` argument is handed a freshly allocated array, so it saves nothing
@@ -213,7 +219,9 @@ Laricchiuta is applied as a *recursive central finite difference in T*:
 
 ```python
 negT, posT = T - 0.5, T + 0.5
-return Qin(..., s - 1, T) + T / (s + 1) * (Qin(..., s - 1, posT) - Qin(..., s - 1, negT))
+return Qin(..., s - 1, T) + T / (s + 1) * (
+    Qin(..., s - 1, posT) - Qin(..., s - 1, negT)
+)
 ```
 
 Each level triples the call count. Measured over one `q()` call:
