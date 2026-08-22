@@ -22,11 +22,12 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install the latest version of uv.
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         version: "latest"
+        enable-cache: false
     - uses: pre-commit/action@v3.0.1
 
   tests:
@@ -35,12 +36,13 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"] # Add more versions as needed.
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install the latest version of uv and set the python version.
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         python-version: ${{ matrix.python-version }}
-    - uses: extractions/setup-just@v2
+        enable-cache: false
+    - uses: extractions/setup-just@v3
     - name: Test with python ${{ matrix.python-version }}
       run: just tests
 
@@ -48,12 +50,13 @@ jobs:
     needs: [tests]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install the latest version of uv.
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         version: "latest"
-    - uses: extractions/setup-just@v2
+        enable-cache: false
+    - uses: extractions/setup-just@v3
     - name: Run code quality checks.
       run: just type-check
 
@@ -61,12 +64,13 @@ jobs:
     needs: [tests]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Install the latest version of uv.
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         version: "latest"
-    - uses: extractions/setup-just@v2
+        enable-cache: false
+    - uses: extractions/setup-just@v3
     - name: Build the documentation.
       run: just build-docs
     - uses: actions/upload-pages-artifact@v3
