@@ -312,6 +312,16 @@ class Monatomic(Species):
             f"Emission lines: {len(self.emission_lines)}"
         )
 
+    def _electronic_moments(self, T: float, dE: float) -> tuple[float, float]:
+        """Electronic partition sum and its energy-weighted first moment."""
+        beta = 1 / (u.k_b * T)
+        below = self._level_energies < (self.ionisation_energy - dE)
+        weights = self._degeneracies * below
+        boltzmann = np.exp(-beta * self._level_energies)
+        return float(weights @ boltzmann), float(
+            (weights * self._level_energies) @ boltzmann
+        )
+
     def internal_partition_function(self, T: float, dE: float) -> float:
         r"""Calculate the internal partition function for an atomic species.
 
@@ -354,16 +364,8 @@ class Monatomic(Species):
 
             g_i = 2J_i + 1
         """
-        beta = 1 / (u.k_b * T)  # Inverse temperature, in J^-1.
-
-        # Only include energy levels below the lowered ionisation energy.
-        # Levels above it are zeroed rather than skipped, so the sum does
-        # not depend on the order of energy_levels.
-        below = self._level_energies < (self.ionisation_energy - dE)
-
-        return float(
-            (self._degeneracies * below) @ np.exp(-beta * self._level_energies)
-        )
+        partition, _ = self._electronic_moments(T, dE)
+        return partition
 
     def internal_energy(self, T: float, dE: float) -> float:
         r"""Calculate the internal energy of an atomic species.
@@ -410,21 +412,11 @@ class Monatomic(Species):
         TODO: Check this --> The internal energy is defined as the sum of the
             translational energy and the electronic energy.
         """
-        beta = 1 / (u.k_b * T)  # Inverse temperature, in J^-1.
-
         # Calculate the translational energy.
         translational_energy = 3 / 2 * u.k_b * T
 
-        # Calculate the electronic energy.  As in
-        # internal_partition_function, levels at or above the lowered
-        # ionisation energy are zeroed rather than terminating the sum.
-        below = self._level_energies < (self.ionisation_energy - dE)
-        electronic_energy = float(
-            (self._degeneracies * self._level_energies * below)
-            @ np.exp(-beta * self._level_energies)
-        )
-
-        electronic_energy /= self.internal_partition_function(T, dE)
+        partition, energy_moment = self._electronic_moments(T, dE)
+        electronic_energy = energy_moment / partition
         return translational_energy + electronic_energy
 
 
