@@ -2752,6 +2752,48 @@ def _qhat11_jit(
 ### Transport property calculations ###########################################
 
 
+class _TransportWorkspace:
+    """Lazily evaluated transport intermediates for one mixture state."""
+
+    def __init__(self, mixture: "LTE"):
+        self.mixture = mixture
+        self.state = mixture._equilibrium_state()
+        self._Q: dict[tuple[int, int], np.ndarray] = {}
+        self._q: np.ndarray | None = None
+        self._qhat: np.ndarray | None = None
+        self._q_system: "_QSystem | None" = None
+
+    def collision_integrals(
+        self, moments: tuple[tuple[int, int], ...]
+    ) -> dict[tuple[int, int], np.ndarray]:
+        """Return requested moments, calculating only entries not yet held."""
+        missing = tuple(moment for moment in moments if moment not in self._Q)
+        if missing:
+            self._Q.update(collision_integrals(self.mixture, missing))
+        return self._Q
+
+    @property
+    def q(self) -> np.ndarray:
+        if self._q is None:
+            self._q = q(self.mixture, self.collision_integrals(LS_PAIRS))
+        return self._q
+
+    @property
+    def qhat(self) -> np.ndarray:
+        if self._qhat is None:
+            self._qhat = qhat(
+                self.mixture,
+                self.collision_integrals(QHAT_LS_PAIRS),
+            )
+        return self._qhat
+
+    @property
+    def q_system(self) -> "_QSystem":
+        if self._q_system is None:
+            self._q_system = _QSystem(self.mixture, self.q)
+        return self._q_system
+
+
 class _QSystem:
     """Factorized Devoto q-system and its shared solution families."""
 
@@ -3003,11 +3045,12 @@ def viscosity(mixture: "LTE") -> float:
     TODO: Why not use equation 21?
     """
     nb_species = len(mixture.species)
-    state = mixture._equilibrium_state()
+    workspace = mixture._transport_workspace()
+    state = workspace.state
     number_densities = state.number_densities
     masses = state.masses
 
-    qqhat = qhat(mixture)
+    qqhat = workspace.qhat
 
     b_vec = np.zeros(2 * nb_species)  # 2 for 2nd order approximation
     b_vec[:nb_species] = (
@@ -3064,13 +3107,14 @@ def electrical_conductivity(mixture: "LTE") -> float:
     """
     # This function should only be called for electron-containing mixtures
     # Non-electron mixtures should return 0 via their template method override
-    state = mixture._equilibrium_state()
+    workspace = mixture._transport_workspace()
+    state = workspace.state
     charge_numbers = state.charge_numbers
     number_densities = state.number_densities
     masses = state.masses
     rho = state.rho
 
-    D1 = Dij(mixture)[-1, :]
+    D1 = workspace.q_system.diffusion_matrix()[-1, :]
     n_tot = state.n_tot
 
     # TODO: Check if this is correct. Electrons should be discarded.
@@ -3200,7 +3244,8 @@ def thermal_conductivity(
               a_{j 1}
     """
     nb_species = len(mixture.species)
-    state = mixture._equilibrium_state()
+    workspace = mixture._transport_workspace()
+    state = workspace.state
     number_densities = state.number_densities
     masses = state.masses
     n_tot = state.n_tot
@@ -3216,9 +3261,7 @@ def thermal_conductivity(
     # This q-matrix is reused by DTi and Dij below: the temperature and
     # composition are the same for all three (the +/- dT excursions further
     # down restore T before Dij is called).
-    qq = q(mixture)
-
-    q_system = _QSystem(mixture, qq)
+    q_system = workspace.q_system
     aip = q_system.aip
     # Equation 13 of [Devoto1966]_.
     k_dash = (
