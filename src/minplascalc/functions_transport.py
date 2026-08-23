@@ -2752,7 +2752,72 @@ def _qhat11_jit(
 ### Transport property calculations ###########################################
 
 
-def Dij(mixture: "LTE", qq: np.ndarray | None = None) -> np.ndarray:
+class _QSystem:
+    """Factorized Devoto q-system and its shared solution families."""
+
+    def __init__(self, mixture: "LTE", qq: np.ndarray | None = None):
+        self.state = mixture._equilibrium_state()
+        self.nb_species = len(mixture.species)
+        self.qq = q(mixture) if qq is None else qq
+        self.lu_piv = scl.lu_factor(self.qq)
+        self._aip: np.ndarray | None = None
+        self._c_unit: np.ndarray | None = None
+
+    @property
+    def aip(self) -> np.ndarray:
+        """Coefficients solving equation 5 of [Devoto1966]."""
+        if self._aip is None:
+            b_vec = np.zeros(4 * self.nb_species)
+            b_vec[self.nb_species : 2 * self.nb_species] = (
+                -15 / 2 * np.sqrt(np.pi) * self.state.number_densities
+            )
+            self._aip = scl.lu_solve(self.lu_piv, b_vec).reshape(
+                4, self.nb_species
+            )
+        return self._aip
+
+    @property
+    def c_unit(self) -> np.ndarray:
+        """Equation-6 solutions for the independent unit-vector RHSs."""
+        if self._c_unit is None:
+            b_matrix = np.zeros((4 * self.nb_species, self.nb_species))
+            b_matrix[: self.nb_species, :] = (
+                3 * np.sqrt(np.pi) * np.eye(self.nb_species)
+            )
+            self._c_unit = scl.lu_solve(self.lu_piv, b_matrix)[
+                : self.nb_species
+            ]
+        return self._c_unit
+
+    def thermal_diffusion(self) -> np.ndarray:
+        """Thermal diffusion coefficients from the shared ``a`` solution."""
+        state = self.state
+        return (
+            0.5
+            * state.number_densities
+            * state.masses
+            * np.sqrt(2 * u.k_b * state.T / state.masses)
+            * self.aip[0]
+        )
+
+    def diffusion_matrix(self) -> np.ndarray:
+        """Ordinary diffusion coefficients from the shared unit solutions."""
+        state = self.state
+        cip0 = np.diag(self.c_unit)[:, np.newaxis] - self.c_unit
+        return (
+            state.rho
+            * state.number_densities[:, np.newaxis]
+            / (2 * state.n_tot * state.masses[np.newaxis, :])
+            * np.sqrt(2 * u.k_b * state.T / state.masses)[:, np.newaxis]
+            * cip0
+        )
+
+
+def Dij(
+    mixture: "LTE",
+    qq: np.ndarray | None = None,
+    q_system: _QSystem | None = None,
+) -> np.ndarray:
     r"""Diffusion coefficients.
 
     Diffusion coefficents, calculation per [Devoto1966]_ (eq. 3 and eq. 6).
@@ -2815,42 +2880,15 @@ def Dij(mixture: "LTE", qq: np.ndarray | None = None) -> np.ndarray:
     TODO: Add how the code works.
     TODO: Why not use equation 8?
     """
-    nb_species = len(mixture.species)
-    state = mixture._equilibrium_state()
-    number_densities = state.number_densities
-    masses = state.masses
-    rho = state.rho
-    n_tot = state.n_tot
-
-    if qq is None:
-        qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
-    lu_piv_q = scl.lu_factor(qq)
-
-    # Equation 6 of [Devoto1966]_.  The right-hand side for the pair (i, j)
-    # is 3 sqrt(pi) (e_i - e_j) in its first nb_species entries, so the
-    # nb_species**2 right-hand sides span only an nb_species-dimensional
-    # space.  Solving once against the unit vectors therefore gives every
-    # c^{ji} by subtraction, instead of one solve per pair.
-    b_matrix = np.zeros((4 * nb_species, nb_species))
-    b_matrix[:nb_species, :] = 3 * np.sqrt(np.pi) * np.eye(nb_species)
-    c_unit = scl.lu_solve(lu_piv_q, b_matrix)[:nb_species]
-
-    # c_i0^{ji} for the pair (i, j) is c_unit[i, i] - c_unit[i, j].
-    cip0 = np.diag(c_unit)[:, np.newaxis] - c_unit
-
-    # Diffusion coefficient, equation 3 of [Devoto1966]_.
-    diffusion_matrix = (
-        rho
-        * number_densities[:, np.newaxis]
-        / (2 * n_tot * masses[np.newaxis, :])
-        * np.sqrt(2 * u.k_b * mixture.T / masses)[:, np.newaxis]
-        * cip0
-    )
-
-    return diffusion_matrix
+    system = q_system or _QSystem(mixture, qq)
+    return system.diffusion_matrix()
 
 
-def DTi(mixture: "LTE", qq: np.ndarray | None = None) -> float:
+def DTi(
+    mixture: "LTE",
+    qq: np.ndarray | None = None,
+    q_system: _QSystem | None = None,
+) -> np.ndarray:
     r"""Thermal diffusion coefficients.
 
     Thermal diffusion coefficents, calculation per [Devoto1966]_
@@ -2908,28 +2946,8 @@ def DTi(mixture: "LTE", qq: np.ndarray | None = None) -> float:
     TODO: Add how the code works.
     TODO: Why not use equation 9?
     """
-    nb_species = len(mixture.species)
-    state = mixture._equilibrium_state()
-    number_densities = state.number_densities
-    masses = state.masses
-
-    if qq is None:
-        qq = q(mixture)
-    b_vec = np.zeros(4 * nb_species)  # 4 for 4th order approximation
-    # Only the first element is non-zero
-    b_vec[nb_species : 2 * nb_species] = (
-        -15 / 2 * np.sqrt(np.pi) * number_densities
-    )
-    aflat = np.linalg.solve(qq, b_vec)
-    aip = aflat.reshape(4, nb_species)
-
-    return (
-        0.5
-        * number_densities
-        * masses
-        * np.sqrt(2 * u.k_b * mixture.T / masses)
-        * aip[0]
-    )
+    system = q_system or _QSystem(mixture, qq)
+    return system.thermal_diffusion()
 
 
 def viscosity(mixture: "LTE") -> float:
@@ -3200,12 +3218,8 @@ def thermal_conductivity(
     # down restore T before Dij is called).
     qq = q(mixture)
 
-    b_vec = np.zeros(4 * nb_species)
-    b_vec[nb_species : 2 * nb_species] = (
-        -15 / 2 * np.sqrt(np.pi) * number_densities
-    )
-    aflat = np.linalg.solve(qq, b_vec)
-    aip = aflat.reshape(4, nb_species)
+    q_system = _QSystem(mixture, qq)
+    aip = q_system.aip
     # Equation 13 of [Devoto1966]_.
     k_dash = (
         -5
@@ -3222,7 +3236,7 @@ def thermal_conductivity(
         # TODO: This looks like the second term in the second parenthesis of 18
         # of [Devoto1966]_.
         # TODO: Check if it is correct. Where are the term n² and rho?
-        locDTi = DTi(mixture, qq=qq)
+        locDTi = q_system.thermal_diffusion()
         kdt = np.sum(hv * locDTi / mixture.T)
     else:
         kdt = 0
@@ -3241,7 +3255,7 @@ def thermal_conductivity(
     x_negative = n_negative / np.sum(n_negative)
     dxdT = (x_positive - x_negative) / (2 * rel_delta_T * mixture.T)
 
-    locDij = Dij(mixture, qq=qq)
+    locDij = q_system.diffusion_matrix()
 
     # TODO: This looks like the first term in the first parenthesis of
     # 18 of [Devoto1966]_.
