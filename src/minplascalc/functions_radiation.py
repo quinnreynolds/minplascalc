@@ -104,7 +104,8 @@ def total_emission_coefficient(mix: "LTE") -> float:
     coefficient (NEC).
     """
     # Calculate the number densities of species in the mixture.
-    nd = mix.calculate_composition()
+    state = mix._equilibrium_state()
+    nd = state.number_densities
 
     # Initialize the total emission coefficient.
     total_emission_coefficient = 0.0
