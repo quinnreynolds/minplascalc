@@ -1,1 +1,1 @@
-"""Development benchmarks and independent numerical oracles."""
+"""Development benchmarks, alternative formulations, and numerical oracles."""
