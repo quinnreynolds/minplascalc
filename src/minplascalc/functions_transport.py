@@ -1889,7 +1889,8 @@ def collision_integrals(
         Collision integral matrix for each requested (l, s) pair.
     """
     nb_species = len(mixture.species)
-    number_densities = mixture.calculate_composition()  # in m^-3
+    state = mixture._equilibrium_state()
+    number_densities = state.number_densities
     values = {ls: np.zeros((nb_species, nb_species)) for ls in ls_pairs}
 
     # Species pairs outermost, moments innermost: the potential parameters
@@ -1934,7 +1935,7 @@ def Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
     # Square matrix to store the collision integrals.
     Q_values = np.zeros((len(mixture.species), len(mixture.species)))
     # Get the number densities of the species in the mixture.
-    number_densities = mixture.calculate_composition()  # in m^-3
+    number_densities = mixture._equilibrium_state().number_densities
 
     # For all pairs of species in the mixture, calculate the corresponding
     # collision integral.
@@ -1981,8 +1982,9 @@ def q(
     [Devoto1966]_.
     """
     nb_species = len(mixture.species)
-    number_densities = mixture.calculate_composition()  # m^-3
-    masses = mixture.masses  # kg
+    state = mixture._equilibrium_state()
+    number_densities = state.number_densities
+    masses = state.masses
 
     if Q is None:
         Q = collision_integrals(mixture)
@@ -2628,8 +2630,9 @@ def qhat(
     [Devoto1966]_, from equation A19 to A22.
     """
     nb_species = len(mixture.species)
-    number_densities = mixture.calculate_composition()
-    masses = mixture.masses
+    state = mixture._equilibrium_state()
+    number_densities = state.number_densities
+    masses = state.masses
 
     # qhat()'s (l, s) set is a subset of q()'s, so a set computed for q()
     # can be reused here.
@@ -2813,11 +2816,11 @@ def Dij(mixture: "LTE", qq: np.ndarray | None = None) -> np.ndarray:
     TODO: Why not use equation 8?
     """
     nb_species = len(mixture.species)
-    number_densities = mixture.calculate_composition()  # m^-3
-    masses = mixture.masses  # kg
-    rho = mixture.calculate_density()  # kg/m^3
-
-    n_tot = np.sum(number_densities)  # m^-3
+    state = mixture._equilibrium_state()
+    number_densities = state.number_densities
+    masses = state.masses
+    rho = state.rho
+    n_tot = state.n_tot
 
     if qq is None:
         qq = q(mixture)  # Size (4*nb_species, 4*nb_species)
@@ -2906,8 +2909,9 @@ def DTi(mixture: "LTE", qq: np.ndarray | None = None) -> float:
     TODO: Why not use equation 9?
     """
     nb_species = len(mixture.species)
-    number_densities = mixture.calculate_composition()
-    masses = mixture.masses
+    state = mixture._equilibrium_state()
+    number_densities = state.number_densities
+    masses = state.masses
 
     if qq is None:
         qq = q(mixture)
@@ -2981,8 +2985,9 @@ def viscosity(mixture: "LTE") -> float:
     TODO: Why not use equation 21?
     """
     nb_species = len(mixture.species)
-    number_densities = mixture.calculate_composition()
-    masses = mixture.masses
+    state = mixture._equilibrium_state()
+    number_densities = state.number_densities
+    masses = state.masses
 
     qqhat = qhat(mixture)
 
@@ -3041,13 +3046,14 @@ def electrical_conductivity(mixture: "LTE") -> float:
     """
     # This function should only be called for electron-containing mixtures
     # Non-electron mixtures should return 0 via their template method override
-    charge_numbers = mixture.charge_numbers
-    number_densities = mixture.calculate_composition()
-    masses = mixture.masses
-    rho = mixture.calculate_density()
+    state = mixture._equilibrium_state()
+    charge_numbers = state.charge_numbers
+    number_densities = state.number_densities
+    masses = state.masses
+    rho = state.rho
 
     D1 = Dij(mixture)[-1, :]
-    n_tot = np.sum(number_densities)
+    n_tot = state.n_tot
 
     # TODO: Check if this is correct. Electrons should be discarded.
     # TODO: Check if this is correct. Neutral species should be discarded
@@ -3176,16 +3182,16 @@ def thermal_conductivity(
               a_{j 1}
     """
     nb_species = len(mixture.species)
-    number_densities = mixture.calculate_composition()
-    masses = mixture.masses
-    n_tot = np.sum(number_densities)
-    rho = mixture.calculate_density()
+    state = mixture._equilibrium_state()
+    number_densities = state.number_densities
+    masses = state.masses
+    n_tot = state.n_tot
+    rho = state.rho
     hv = mixture.calculate_species_enthalpies()
 
     # Rescale species enthalpies relative to average molar mass.
     # TODO: why?
-    average_molar_mass = rho / n_tot
-    hv = hv * masses / average_molar_mass
+    hv = hv * masses / state.mean_particle_mass
 
     ### translational tk components ###
     # Solve equation 5 of [Devoto1966]_ to get the `a` matrix.

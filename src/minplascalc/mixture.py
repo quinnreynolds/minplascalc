@@ -5,6 +5,7 @@ This includes species composition and thermodynamic properties.
 
 import logging
 import warnings
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -13,6 +14,26 @@ from minplascalc import species as _sp
 from minplascalc import units as u
 
 __all__ = ["lte_from_names", "LTE", "LTEWithoutElectrons"]
+
+
+@dataclass(frozen=True)
+class _EquilibriumState:
+    """Derived quantities for one converged mixture state."""
+
+    T: float
+    P: float
+    particle_numbers: np.ndarray
+    number_densities: np.ndarray
+    mole_fractions: np.ndarray
+    masses: np.ndarray
+    charge_numbers: np.ndarray
+    reference_energies: np.ndarray
+    ionization_lowering: np.ndarray
+    kbt: float
+    volume: float
+    n_tot: float
+    rho: float
+    mean_particle_mass: float
 
 
 class LTE:
@@ -101,6 +122,7 @@ class LTE:
 
         # Number of particles of each species.
         self.__Ni: np.ndarray = np.zeros(len(self.species))
+        self.__state: _EquilibriumState | None = None
 
     @property
     def species(self):
@@ -132,6 +154,7 @@ class LTE:
     def x0(self, x0):
         self._validate_x0_length(x0)
         self.__isLTE = False
+        self.__state = None
         self.__x0 = self._format_x0(x0)
 
     @property
@@ -141,6 +164,7 @@ class LTE:
     @T.setter
     def T(self, T):
         self.__isLTE = False  # Reset LTE composition flag.
+        self.__state = None
         self.__T = T
 
     @property
@@ -150,6 +174,7 @@ class LTE:
     @P.setter
     def P(self, P):
         self.__isLTE = False  # Reset LTE composition flag.
+        self.__state = None
         self.__P = P
 
     def __repr__(self):
@@ -684,11 +709,43 @@ class LTE:
         logging.debug(self.__Ni)
 
         self.__isLTE = True
+        self.__state = None
 
         N_i = self.__Ni  # Number of particles of each species.
         N_tot = N_i.sum()  # Total number of particles in the plasma.
         V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
         return N_i / V  # Number density of each species, in particles/m3.
+
+    def _equilibrium_state(self) -> _EquilibriumState:
+        """Return all commonly used quantities for the current LTE state."""
+        if self.__state is not None:
+            return self.__state
+
+        number_densities = self.calculate_composition()
+        kbt = u.k_b * self.T
+        particle_numbers = self.__Ni
+        particle_total = particle_numbers.sum()
+        volume = particle_total * kbt / self.P
+        n_tot = number_densities.sum()
+        rho = number_densities @ self.masses
+
+        self.__state = _EquilibriumState(
+            T=self.T,
+            P=self.P,
+            particle_numbers=particle_numbers,
+            number_densities=number_densities,
+            mole_fractions=number_densities / n_tot,
+            masses=self.masses,
+            charge_numbers=self.charge_numbers,
+            reference_energies=self.__E0,
+            ionization_lowering=self.__dE,
+            kbt=kbt,
+            volume=volume,
+            n_tot=n_tot,
+            rho=rho,
+            mean_particle_mass=rho / n_tot,
+        )
+        return self.__state
 
     def calculate_density(self) -> float:
         r"""Calculate the LTE density of the plasma.
@@ -715,13 +772,7 @@ class LTE:
         * :math:`M_i` is the molar mass of species :math:`i`,
           in :math:`\text{kg.mol}^{-1}`.
         """
-        number_densities = self.calculate_composition()  # particles/m^3
-        molar_masses = [sp.molar_mass for sp in self.species]  # kg/mol
-        # kg/m3 = (particules/m^3 * kg/mol) / (particules/mol)
-        return (
-            sum(n_i * M_i for n_i, M_i in zip(number_densities, molar_masses))
-            / u.N_a
-        )
+        return self._equilibrium_state().rho
 
     def calculate_species_enthalpies(self) -> np.ndarray:
         r"""Calculate the LTE enthalpy for each component in the plasma.
@@ -768,14 +819,15 @@ class LTE:
         * :math:`M_i` is the molar mass of species :math:`i`,
           in :math:`\text{kg.mol}^{-1}`.
         """
+        state = self._equilibrium_state()
         internal_energies = [
-            sp.internal_energy(self.T, dE)
-            for sp, dE in zip(self.species, self.__dE)
+            sp.internal_energy(state.T, dE)
+            for sp, dE in zip(self.species, state.ionization_lowering)
         ]  # J/particle
 
         enthalpies = [
-            (u_i + E0_i + u.k_b * self.T)
-            for u_i, E0_i in zip(internal_energies, self.__E0)
+            (u_i + E0_i + state.kbt)
+            for u_i, E0_i in zip(internal_energies, state.reference_energies)
         ]  # J/particle
 
         # (kg/mol) / (particle/mol) = kg/particle
@@ -815,10 +867,11 @@ class LTE:
         * :math:`M_i` is the molar mass of species :math:`i`,
           in :math:`\text{kg.mol}^{-1}`.
         """
-        number_densities = self.calculate_composition()  # m^-3
+        state = self._equilibrium_state()
+        number_densities = state.number_densities
         molar_masses = [sp.molar_mass for sp in self.species]  # kg/mol
 
-        density = self.calculate_density()  # kg/m3
+        density = state.rho
 
         mass_enthalpies = self.calculate_species_enthalpies()  # J/kg
         masses = self.masses  # kg/particle
@@ -826,9 +879,11 @@ class LTE:
 
         # Get the species with the lowest reference energy.
         # Index of the species with the lowest reference energy.
-        i_min = np.argmin(self.__E0)
+        i_min = np.argmin(state.reference_energies)
         # J/(kg/mol)
-        h_mol_0 = self.__E0[i_min] / self.species[i_min].molar_mass
+        h_mol_0 = (
+            state.reference_energies[i_min] / self.species[i_min].molar_mass
+        )
 
         weighted_enthalpy = sum(
             n_i * (h_i - h_mol_0 * M_i)
