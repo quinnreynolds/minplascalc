@@ -125,6 +125,26 @@ def test_log_equilibrium_temperature_continuation(factory, descending):
         assert actual == pytest.approx(expected, rel=2e-7, abs=3e-10)
 
 
+@pytest.mark.parametrize("factory", [make_simple, make_sico])
+@pytest.mark.parametrize("pressure", [1013.25, 10132500.0])
+@pytest.mark.parametrize("descending", [False, True])
+def test_log_equilibrium_pressure_range(factory, pressure, descending):
+    temperatures = np.linspace(1000.0, 25000.0, 13)
+    if descending:
+        temperatures = temperatures[::-1]
+    system = LogEquilibriumSystem(
+        factory(T=float(temperatures[0]), P=pressure)
+    )
+    path = system.solve_temperature_path(temperatures)
+
+    assert all(state.residual_norm < 1e-9 for state in path.states)
+    assert all(
+        np.all(np.isfinite(state.number_densities)) for state in path.states
+    )
+    assert all(np.all(state.number_densities > 0) for state in path.states)
+    assert path.total_iterations / path.continuation_solves < 7
+
+
 def test_log_equilibrium_selects_lower_gibbs_cutoff_branch():
     temperature = 20862.0
     system = LogEquilibriumSystem(make_sico(T=temperature))

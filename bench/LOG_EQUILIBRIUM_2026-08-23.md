@@ -29,6 +29,17 @@ composition as an initial value.
 The analytical Jacobian agrees with a central numerical Jacobian to
 `1.5e-10` in relative norm at the 16-species, 12000 K SiCO state.
 
+A validation matrix spanning the simple oxygen and SiCO workloads, pressures
+from 1013.25 Pa to 10.1325 MPa, and ascending and descending 1000--25000 K
+continuation converges in every case. All returned densities remain finite and
+strictly positive. Two edge cases also expose production-solver fragility:
+
+- at 1013.25 Pa and 23000 K, production warns that it did not converge and its
+  mole fractions differ by `2.62e-6`; log Newton restarted from that state
+  converges to the continuation root;
+- at 10.1325 MPa and 1000 K, production encounters `log(0)` and returns a
+  non-finite composition, while log Newton converges with a `3.5e-11` residual.
+
 ## Benchmark
 
 Command:
