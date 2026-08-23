@@ -123,6 +123,7 @@ class LTE:
         # Number of particles of each species.
         self.__Ni: np.ndarray = np.zeros(len(self.species))
         self.__state: _EquilibriumState | None = None
+        self.__transport_workspace = None
 
     @property
     def species(self):
@@ -155,6 +156,7 @@ class LTE:
         self._validate_x0_length(x0)
         self.__isLTE = False
         self.__state = None
+        self.__transport_workspace = None
         self.__x0 = self._format_x0(x0)
 
     @property
@@ -165,6 +167,7 @@ class LTE:
     def T(self, T):
         self.__isLTE = False  # Reset LTE composition flag.
         self.__state = None
+        self.__transport_workspace = None
         self.__T = T
 
     @property
@@ -175,6 +178,7 @@ class LTE:
     def P(self, P):
         self.__isLTE = False  # Reset LTE composition flag.
         self.__state = None
+        self.__transport_workspace = None
         self.__P = P
 
     def __repr__(self):
@@ -746,6 +750,14 @@ class LTE:
             mean_particle_mass=rho / n_tot,
         )
         return self.__state
+
+    def _transport_workspace(self):
+        """Return lazily evaluated transport intermediates for this state."""
+        if self.__transport_workspace is None:
+            self.__transport_workspace = (
+                functions_transport._TransportWorkspace(self)
+            )
+        return self.__transport_workspace
 
     def calculate_density(self) -> float:
         r"""Calculate the LTE density of the plasma.
