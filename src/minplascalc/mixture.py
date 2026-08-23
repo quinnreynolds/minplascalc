@@ -5,7 +5,9 @@ This includes species composition and thermodynamic properties.
 
 import logging
 import warnings
+from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Iterator
 
 import numpy as np
 
@@ -759,6 +761,33 @@ class LTE:
             )
         return self.__transport_workspace
 
+    @contextmanager
+    def _at_temperature(self, T: float) -> Iterator[None]:
+        """Temporarily change temperature, restoring the complete LTE state."""
+        self._equilibrium_state()
+        original = (
+            self.__T,
+            self.__isLTE,
+            self.__Ni,
+            self.__E0,
+            self.__dE,
+            self.__state,
+            self.__transport_workspace,
+        )
+        self.T = T
+        try:
+            yield
+        finally:
+            (
+                self.__T,
+                self.__isLTE,
+                self.__Ni,
+                self.__E0,
+                self.__dE,
+                self.__state,
+                self.__transport_workspace,
+            ) = original
+
     def calculate_density(self) -> float:
         r"""Calculate the LTE density of the plasma.
 
@@ -947,11 +976,10 @@ class LTE:
         * :math:`\Delta T` is the relative change in temperature.
         """
         start_temperature = self.T
-        self.T = start_temperature * (1 - rel_delta_T)
-        enthalpy_low = self.calculate_enthalpy()
-        self.T = start_temperature * (1 + rel_delta_T)
-        enthalpy_high = self.calculate_enthalpy()
-        self.T = start_temperature
+        with self._at_temperature(start_temperature * (1 - rel_delta_T)):
+            enthalpy_low = self.calculate_enthalpy()
+        with self._at_temperature(start_temperature * (1 + rel_delta_T)):
+            enthalpy_high = self.calculate_enthalpy()
         return (enthalpy_high - enthalpy_low) / (2 * rel_delta_T * self.T)
 
     def calculate_viscosity(self) -> float:
