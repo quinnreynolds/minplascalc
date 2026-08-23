@@ -126,6 +126,7 @@ class LTE:
         self.__Ni: np.ndarray = np.zeros(len(self.species))
         self.__state: _EquilibriumState | None = None
         self.__transport_workspace = None
+        self.__collision_model = None
 
     @property
     def species(self):
@@ -760,6 +761,14 @@ class LTE:
                 functions_transport._TransportWorkspace(self)
             )
         return self.__transport_workspace
+
+    def _collision_model(self):
+        """Return temperature-independent numeric collision descriptors."""
+        if self.__collision_model is None:
+            self.__collision_model = functions_transport._CollisionModel(
+                self.species
+            )
+        return self.__collision_model
 
     @contextmanager
     def _at_temperature(self, T: float) -> Iterator[None]:
