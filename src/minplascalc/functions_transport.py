@@ -1178,9 +1178,10 @@ def Qe(species_i: "Species", l: int, s: int, T: float) -> float:
 #: Largest energy-moment order with its own fit coefficients, per l.
 #: Above this, eq. 18 of [Laricchiuta2007]_ generates the value from a
 #: temperature derivative of the tabulated one.
-_BASE_S = {1: 5, 2: 4, 3: 3, 4: 4}
+_BASE_S = (0, 5, 4, 3, 4)
 
 
+@njit
 def _omega_star(x: float, a: np.ndarray, k: int, s0: int) -> float:
     r"""Reduced collision integral at moment order ``s0 + k``.
 
@@ -1259,6 +1260,7 @@ def _omega_star(x: float, a: np.ndarray, k: int, s0: int) -> float:
     return np.exp(g) * P
 
 
+@njit
 def _omega_fit(
     table: np.ndarray,
     sigma: float,
