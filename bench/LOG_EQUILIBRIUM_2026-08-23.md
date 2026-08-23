@@ -38,31 +38,30 @@ PYTHONPATH=src:. .venv/bin/python bench/bench_log_equilibrium.py
 ```
 
 AC-powered result for 20 temperatures and three SiCO mixture ratios, seven
-alternating repetitions:
+alternating repetitions after packed thermodynamics and accepted-state reuse:
 
 | Solver | Median | Nonlinear iterations | Iterations per solve |
 |---|---:|---:|---:|
-| Production governed solver | 0.300629 s | 2574 | 42.90 per requested state |
-| Log Newton plus continuation | 0.234832 s | 610 | 4.07 per continuation solve |
+| Production governed solver | 0.294884 s | 2574 | 42.90 per requested state |
+| Log Newton plus continuation | 0.148206 s | 610 | 4.07 per continuation solve |
 
-The current Python prototype is **1.28x faster** despite performing 150 solves:
+The current Python prototype is **1.99x faster** despite performing 150 solves:
 60 requested states plus the independent bootstrap/intermediate continuation
-states. It used 1397 residual evaluations. The largest absolute mole-fraction
+states. It used 787 residual evaluations. The largest absolute mole-fraction
 difference on this 20-point grid was `1.24e-8`.
 
-The 10.5x iteration reduction becoming only a 1.28x wall-clock improvement is
-the main implementation finding. A log iteration currently:
+The 10.5x iteration reduction becoming only a 1.99x wall-clock improvement is
+still the main implementation finding. The two central eliminations were:
 
-1. evaluates reference energies and every partition function for the Newton
-   residual;
-1. independently recalculates lowering derivatives for the Jacobian;
-1. evaluates the full thermodynamics again at the line-search candidate;
-1. repeats part of the accepted candidate work when constructing the next
-   Jacobian.
+1. packing immutable level data so monatomic partition functions use one
+   vectorised exponential and reductions rather than per-species calls;
+1. retaining the accepted line-search residual and thermodynamic state for the
+   next Newton step, then calculating only the missing lowering derivative.
 
-Only 27 evaluations beyond the expected one-Jacobian plus one-candidate pattern
-were caused by actual backtracking. The overhead is repeated thermodynamic
-evaluation, not poor globalization.
+The evaluation count is now close to one accepted candidate per iteration; the
+remaining excess is actual backtracking. The next performance ceiling is the
+dense coupled linear solve and its assembly rather than repeated partition
+evaluation.
 
 This makes a fused evaluator unusually well motivated: one packed pass should
 return reference energies, lowering and its derivatives, partition moments,
@@ -78,10 +77,19 @@ sweep at 20862 K, production and continuation converged to roots differing by
 Si+ level and had a Gibbs objective about 9.77 J lower on the solver's arbitrary
 `1e24`-particle constraint scale.
 
-This does not yet establish which branch should be selected by the public API,
-but it shows that continuation direction and active-set policy need explicit
-tests. It is not ordinary Newton error: both roots satisfy their respective
-piecewise residuals to roundoff.
+The prototype now probes across the nearest cutoff in the direction calculated
+from the analytical lowering gradient and selects the locally reachable root
+with the lower dimensionless Gibbs objective. At 20862 K it deterministically
+recovers both roots: they differ only by the 28th active Si+ level, and the
+28-level branch is lower. A 0.05 K scan from 20860 to 20864 K also finds the
+adjacent 27/28 and 28/29 transition pairs. The detected coexistence is narrow
+and failed optional probes are harmless because the original root remains
+valid.
+
+This is a local selection rule, not a global search over all electronic active
+sets. It is suitable evidence for the rewrite but should remain outside the
+public API until the physical choice between a hard cutoff and a smooth
+occupation model is settled.
 
 ## Assessment
 
@@ -94,8 +102,9 @@ The log formulation is worth continuing:
 - ascending and descending sweeps pass from 1000 to 25000 K;
 - even the deliberately unfused Python prototype is already faster.
 
-The next experiment should fuse residual and Jacobian thermodynamics before
-attempting API compatibility. That will establish whether the iteration-count
-gain translates into a roughly 2–3x composition-solver gain. Active-set branch
-selection should be investigated in parallel, not hidden behind loose
-comparison tolerances.
+The next experiment should reduce or structure the coupled linear algebra. At
+16 species the dense solve is small, but it now sits directly behind a compact
+thermodynamic kernel and is the obvious remaining per-iteration cost. A second
+useful direction is a smooth electronic cutoff: it would remove the local
+branch search and make the Jacobian globally continuous, at the cost of
+changing the thermodynamic model rather than merely the solver.
