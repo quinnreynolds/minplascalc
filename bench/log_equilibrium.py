@@ -94,6 +94,7 @@ class LogEquilibriumSystem:
         self.has_charge_constraint = self.constraint_count > self.element_count
         self.residual_evaluations = 0
         self._prepare_packed_thermodynamics()
+        self._cached_temperature = np.nan
 
     def _prepare_packed_thermodynamics(self) -> None:
         """Pack immutable species data for vectorized evaluation."""
@@ -221,6 +222,32 @@ class LogEquilibriumSystem:
                     )
                 )
 
+    def _prepare_temperature_thermodynamics(self) -> None:
+        """Cache factors invariant during a fixed-temperature solve."""
+        temperature = self.mixture.T
+        if temperature == self._cached_temperature:
+            return
+
+        kbt = u.k_b * temperature
+        self.level_boltzmann_terms = self.level_degeneracies * np.exp(
+            -self.level_energies / kbt
+        )
+        self.temperature_log_internal = np.full(self.species_count, np.nan)
+        if self.diatomic_indices.size:
+            vibration_ratio = self.diatomic_w / kbt
+            self.temperature_log_internal[self.diatomic_indices] = (
+                np.log(self.diatomic_g0)
+                - vibration_ratio / 2
+                - np.log1p(-np.exp(-vibration_ratio))
+                + np.log(kbt / self.diatomic_rotation)
+            )
+        if self.electron_index >= 0:
+            self.temperature_log_internal[self.electron_index] = np.log(2.0)
+        self.temperature_log_partition = (
+            self.log_translational_prefactors + 1.5 * np.log(temperature)
+        )
+        self._cached_temperature = temperature
+
     def _set_particle_numbers(self, particle_numbers: np.ndarray) -> None:
         """Set the private iterate on the prototype-owned mixture."""
         self.mixture._LTE__Ni = particle_numbers
@@ -296,6 +323,7 @@ class LogEquilibriumSystem:
         particle_total = float(particle_numbers.sum())
         temperature = self.mixture.T
         kbt = u.k_b * temperature
+        self._prepare_temperature_thermodynamics()
         volume = particle_total * kbt / self.mixture.P
         lowering, lowering_dN = self._packed_lowering(
             particle_numbers, derivatives=derivatives
@@ -323,18 +351,14 @@ class LogEquilibriumSystem:
                     reference_dN[source] + sign * lowering_dN[lowering_index]
                 )
 
-        log_internal = np.empty(self.species_count)
+        log_internal = self.temperature_log_internal.copy()
         active_counts = np.zeros(self.species_count, dtype=np.int64)
         if self.monatomic_indices.size:
             owners = self.level_owners
             active = self.level_energies < (
                 self.monatomic_ionization[owners] - lowering[owners]
             )
-            level_terms = (
-                self.level_degeneracies
-                * active
-                * np.exp(-self.level_energies / kbt)
-            )
+            level_terms = self.level_boltzmann_terms * active
             sums = np.bincount(
                 owners, weights=level_terms, minlength=self.species_count
             )
@@ -344,16 +368,6 @@ class LogEquilibriumSystem:
             log_internal[self.monatomic_indices] = np.log(
                 sums[self.monatomic_indices]
             )
-        if self.diatomic_indices.size:
-            vibration_ratio = self.diatomic_w / kbt
-            log_internal[self.diatomic_indices] = (
-                np.log(self.diatomic_g0)
-                - vibration_ratio / 2
-                - np.log1p(-np.exp(-vibration_ratio))
-                + np.log(kbt / self.diatomic_rotation)
-            )
-        if self.electron_index >= 0:
-            log_internal[self.electron_index] = np.log(2.0)
         for index in self.fallback_indices:
             log_internal[index] = np.log(
                 self.mixture.species[index].internal_partition_function(
@@ -362,10 +376,7 @@ class LogEquilibriumSystem:
             )
 
         log_partitions = (
-            np.log(volume)
-            + self.log_translational_prefactors
-            + 1.5 * np.log(temperature)
-            + log_internal
+            np.log(volume) + self.temperature_log_partition + log_internal
         )
         return _PackedThermodynamics(
             particle_numbers=particle_numbers,
@@ -470,12 +481,13 @@ class LogEquilibriumSystem:
         scaled_multipliers: np.ndarray,
         *,
         jacobian: bool,
+        cache_derivatives: bool = False,
     ) -> tuple[np.ndarray, np.ndarray | None, _PackedThermodynamics]:
         """Evaluate a new thermodynamic state and retain it for reuse."""
         self.residual_evaluations += 1
         with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
             thermodynamics = self._packed_thermodynamics(
-                log_particles, derivatives=jacobian
+                log_particles, derivatives=jacobian or cache_derivatives
             )
             residual = self._residual_from_thermodynamics(
                 thermodynamics, log_particles, scaled_multipliers
@@ -584,6 +596,7 @@ class LogEquilibriumSystem:
                             candidate_log,
                             candidate_multipliers,
                             jacobian=False,
+                            cache_derivatives=True,
                         )
                     )
                     candidate_merit = 0.5 * candidate @ candidate
