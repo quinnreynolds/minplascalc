@@ -123,3 +123,41 @@ def test_log_equilibrium_temperature_continuation(factory, descending):
         expected = _mole_fractions(reference.calculate_composition())
         actual = _mole_fractions(path.states[index].number_densities)
         assert actual == pytest.approx(expected, rel=2e-7, abs=3e-10)
+
+
+def test_log_equilibrium_selects_lower_gibbs_cutoff_branch():
+    temperature = 20862.0
+    system = LogEquilibriumSystem(make_sico(T=temperature))
+    continued = system.solve_temperature_path(np.array([temperature])).states[
+        0
+    ]
+    branches = system.solve_lowest_gibbs_branch(
+        (continued.log_particles, continued.scaled_multipliers)
+    )
+
+    assert branches.nearest_cutoff_distance < 2e-5
+    assert len(branches.candidates) == 2
+    assert branches.dimensionless_gibbs[0] != pytest.approx(
+        branches.dimensionless_gibbs[1], rel=1e-9
+    )
+    assert system.dimensionless_gibbs(branches.selected) == min(
+        branches.dimensionless_gibbs
+    )
+
+    active_counts = [
+        system._packed_thermodynamics(
+            candidate.log_particles, derivatives=False
+        ).active_level_counts
+        for candidate in branches.candidates
+    ]
+    differing_species = np.flatnonzero(active_counts[0] != active_counts[1])
+    assert [
+        system.mixture.species[index].name for index in differing_species
+    ] == ["Si+"]
+    assert (
+        abs(
+            active_counts[0][differing_species[0]]
+            - active_counts[1][differing_species[0]]
+        )
+        == 1
+    )

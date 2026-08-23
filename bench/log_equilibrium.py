@@ -40,6 +40,16 @@ class LogEquilibriumPathResult:
 
 
 @dataclass(frozen=True)
+class LogEquilibriumBranchResult:
+    """Locally competing cutoff branches and the lowest-G selection."""
+
+    selected: LogEquilibriumResult
+    candidates: tuple[LogEquilibriumResult, ...]
+    dimensionless_gibbs: tuple[float, ...]
+    nearest_cutoff_distance: float
+
+
+@dataclass(frozen=True)
 class _PackedThermodynamics:
     """Thermodynamic values shared by the residual and Jacobian."""
 
@@ -596,6 +606,101 @@ class LogEquilibriumSystem:
         raise RuntimeError(
             f"Log-equilibrium solver did not converge after {max_iterations} "
             f"iterations; residual={residual_norm:.3e}."
+        )
+
+    def dimensionless_gibbs(self, result: LogEquilibriumResult) -> float:
+        """Return ``G/(k_B T)`` on the prototype's arbitrary particle scale."""
+        thermodynamics = self._packed_thermodynamics(
+            result.log_particles, derivatives=False
+        )
+        chemical_potential = (
+            thermodynamics.reference_energies / (u.k_b * self.mixture.T)
+            - thermodynamics.log_partitions
+            + result.log_particles
+        )
+        return float(thermodynamics.particle_numbers @ chemical_potential)
+
+    def solve_lowest_gibbs_branch(
+        self,
+        initial: tuple[np.ndarray, np.ndarray] | None = None,
+        *,
+        tolerance: float = 1e-10,
+        cutoff_window: float = 2e-5,
+        probe_distance: float = 1e-5,
+    ) -> LogEquilibriumBranchResult:
+        """Probe both sides of the nearest electronic cutoff and select G.
+
+        ``cutoff_window`` and ``probe_distance`` are fractions of ``k_B T``.
+        This is deliberately a local policy for the exploratory solver: it
+        detects the pair of piecewise roots created as a level crosses the
+        ionisation-lowered continuum, without pretending to perform a global
+        combinatorial search over every electronic active set.
+        """
+        primary = self.solve(initial, tolerance=tolerance)
+        thermodynamics = self._packed_thermodynamics(
+            primary.log_particles, derivatives=False
+        )
+        margins = (
+            self.monatomic_ionization[self.level_owners]
+            - thermodynamics.ionization_lowering[self.level_owners]
+            - self.level_energies
+        )
+        nearest = int(np.argmin(np.abs(margins)))
+        kbt = u.k_b * self.mixture.T
+        cutoff_distance = float(abs(margins[nearest]) / kbt)
+        candidates = [primary]
+
+        if cutoff_distance < cutoff_window:
+            owner = self.level_owners[nearest]
+            _, lowering_dN = self._packed_lowering(
+                thermodynamics.particle_numbers, derivatives=True
+            )
+            assert lowering_dN is not None
+            margin_gradient = (
+                -lowering_dN[owner] * thermodynamics.particle_numbers
+            )
+            gradient_square = float(margin_gradient @ margin_gradient)
+            if gradient_square > 0:
+                displacement = (
+                    probe_distance * kbt * margin_gradient / gradient_square
+                )
+                for sign in (-1.0, 1.0):
+                    try:
+                        candidate = self.solve(
+                            (
+                                primary.log_particles + sign * displacement,
+                                primary.scaled_multipliers,
+                            ),
+                            tolerance=tolerance,
+                        )
+                    except RuntimeError:
+                        # A probe may fall in the discontinuity gap where no
+                        # root exists. The already converged primary remains
+                        # valid, so a failed optional probe is not fatal.
+                        continue
+                    candidate_thermodynamics = self._packed_thermodynamics(
+                        candidate.log_particles, derivatives=False
+                    )
+                    active_counts = (
+                        candidate_thermodynamics.active_level_counts
+                    )
+                    if not any(
+                        np.array_equal(
+                            active_counts,
+                            self._packed_thermodynamics(
+                                existing.log_particles, derivatives=False
+                            ).active_level_counts,
+                        )
+                        for existing in candidates
+                    ):
+                        candidates.append(candidate)
+
+        gibbs = tuple(self.dimensionless_gibbs(item) for item in candidates)
+        return LogEquilibriumBranchResult(
+            selected=candidates[int(np.argmin(gibbs))],
+            candidates=tuple(candidates),
+            dimensionless_gibbs=gibbs,
+            nearest_cutoff_distance=cutoff_distance,
         )
 
     def solve_temperature_path(
