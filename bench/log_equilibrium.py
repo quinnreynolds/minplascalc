@@ -367,26 +367,19 @@ class LogEquilibriumSystem:
             active_level_counts=active_counts,
         )
 
-    def evaluate(
+    def _residual_from_thermodynamics(
         self,
+        thermodynamics: _PackedThermodynamics,
         log_particles: np.ndarray,
         scaled_multipliers: np.ndarray,
-        *,
-        jacobian: bool = True,
-    ) -> tuple[np.ndarray, np.ndarray | None]:
-        """Evaluate the complete dimensionless residual and its Jacobian."""
-        self.residual_evaluations += 1
-        with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
-            thermodynamics = self._packed_thermodynamics(
-                log_particles, derivatives=jacobian
-            )
-            chemical = (
-                thermodynamics.reference_energies / (u.k_b * self.mixture.T)
-                - thermodynamics.log_partitions
-                + log_particles
-                + self.constraints @ scaled_multipliers
-            )
-
+    ) -> np.ndarray:
+        """Assemble a residual from an already evaluated candidate state."""
+        chemical = (
+            thermodynamics.reference_energies / (u.k_b * self.mixture.T)
+            - thermodynamics.log_partitions
+            + log_particles
+            + self.constraints @ scaled_multipliers
+        )
         particle_numbers = thermodynamics.particle_numbers
         particle_total = thermodynamics.particle_total
         conserved = self.constraints.T @ particle_numbers
@@ -400,12 +393,36 @@ class LogEquilibriumSystem:
             )
         else:
             residual = np.concatenate((chemical, element_residual))
+        return residual
 
-        if not jacobian:
-            return residual, None
+    def _reference_derivative_from_particles(
+        self, particle_numbers: np.ndarray
+    ) -> np.ndarray:
+        """Build only the reference-energy Jacobian for a cached state."""
+        _, lowering_dN = self._packed_lowering(
+            particle_numbers, derivatives=True
+        )
+        assert lowering_dN is not None
+        reference_dN = np.zeros((self.species_count, self.species_count))
+        for source, target, lowering_index, sign, _ in self.reference_chains:
+            reference_dN[target] = (
+                reference_dN[source] + sign * lowering_dN[lowering_index]
+            )
+        return reference_dN
 
+    def _jacobian_from_thermodynamics(
+        self, thermodynamics: _PackedThermodynamics
+    ) -> np.ndarray:
+        """Assemble the Jacobian, deriving values absent from the cache."""
         reference_dN = thermodynamics.reference_dN
-        assert reference_dN is not None
+        if reference_dN is None:
+            with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
+                reference_dN = self._reference_derivative_from_particles(
+                    thermodynamics.particle_numbers
+                )
+        particle_numbers = thermodynamics.particle_numbers
+        particle_total = thermodynamics.particle_total
+        conserved = self.constraints.T @ particle_numbers
         system_size = self.species_count + self.constraint_count
         derivative = np.zeros((system_size, system_size))
 
@@ -435,6 +452,42 @@ class LogEquilibriumSystem:
                 self.constraints[:, -1] * particle_numbers / particle_total
                 - charge * particle_numbers / particle_total**2
             )
+        return derivative
+
+    def _evaluate_with_state(
+        self,
+        log_particles: np.ndarray,
+        scaled_multipliers: np.ndarray,
+        *,
+        jacobian: bool,
+    ) -> tuple[np.ndarray, np.ndarray | None, _PackedThermodynamics]:
+        """Evaluate a new thermodynamic state and retain it for reuse."""
+        self.residual_evaluations += 1
+        with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
+            thermodynamics = self._packed_thermodynamics(
+                log_particles, derivatives=jacobian
+            )
+            residual = self._residual_from_thermodynamics(
+                thermodynamics, log_particles, scaled_multipliers
+            )
+            derivative = (
+                self._jacobian_from_thermodynamics(thermodynamics)
+                if jacobian
+                else None
+            )
+        return residual, derivative, thermodynamics
+
+    def evaluate(
+        self,
+        log_particles: np.ndarray,
+        scaled_multipliers: np.ndarray,
+        *,
+        jacobian: bool = True,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
+        """Evaluate the complete dimensionless residual and its Jacobian."""
+        residual, derivative, _ = self._evaluate_with_state(
+            log_particles, scaled_multipliers, jacobian=jacobian
+        )
         return residual, derivative
 
     def initial_state(
@@ -468,15 +521,27 @@ class LogEquilibriumSystem:
             scaled_multipliers = np.array(initial[1], copy=True)
 
         self.residual_evaluations = 0
+        cached_residual = None
+        cached_thermodynamics = None
         for iteration in range(max_iterations + 1):
-            residual, derivative = self.evaluate(
-                log_particles, scaled_multipliers
-            )
+            if cached_residual is None:
+                residual, derivative, thermodynamics = (
+                    self._evaluate_with_state(
+                        log_particles,
+                        scaled_multipliers,
+                        jacobian=True,
+                    )
+                )
+            else:
+                residual = cached_residual
+                assert cached_thermodynamics is not None
+                thermodynamics = cached_thermodynamics
+                derivative = self._jacobian_from_thermodynamics(thermodynamics)
             residual_norm = float(np.linalg.norm(residual, ord=np.inf))
             if residual_norm < tolerance:
-                particle_numbers = np.exp(log_particles)
+                particle_numbers = thermodynamics.particle_numbers
                 volume = (
-                    particle_numbers.sum()
+                    thermodynamics.particle_total
                     * u.k_b
                     * self.mixture.T
                     / self.mixture.P
@@ -504,10 +569,12 @@ class LogEquilibriumSystem:
                     scaled_multipliers + step * multiplier_update
                 )
                 if np.max(np.abs(candidate_log)) < 700:
-                    candidate, _ = self.evaluate(
-                        candidate_log,
-                        candidate_multipliers,
-                        jacobian=False,
+                    candidate, _, candidate_thermodynamics = (
+                        self._evaluate_with_state(
+                            candidate_log,
+                            candidate_multipliers,
+                            jacobian=False,
+                        )
                     )
                     candidate_merit = 0.5 * candidate @ candidate
                     if (
@@ -516,6 +583,8 @@ class LogEquilibriumSystem:
                     ):
                         log_particles = candidate_log
                         scaled_multipliers = candidate_multipliers
+                        cached_residual = candidate
+                        cached_thermodynamics = candidate_thermodynamics
                         break
                 step *= 0.5
             else:
