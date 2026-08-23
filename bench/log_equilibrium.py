@@ -102,6 +102,8 @@ class LogEquilibriumSystem:
         self.charges = np.asarray(
             self.mixture.charge_numbers, dtype=np.float64
         )
+        self.positive_indices = np.flatnonzero(self.charges > 0)
+        self.positive_charges = self.charges[self.positive_indices]
         self.electron_index = next(
             (
                 index
@@ -262,11 +264,9 @@ class LogEquilibriumSystem:
         if self.electron_index < 0:
             return lowering, derivative
 
-        positive = self.charges > 0
-        charge_sum = particle_numbers[positive] @ self.charges[positive]
-        charge_square_sum = (
-            particle_numbers[positive] @ self.charges[positive] ** 2
-        )
+        positive_numbers = particle_numbers[self.positive_indices]
+        charge_sum = positive_numbers @ self.positive_charges
+        charge_square_sum = positive_numbers @ self.positive_charges**2
         z_star = charge_square_sum / charge_sum
         denominator = z_star + 1
         total_particles = particle_numbers.sum()
@@ -282,37 +282,36 @@ class LogEquilibriumSystem:
 
         if derivatives:
             dzstar_dN = np.zeros(count)
-            dzstar_dN[positive] = (
-                self.charges[positive] ** 2 * charge_sum
-                - charge_square_sum * self.charges[positive]
+            dzstar_dN[self.positive_indices] = (
+                self.positive_charges**2 * charge_sum
+                - charge_square_sum * self.positive_charges
             ) / charge_sum**2
             dlog_ratio_dN = (
                 1.5 * dzstar_dN / denominator - 0.5 / total_particles
             )
             dlog_ratio_dN[self.electron_index] += 0.5 / electron_particles
 
-        for index in np.flatnonzero(positive):
-            ion_sphere_pow3 = (
-                3 * self.charges[index] / (4 * np.pi * electron_density)
-            )
-            ratio = ion_sphere_pow3 / debye_pow3
-            shape = (ratio + 1) ** (2 / 3) - 1
-            lowering[index] = (
-                u.k_b * self.mixture.T * shape / (2 * denominator)
-            )
-            if derivatives:
-                shape_derivative = 2 / 3 * (ratio + 1) ** (-1 / 3)
-                ratio_dN = ratio * dlog_ratio_dN
-                assert derivative is not None
-                derivative[index] = (
-                    u.k_b
-                    * self.mixture.T
-                    / 2
-                    * (
-                        shape_derivative * ratio_dN / denominator
-                        - shape * dzstar_dN / denominator**2
-                    )
+        ion_sphere_pow3 = (
+            3 * self.positive_charges / (4 * np.pi * electron_density)
+        )
+        ratio = ion_sphere_pow3 / debye_pow3
+        shape = (ratio + 1) ** (2 / 3) - 1
+        lowering[self.positive_indices] = (
+            u.k_b * self.mixture.T * shape / (2 * denominator)
+        )
+        if derivatives:
+            shape_derivative = 2 / 3 * (ratio + 1) ** (-1 / 3)
+            ratio_dN = ratio[:, np.newaxis] * dlog_ratio_dN
+            assert derivative is not None
+            derivative[self.positive_indices] = (
+                u.k_b
+                * self.mixture.T
+                / 2
+                * (
+                    shape_derivative[:, np.newaxis] * ratio_dN / denominator
+                    - shape[:, np.newaxis] * dzstar_dN / denominator**2
                 )
+            )
         return lowering, derivative
 
     def _packed_thermodynamics(
