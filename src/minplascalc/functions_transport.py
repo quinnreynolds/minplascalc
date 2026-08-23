@@ -1720,6 +1720,14 @@ _QC_C2 = (1 / 2, 1.0, 7 / 6, 4 / 3)
 _PSICONST = {s: psiconst(s) for s in _S_VALUES}
 _SUM1 = {s: sum1(s) for s in _S_VALUES}
 _SUM2 = {s: sum2(s) for s in _S_VALUES}
+_PSICONST_ARRAY = np.array([0.0] + [_PSICONST[s] for s in _S_VALUES])
+_SUM1_ARRAY = np.array([0.0] + [_SUM1[s] for s in _S_VALUES])
+_SUM2_ARRAY = np.array([0.0] + [_SUM2[s] for s in _S_VALUES])
+
+_PAIR_CHARGED = 0
+_PAIR_ELECTRON_NEUTRAL = 1
+_PAIR_NEUTRAL_NEUTRAL = 2
+_PAIR_ION_NEUTRAL = 3
 
 
 def _qe_pair(species_neutral: "Species", T: float) -> dict[int, float]:
@@ -1860,21 +1868,266 @@ def _pair_integrals(
     return out
 
 
+class _CollisionModel:
+    """Numeric, temperature-independent descriptors for every species pair."""
+
+    def __init__(self, species: tuple["Species", ...]):
+        n = len(species)
+        self.kinds = np.empty((n, n), dtype=np.int8)
+        self.charges = np.array([sp.charge_number for sp in species])
+        self.electron_index = next(
+            (i for i, sp in enumerate(species) if sp.name == "e"), -1
+        )
+        self.fit_parameters = np.zeros((n, n, 5))
+        self.electron_parameters = np.zeros((n, 4))
+        self.electron_gamma_ratios = np.zeros((n, 8))
+        self.resonant = np.zeros((n, n), dtype=np.bool_)
+        self.resonant_parameters = np.zeros((n, n, 3))
+
+        for i, sp in enumerate(species):
+            cross_section = getattr(sp, "electron_cross_section", None)
+            if isinstance(cross_section, (tuple, list)):
+                D1, D2, D3, D4 = cross_section
+            elif isinstance(cross_section, float):
+                D1, D2, D3, D4 = cross_section, 0.0, 0.0, 0.0
+            else:
+                continue
+            self.electron_parameters[i] = D1, D2, D3, D4
+            for s in _S_VALUES:
+                self.electron_gamma_ratios[i, s] = gamma(
+                    D3 / 2 + s + 2
+                ) / gamma(s + 2)
+
+        for i, species_i in enumerate(species):
+            for j, species_j in enumerate(species):
+                self._describe_pair(i, species_i, j, species_j)
+
+    def _describe_pair(
+        self,
+        i: int,
+        species_i: "Species",
+        j: int,
+        species_j: "Species",
+    ) -> None:
+        z_i, z_j = species_i.charge_number, species_j.charge_number
+        if z_i != 0 and z_j != 0:
+            self.kinds[i, j] = _PAIR_CHARGED
+            return
+
+        if species_i.name == "e" or species_j.name == "e":
+            self.kinds[i, j] = _PAIR_ELECTRON_NEUTRAL
+            neutral = species_j if species_i.name == "e" else species_i
+            if not isinstance(
+                neutral.electron_cross_section, (tuple, list, float)
+            ):
+                raise ValueError("Invalid electron cross section data.")
+            return
+
+        if z_i == 0 and z_j == 0:
+            self.kinds[i, j] = _PAIR_NEUTRAL_NEUTRAL
+            sigma, epsilon_0, beta_array = _nn_pair_parameters(
+                species_i, species_j
+            )
+        else:
+            self.kinds[i, j] = _PAIR_ION_NEUTRAL
+            ion, neutral = (
+                (species_j, species_i) if z_i == 0 else (species_i, species_j)
+            )
+            sigma, epsilon_0, beta_array = _in_pair_parameters(ion, neutral)
+            if (
+                species_i.stoichiometry == species_j.stoichiometry
+                and abs(z_i - z_j) == 1
+            ):
+                self.resonant[i, j] = True
+                lower = species_i if z_i < z_j else species_j
+                self.resonant_parameters[i, j] = (
+                    A(lower.ionisation_energy),
+                    B(lower.ionisation_energy),
+                    lower.molar_mass,
+                )
+
+        self.fit_parameters[i, j, :2] = sigma, epsilon_0
+        self.fit_parameters[i, j, 2:] = beta_array
+
+    def evaluate(
+        self,
+        number_densities: np.ndarray,
+        T: float,
+        ls_pairs: tuple[tuple[int, int], ...],
+    ) -> dict[tuple[int, int], np.ndarray]:
+        moments = np.asarray(ls_pairs, dtype=np.int64)
+        values = _collision_integrals_kernel(
+            number_densities,
+            T,
+            moments,
+            self.kinds,
+            self.charges,
+            self.electron_index,
+            self.fit_parameters,
+            self.electron_parameters,
+            self.electron_gamma_ratios,
+            self.resonant,
+            self.resonant_parameters,
+        )
+        return {tuple(moment): values[k] for k, moment in enumerate(moments)}
+
+
+@njit
+def _coulomb_logarithm_kernel(
+    i: int,
+    j: int,
+    n_i: float,
+    n_j: float,
+    T: float,
+    charges: np.ndarray,
+    electron_index: int,
+) -> float:
+    """Numeric equivalent of :func:`cl_charged`."""
+    T_eV = T * u.K_to_eV
+    if i == electron_index and j == electron_index:
+        ne_cgs = n_i * 1e-6
+        return (
+            23.5
+            - np.log(ne_cgs ** (1 / 2) * T_eV ** (-5 / 4))
+            - (1e-5 + (np.log(T_eV) - 2) ** 2 / 16) ** (1 / 2)
+        )
+    if i == electron_index:
+        ne_cgs = n_i * 1e-6
+        return 23 - np.log(
+            ne_cgs ** (1 / 2) * abs(charges[j]) * T_eV ** (-3 / 2)
+        )
+    if j == electron_index:
+        ne_cgs = n_j * 1e-6
+        return 23 - np.log(
+            ne_cgs ** (1 / 2) * abs(charges[i]) * T_eV ** (-3 / 2)
+        )
+    ni_cgs, nj_cgs = n_i * 1e-6, n_j * 1e-6
+    z_i, z_j = charges[i], charges[j]
+    return 23 - np.log(
+        abs(z_i * z_j)
+        / T_eV
+        * (ni_cgs * abs(z_i) ** 2 / T_eV + nj_cgs * abs(z_j) ** 2 / T_eV)
+        ** (1 / 2)
+    )
+
+
+@njit
+def _collision_integrals_kernel(
+    number_densities: np.ndarray,
+    T: float,
+    moments: np.ndarray,
+    kinds: np.ndarray,
+    charges: np.ndarray,
+    electron_index: int,
+    fit_parameters: np.ndarray,
+    electron_parameters: np.ndarray,
+    electron_gamma_ratios: np.ndarray,
+    resonant: np.ndarray,
+    resonant_parameters: np.ndarray,
+) -> np.ndarray:
+    """Evaluate all requested collision moments in one compiled pair loop."""
+    n = number_densities.size
+    values = np.empty((moments.shape[0], n, n))
+    log_two = np.log(2.0)
+
+    for i in range(n):
+        for j in range(n):
+            kind = kinds[i, j]
+
+            if kind == _PAIR_CHARGED:
+                b0_sq = (
+                    ke * charges[i] * charges[j] * u.e**2 / (2 * u.k_b * T)
+                ) ** 2
+                cl = (
+                    _coulomb_logarithm_kernel(
+                        i,
+                        j,
+                        number_densities[i],
+                        number_densities[j],
+                        T,
+                        charges,
+                        electron_index,
+                    )
+                    + log_two
+                )
+                for k in range(moments.shape[0]):
+                    l, s = moments[k]
+                    values[k, i, j] = (
+                        _QC_C1[l - 1]
+                        * np.pi
+                        / (s * (s + 1))
+                        * b0_sq
+                        * (
+                            cl
+                            - _QC_C2[l - 1]
+                            - 2 * egamma
+                            + _PSICONST_ARRAY[s]
+                        )
+                    )
+                continue
+
+            if kind == _PAIR_ELECTRON_NEUTRAL:
+                neutral = j if i == electron_index else i
+                D1, D2, D3, D4 = electron_parameters[neutral]
+                tau = np.sqrt(2 * u.m_e * u.k_b * T) / u.hbar
+                tau_pow = tau**D3
+                tau_sq = D4 * tau**2 + 1
+                for k in range(moments.shape[0]):
+                    s = moments[k, 1]
+                    barg = D3 / 2 + s + 2
+                    values[k, i, j] = (
+                        D1
+                        + D2
+                        * tau_pow
+                        * electron_gamma_ratios[neutral, s]
+                        / tau_sq**barg
+                    )
+                continue
+
+            sigma = fit_parameters[i, j, 0]
+            epsilon_0 = fit_parameters[i, j, 1]
+            beta_array = fit_parameters[i, j, 2:]
+            for k in range(moments.shape[0]):
+                l, s = moments[k]
+                if kind == _PAIR_NEUTRAL_NEUTRAL:
+                    values[k, i, j] = _omega_fit(
+                        c_nn, sigma, epsilon_0, beta_array, l, s, T
+                    )
+                elif resonant[i, j] and l % 2 == 1:
+                    a, b, molar_mass = resonant_parameters[i, j]
+                    ln_term = np.log(4 * u.R * T / molar_mass)
+                    zeta_1 = _SUM1_ARRAY[s]
+                    zeta_2 = _SUM2_ARRAY[s]
+                    cterm = np.pi**2 / 6 - zeta_2 + zeta_1**2
+                    values[k, i, j] = (
+                        a**2
+                        - zeta_1 * a * b
+                        + (b / 2) ** 2 * cterm
+                        + (b / 2) ** 2 * ln_term**2
+                        + (zeta_1 * b**2 / 2 - a * b) * ln_term
+                    )
+                else:
+                    values[k, i, j] = _omega_fit(
+                        c_in, sigma, epsilon_0, beta_array, l, s, T
+                    )
+    return values
+
+
 def collision_integrals(
     mixture: "LTE",
     ls_pairs: tuple[tuple[int, int], ...] = LS_PAIRS,
 ) -> dict[tuple[int, int], np.ndarray]:
     r"""Collision integral matrices for the requested (l, s) pairs.
 
-    Evaluated together, species pairs outermost and moments innermost, so
-    that each pair's interaction-potential parameters -- equilibrium
-    distance, binding energy, beta, the Coulomb logarithm -- are derived
-    once for the pair rather than once per (l, s).
+    Evaluated together in one compiled pair loop. Temperature-independent
+    numeric descriptors -- interaction-potential parameters and resonant
+    charge-transfer coefficients -- are retained by the mixture. The
+    temperature- and composition-dependent matrices are freshly evaluated.
 
-    Nothing is cached.  Callers that need the same set more than once
-    should evaluate it here and pass it on: :func:`q` and :func:`qhat` both
-    accept it as ``Q``, and :func:`q`'s result can in turn be passed to
-    :func:`Dij` and :func:`DTi` as ``qq``.
+    Callers that need the same matrices more than once should evaluate them
+    here and pass them on: :func:`q` and :func:`qhat` both accept them as
+    ``Q``, and :func:`q`'s result can in turn be passed to :func:`Dij` and
+    :func:`DTi` as ``qq``.
 
     Parameters
     ----------
@@ -1890,27 +2143,10 @@ def collision_integrals(
     dict[tuple[int, int], np.ndarray]
         Collision integral matrix for each requested (l, s) pair.
     """
-    nb_species = len(mixture.species)
     state = mixture._equilibrium_state()
-    number_densities = state.number_densities
-    values = {ls: np.zeros((nb_species, nb_species)) for ls in ls_pairs}
-
-    # Species pairs outermost, moments innermost: the potential parameters
-    # are a property of the pair, so this derives them once each rather than
-    # once per (l, s).
-    for i, (ndi, species_i) in enumerate(
-        zip(number_densities, mixture.species)
-    ):
-        for j, (ndj, species_j) in enumerate(
-            zip(number_densities, mixture.species)
-        ):
-            pair = _pair_integrals(
-                species_i, ndi, species_j, ndj, mixture.T, ls_pairs
-            )
-            for ls, value in pair.items():
-                values[ls][i, j] = value
-
-    return values
+    return mixture._collision_model().evaluate(
+        state.number_densities, state.T, ls_pairs
+    )
 
 
 def Qij_mix(mixture: "LTE", l: int, s: int) -> np.ndarray:
