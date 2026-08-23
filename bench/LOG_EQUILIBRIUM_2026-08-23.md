@@ -42,26 +42,29 @@ alternating repetitions after packed thermodynamics and accepted-state reuse:
 
 | Solver | Median | Nonlinear iterations | Iterations per solve |
 |---|---:|---:|---:|
-| Production governed solver | 0.294884 s | 2574 | 42.90 per requested state |
-| Log Newton plus continuation | 0.148206 s | 610 | 4.07 per continuation solve |
+| Production governed solver | 0.300781 s | 2574 | 42.90 per requested state |
+| Log Newton plus continuation | 0.136857 s | 610 | 4.07 per continuation solve |
 
-The current Python prototype is **1.99x faster** despite performing 150 solves:
+The current Python prototype is **2.20x faster** despite performing 150 solves:
 60 requested states plus the independent bootstrap/intermediate continuation
 states. It used 787 residual evaluations. The largest absolute mole-fraction
 difference on this 20-point grid was `1.24e-8`.
 
-The 10.5x iteration reduction becoming only a 1.99x wall-clock improvement is
-still the main implementation finding. The two central eliminations were:
+The 10.5x iteration reduction becoming only a 2.20x wall-clock improvement is
+still the main implementation finding. The three central eliminations were:
 
 1. packing immutable level data so monatomic partition functions use one
    vectorised exponential and reductions rather than per-species calls;
 1. retaining the accepted line-search residual and thermodynamic state for the
-   next Newton step, then calculating only the missing lowering derivative.
+   next Newton step, including its lowering derivative;
+1. caching electronic Boltzmann weights and other factors that depend on
+   temperature but not composition.
 
 The evaluation count is now close to one accepted candidate per iteration; the
-remaining excess is actual backtracking. The next performance ceiling is the
-dense coupled linear solve and its assembly rather than repeated partition
-evaluation.
+remaining excess is actual backtracking. Profiling shows the dense coupled
+linear solve is only about 4% of prototype runtime. Packed thermodynamics and
+ionisation lowering remain dominant, followed by species construction and JSON
+loading in a benchmark that includes mixture setup.
 
 This makes a fused evaluator unusually well motivated: one packed pass should
 return reference energies, lowering and its derivatives, partition moments,
@@ -102,9 +105,8 @@ The log formulation is worth continuing:
 - ascending and descending sweeps pass from 1000 to 25000 K;
 - even the deliberately unfused Python prototype is already faster.
 
-The next experiment should reduce or structure the coupled linear algebra. At
-16 species the dense solve is small, but it now sits directly behind a compact
-thermodynamic kernel and is the obvious remaining per-iteration cost. A second
-useful direction is a smooth electronic cutoff: it would remove the local
-branch search and make the Jacobian globally continuous, at the cost of
-changing the thermodynamic model rather than merely the solver.
+The next performance experiment should vectorise the remaining ionisation-
+lowering loop; restructuring the dense linear algebra is unlikely to pay at 16
+species. A separate useful direction is a smooth electronic cutoff: it would
+remove the local branch search and make the Jacobian globally continuous, at
+the cost of changing the thermodynamic model rather than merely the solver.
