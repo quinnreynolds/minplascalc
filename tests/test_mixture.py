@@ -212,11 +212,11 @@ def test_viscosity_complex(mixture_complex, x0, result, tol):
 @pytest.mark.parametrize(
     "T, P, result, tol",
     [
-        (MID_T, MID_P, 1.6850647038100455, 1e-5),
-        (LOW_T, LOW_P, 0.051617047811510164, 1e-7),
-        (HIGH_T, LOW_P, 4.464206850824014, 1e-5),
-        (LOW_T, HIGH_P, 0.05161701653293017, 1e-7),
-        (HIGH_T, HIGH_P, 6.620655660595108, 1e-5),
+        (MID_T, MID_P, 1.685060072421295, 1e-5),
+        (LOW_T, LOW_P, 0.051617047810062884, 1e-7),
+        (HIGH_T, LOW_P, 4.464230656329954, 1e-5),
+        (LOW_T, HIGH_P, 0.05161701653201179, 1e-7),
+        (HIGH_T, HIGH_P, 6.620636394638989, 1e-5),
     ],
 )
 def test_thermal_conductivity_simple(mixture_simple, T, P, result, tol):
@@ -231,9 +231,9 @@ def test_thermal_conductivity_simple(mixture_simple, T, P, result, tol):
 @pytest.mark.parametrize(
     "x0, result, tol",
     [
-        (LOW_X0, 1.9640250363781075, 1e-5),
-        (MID_X0, 2.1890014838932124, 1e-5),
-        (HIGH_X0, 2.3835646495764453, 1e-5),
+        (LOW_X0, 1.9640277033345197, 1e-5),
+        (MID_X0, 2.1889980105505384, 1e-5),
+        (HIGH_X0, 2.383560087502664, 1e-5),
     ],
 )
 def test_thermal_conductivity_complex(mixture_complex, x0, result, tol):

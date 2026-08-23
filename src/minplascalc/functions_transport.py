@@ -3375,8 +3375,9 @@ def thermal_conductivity(
 
     Thermal conductivity, calculation per [Devoto1966]_ (eq. 2, 13 and 18).
     Fourth-order approximation.
-    Numerical derivative performed to obtain :math:`\frac{dx_i}{dT}` for
-    :math:`\vec{\nabla} x` in the :math:`\vec{d_i}` expression.
+    A piecewise analytical equilibrium derivative provides
+    :math:`\frac{dx_i}{dT}` for :math:`\vec{\nabla} x` in the
+    :math:`\vec{d_i}` expression.
 
     It assumes that there is no pressure gradient and no external forces.
 
@@ -3385,7 +3386,8 @@ def thermal_conductivity(
     mixture : LTE
         Mixture of species.
     rel_delta_T : float
-        Relative delta T for numerical derivative.
+        Retained for API compatibility; the analytical derivative does not
+        use a temperature step.
     DTterms_yn : bool
         Flag to include thermal diffusion terms.
     ni_limit : float
@@ -3524,16 +3526,10 @@ def thermal_conductivity(
 
     ### reactional tk components - normal diffusion term ###
 
-    # Compute the derivative of the number densities with respect to
-    # temperature. x is the concentration of species i, x = ni / ntot
+    # Compute the equilibrium mole-fraction derivative at the current active
+    # electronic-level set. x is the concentration x_i = n_i / n_tot.
     Tval = mixture.T
-    with mixture._at_temperature(Tval * (1 + rel_delta_T)):
-        n_positive = mixture.calculate_composition()
-    with mixture._at_temperature(Tval * (1 - rel_delta_T)):
-        n_negative = mixture.calculate_composition()
-    x_positive = n_positive / np.sum(n_positive)
-    x_negative = n_negative / np.sum(n_negative)
-    dxdT = (x_positive - x_negative) / (2 * rel_delta_T * mixture.T)
+    dxdT = mixture.calculate_composition_temperature_derivative()
 
     locDij = q_system.diffusion_matrix()
 
