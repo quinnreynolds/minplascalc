@@ -3289,11 +3289,10 @@ def thermal_conductivity(
     # Compute the derivative of the number densities with respect to
     # temperature. x is the concentration of species i, x = ni / ntot
     Tval = mixture.T
-    mixture.T = Tval * (1 + rel_delta_T)
-    n_positive = mixture.calculate_composition()
-    mixture.T = Tval * (1 - rel_delta_T)
-    n_negative = mixture.calculate_composition()
-    mixture.T = Tval
+    with mixture._at_temperature(Tval * (1 + rel_delta_T)):
+        n_positive = mixture.calculate_composition()
+    with mixture._at_temperature(Tval * (1 - rel_delta_T)):
+        n_negative = mixture.calculate_composition()
     x_positive = n_positive / np.sum(n_positive)
     x_negative = n_negative / np.sum(n_negative)
     dxdT = (x_positive - x_negative) / (2 * rel_delta_T * mixture.T)
