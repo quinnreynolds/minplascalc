@@ -1208,8 +1208,8 @@ class LTE:
         Parameters
         ----------
         rel_delta_T : float, optional
-            TODO:Relative change in temperature to calculate the numerical
-            derivative, by default 0.001.
+            Retained for API compatibility; the piecewise analytical
+            composition derivative does not use a temperature increment.
         DTterms_yn : bool, optional
             TODO:Flag to include the temperature-dependent terms in the
             calculation, by default True.
