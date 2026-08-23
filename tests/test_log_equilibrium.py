@@ -11,6 +11,51 @@ def _mole_fractions(number_densities):
     return number_densities / number_densities.sum()
 
 
+@pytest.mark.parametrize("factory", [make_simple, make_sico])
+@pytest.mark.parametrize("temperature", [2000.0, 12000.0, 25000.0])
+def test_packed_thermodynamics_matches_species_evaluation(
+    factory, temperature
+):
+    reference = factory(T=temperature)
+    reference.calculate_composition()
+    state = reference._equilibrium_state()
+
+    system = LogEquilibriumSystem(factory(T=temperature))
+    packed = system._packed_thermodynamics(
+        np.log(state.particle_numbers), derivatives=True
+    )
+    system._set_particle_numbers(state.particle_numbers)
+    expected_reference, expected_lowering = (
+        system.mixture._LTE__get_reference_energies()
+    )
+    expected_reference_dN, _ = (
+        system.mixture._LTE__get_reference_energy_derivatives()
+    )
+    expected_log_partitions = np.log(
+        [
+            species.total_partition_function(
+                state.volume, temperature, lowering
+            )
+            for species, lowering in zip(
+                system.mixture.species, expected_lowering
+            )
+        ]
+    )
+
+    assert packed.ionization_lowering == pytest.approx(
+        expected_lowering, rel=3e-15
+    )
+    assert packed.reference_energies == pytest.approx(
+        expected_reference, rel=3e-15
+    )
+    assert packed.reference_dN == pytest.approx(
+        expected_reference_dN, rel=3e-15
+    )
+    assert packed.log_partitions == pytest.approx(
+        expected_log_partitions, rel=3e-15
+    )
+
+
 def test_log_equilibrium_analytical_jacobian():
     system = LogEquilibriumSystem(make_sico(T=12000.0))
     result = system.solve(tolerance=1e-11)

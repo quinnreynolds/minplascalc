@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from minplascalc import species as species_module
 from minplascalc import units as u
 from minplascalc.mixture import LTE
 
@@ -36,6 +37,19 @@ class LogEquilibriumPathResult:
     total_iterations: int
     total_residual_evaluations: int
     continuation_solves: int
+
+
+@dataclass(frozen=True)
+class _PackedThermodynamics:
+    """Thermodynamic values shared by the residual and Jacobian."""
+
+    particle_numbers: np.ndarray
+    particle_total: float
+    reference_energies: np.ndarray
+    ionization_lowering: np.ndarray
+    log_partitions: np.ndarray
+    reference_dN: np.ndarray | None
+    active_level_counts: np.ndarray
 
 
 class LogEquilibriumSystem:
@@ -69,10 +83,289 @@ class LogEquilibriumSystem:
             )
         self.has_charge_constraint = self.constraint_count > self.element_count
         self.residual_evaluations = 0
+        self._prepare_packed_thermodynamics()
+
+    def _prepare_packed_thermodynamics(self) -> None:
+        """Pack immutable species data for vectorized evaluation."""
+        count = self.species_count
+        self.charges = np.asarray(
+            self.mixture.charge_numbers, dtype=np.float64
+        )
+        self.electron_index = next(
+            (
+                index
+                for index, species in enumerate(self.mixture.species)
+                if species.name == "e"
+            ),
+            -1,
+        )
+        self.log_translational_prefactors = 1.5 * np.log(
+            2
+            * np.pi
+            * np.array(
+                [species.molar_mass for species in self.mixture.species]
+            )
+            * u.k_b
+            / (u.N_a * u.h**2)
+        )
+
+        monatomic = [
+            (index, species)
+            for index, species in enumerate(self.mixture.species)
+            if isinstance(species, species_module.Monatomic)
+        ]
+        self.monatomic_indices = np.array(
+            [index for index, _ in monatomic], dtype=np.int64
+        )
+        self.monatomic_ionization = np.zeros(count)
+        level_owners = []
+        level_energies = []
+        level_degeneracies = []
+        for index, species in monatomic:
+            self.monatomic_ionization[index] = species.ionisation_energy
+            level_owners.extend([index] * len(species._level_energies))
+            level_energies.extend(species._level_energies)
+            level_degeneracies.extend(species._degeneracies)
+        self.level_owners = np.asarray(level_owners, dtype=np.int64)
+        self.level_energies = np.asarray(level_energies, dtype=np.float64)
+        self.level_degeneracies = np.asarray(
+            level_degeneracies, dtype=np.float64
+        )
+
+        diatomic = [
+            (index, species)
+            for index, species in enumerate(self.mixture.species)
+            if isinstance(species, species_module.Diatomic)
+        ]
+        self.diatomic_indices = np.array(
+            [index for index, _ in diatomic], dtype=np.int64
+        )
+        self.diatomic_g0 = np.array([species.g0 for _, species in diatomic])
+        self.diatomic_w = np.array([species.w_e for _, species in diatomic])
+        self.diatomic_rotation = np.array(
+            [species.sigma_s * species.b_e for _, species in diatomic]
+        )
+        known = set(self.monatomic_indices) | set(self.diatomic_indices)
+        if self.electron_index >= 0:
+            known.add(self.electron_index)
+        self.fallback_indices = np.array(
+            [index for index in range(count) if index not in known],
+            dtype=np.int64,
+        )
+
+        self.base_reference_energies = np.zeros(count)
+        for index, species in enumerate(self.mixture.species):
+            if sum(species.stoichiometry.values()) >= 2:
+                self.base_reference_energies[
+                    index
+                ] = -species.dissociation_energy
+
+        self.reference_chains = []
+        neutral_species = [
+            species
+            for species in self.mixture.species
+            if species.charge_number == 0
+        ]
+        for neutral in neutral_species:
+            negative = sorted(
+                (
+                    (index, species)
+                    for index, species in enumerate(self.mixture.species)
+                    if species.stoichiometry == neutral.stoichiometry
+                    and species.charge_number <= 0
+                ),
+                key=lambda item: item[1].charge_number,
+                reverse=True,
+            )
+            positive = sorted(
+                (
+                    (index, species)
+                    for index, species in enumerate(self.mixture.species)
+                    if species.stoichiometry == neutral.stoichiometry
+                    and species.charge_number >= 0
+                ),
+                key=lambda item: item[1].charge_number,
+            )
+            for (source, source_species), (target, _) in zip(
+                positive[:-1], positive[1:]
+            ):
+                self.reference_chains.append(
+                    (
+                        source,
+                        target,
+                        source,
+                        -1.0,
+                        source_species.ionisation_energy,
+                    )
+                )
+            for (source, _), (target, target_species) in zip(
+                negative[:-1], negative[1:]
+            ):
+                self.reference_chains.append(
+                    (
+                        source,
+                        target,
+                        target,
+                        1.0,
+                        -target_species.ionisation_energy,
+                    )
+                )
 
     def _set_particle_numbers(self, particle_numbers: np.ndarray) -> None:
         """Set the private iterate on the prototype-owned mixture."""
         self.mixture._LTE__Ni = particle_numbers
+
+    def _packed_lowering(
+        self, particle_numbers: np.ndarray, *, derivatives: bool
+    ) -> tuple[np.ndarray, np.ndarray | None]:
+        """Evaluate ionisation lowering and its particle-number Jacobian."""
+        count = self.species_count
+        lowering = np.zeros(count)
+        derivative = np.zeros((count, count)) if derivatives else None
+        if self.electron_index < 0:
+            return lowering, derivative
+
+        positive = self.charges > 0
+        charge_sum = particle_numbers[positive] @ self.charges[positive]
+        charge_square_sum = (
+            particle_numbers[positive] @ self.charges[positive] ** 2
+        )
+        z_star = charge_square_sum / charge_sum
+        denominator = z_star + 1
+        total_particles = particle_numbers.sum()
+        electron_particles = particle_numbers[self.electron_index]
+        volume = total_particles * u.k_b * self.mixture.T / self.mixture.P
+        electron_density = electron_particles / volume
+        debye_pow3 = (
+            u.epsilon_0
+            * u.k_b
+            * self.mixture.T
+            / (4 * np.pi * denominator * electron_density * u.e**2)
+        ) ** 1.5
+
+        if derivatives:
+            dzstar_dN = np.zeros(count)
+            dzstar_dN[positive] = (
+                self.charges[positive] ** 2 * charge_sum
+                - charge_square_sum * self.charges[positive]
+            ) / charge_sum**2
+            dlog_ratio_dN = (
+                1.5 * dzstar_dN / denominator - 0.5 / total_particles
+            )
+            dlog_ratio_dN[self.electron_index] += 0.5 / electron_particles
+
+        for index in np.flatnonzero(positive):
+            ion_sphere_pow3 = (
+                3 * self.charges[index] / (4 * np.pi * electron_density)
+            )
+            ratio = ion_sphere_pow3 / debye_pow3
+            shape = (ratio + 1) ** (2 / 3) - 1
+            lowering[index] = (
+                u.k_b * self.mixture.T * shape / (2 * denominator)
+            )
+            if derivatives:
+                shape_derivative = 2 / 3 * (ratio + 1) ** (-1 / 3)
+                ratio_dN = ratio * dlog_ratio_dN
+                assert derivative is not None
+                derivative[index] = (
+                    u.k_b
+                    * self.mixture.T
+                    / 2
+                    * (
+                        shape_derivative * ratio_dN / denominator
+                        - shape * dzstar_dN / denominator**2
+                    )
+                )
+        return lowering, derivative
+
+    def _packed_thermodynamics(
+        self, log_particles: np.ndarray, *, derivatives: bool
+    ) -> _PackedThermodynamics:
+        """Evaluate all species thermodynamics in packed numeric arrays."""
+        particle_numbers = np.exp(log_particles)
+        particle_total = float(particle_numbers.sum())
+        temperature = self.mixture.T
+        kbt = u.k_b * temperature
+        volume = particle_total * kbt / self.mixture.P
+        lowering, lowering_dN = self._packed_lowering(
+            particle_numbers, derivatives=derivatives
+        )
+
+        reference = self.base_reference_energies.copy()
+        reference_dN = (
+            np.zeros((self.species_count, self.species_count))
+            if derivatives
+            else None
+        )
+        for (
+            source,
+            target,
+            lowering_index,
+            sign,
+            offset,
+        ) in self.reference_chains:
+            reference[target] = (
+                reference[source] + offset + sign * lowering[lowering_index]
+            )
+            if derivatives:
+                assert reference_dN is not None and lowering_dN is not None
+                reference_dN[target] = (
+                    reference_dN[source] + sign * lowering_dN[lowering_index]
+                )
+
+        log_internal = np.empty(self.species_count)
+        active_counts = np.zeros(self.species_count, dtype=np.int64)
+        if self.monatomic_indices.size:
+            owners = self.level_owners
+            active = self.level_energies < (
+                self.monatomic_ionization[owners] - lowering[owners]
+            )
+            level_terms = (
+                self.level_degeneracies
+                * active
+                * np.exp(-self.level_energies / kbt)
+            )
+            sums = np.bincount(
+                owners, weights=level_terms, minlength=self.species_count
+            )
+            active_counts = np.bincount(
+                owners, weights=active, minlength=self.species_count
+            ).astype(np.int64)
+            log_internal[self.monatomic_indices] = np.log(
+                sums[self.monatomic_indices]
+            )
+        if self.diatomic_indices.size:
+            vibration_ratio = self.diatomic_w / kbt
+            log_internal[self.diatomic_indices] = (
+                np.log(self.diatomic_g0)
+                - vibration_ratio / 2
+                - np.log1p(-np.exp(-vibration_ratio))
+                + np.log(kbt / self.diatomic_rotation)
+            )
+        if self.electron_index >= 0:
+            log_internal[self.electron_index] = np.log(2.0)
+        for index in self.fallback_indices:
+            log_internal[index] = np.log(
+                self.mixture.species[index].internal_partition_function(
+                    temperature, lowering[index]
+                )
+            )
+
+        log_partitions = (
+            np.log(volume)
+            + self.log_translational_prefactors
+            + 1.5 * np.log(temperature)
+            + log_internal
+        )
+        return _PackedThermodynamics(
+            particle_numbers=particle_numbers,
+            particle_total=particle_total,
+            reference_energies=reference,
+            ionization_lowering=lowering,
+            log_partitions=log_partitions,
+            reference_dN=reference_dN,
+            active_level_counts=active_counts,
+        )
 
     def evaluate(
         self,
@@ -83,30 +376,19 @@ class LogEquilibriumSystem:
     ) -> tuple[np.ndarray, np.ndarray | None]:
         """Evaluate the complete dimensionless residual and its Jacobian."""
         self.residual_evaluations += 1
-        particle_numbers = np.exp(log_particles)
-        self._set_particle_numbers(particle_numbers)
-        particle_total = particle_numbers.sum()
-        temperature = self.mixture.T
-        kbt = u.k_b * temperature
-        volume = particle_total * kbt / self.mixture.P
-
         with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
-            reference_energies, lowering = (
-                self.mixture._LTE__get_reference_energies()
-            )
-            partitions = np.array(
-                [
-                    species.total_partition_function(volume, temperature, dE)
-                    for species, dE in zip(self.mixture.species, lowering)
-                ]
+            thermodynamics = self._packed_thermodynamics(
+                log_particles, derivatives=jacobian
             )
             chemical = (
-                reference_energies / kbt
-                - np.log(partitions)
+                thermodynamics.reference_energies / (u.k_b * self.mixture.T)
+                - thermodynamics.log_partitions
                 + log_particles
                 + self.constraints @ scaled_multipliers
             )
 
+        particle_numbers = thermodynamics.particle_numbers
+        particle_total = thermodynamics.particle_total
         conserved = self.constraints.T @ particle_numbers
         element_residual = np.log(
             conserved[: self.element_count] / self.targets
@@ -122,10 +404,8 @@ class LogEquilibriumSystem:
         if not jacobian:
             return residual, None
 
-        with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
-            reference_dN, _ = (
-                self.mixture._LTE__get_reference_energy_derivatives()
-            )
+        reference_dN = thermodynamics.reference_dN
+        assert reference_dN is not None
         system_size = self.species_count + self.constraint_count
         derivative = np.zeros((system_size, system_size))
 
@@ -134,7 +414,9 @@ class LogEquilibriumSystem:
         chemical_log_derivative = (
             np.eye(self.species_count)
             - particle_numbers[np.newaxis, :] / particle_total
-            + reference_dN * particle_numbers[np.newaxis, :] / kbt
+            + reference_dN
+            * particle_numbers[np.newaxis, :]
+            / (u.k_b * self.mixture.T)
         )
         derivative[: self.species_count, : self.species_count] = (
             chemical_log_derivative
