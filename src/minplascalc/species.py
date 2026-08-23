@@ -66,6 +66,29 @@ class BaseSpecies:
             * self.internal_partition_function(T, dE)
         )
 
+    def dlog_total_partition_dT(self, T: float, dE: float) -> float:
+        r"""Temperature derivative of ``log(Z)`` at fixed volume.
+
+        This is the canonical identity
+        :math:`\partial_T \log Z = U / (k_B T^2)`. For monatomic species,
+        the ionisation-lowered electronic-level active set is held fixed, so
+        the derivative is piecewise analytical at level crossings.
+
+        Parameters
+        ----------
+        T : float
+            Temperature, in :math:`\text{K}`.
+        dE : float
+            Ionisation energy lowering, in :math:`\text{J}`.
+
+        Returns
+        -------
+        float
+            Logarithmic partition-function derivative, in
+            :math:`\text{K}^{-1}`.
+        """
+        return self.internal_energy(T, dE) / (u.k_b * T**2)
+
     def translational_partition_function(self, T: float) -> float:
         r"""Calculate the volumic translational partition function.
 
