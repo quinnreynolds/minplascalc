@@ -275,6 +275,22 @@ class LTE:
             A_matrix[j, -1] = qc
             A_matrix_transpose[-1, j] = qc
 
+    def _constraint_matrix(self) -> np.ndarray:
+        """Return species-by-conservation-law coefficients."""
+        element_names = sorted(
+            {element for sp in self.species for element in sp.stoichiometry}
+        )
+        _, constraint_count = self._get_constraint_dimensions(
+            len(element_names)
+        )
+        matrix = np.zeros((len(self.species), constraint_count))
+        for column, element in enumerate(element_names):
+            matrix[:, column] = [
+                sp.stoichiometry.get(element, 0) for sp in self.species
+            ]
+        self._setup_charge_constraints(matrix, matrix.T)
+        return matrix
+
     def _calculate_ionization_lowering(
         self, number_densities: np.ndarray
     ) -> np.ndarray:
@@ -313,6 +329,64 @@ class LTE:
                 )
 
         return dE
+
+    def _ionization_lowering_derivatives(
+        self, particle_numbers: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return ionisation-lowering derivatives for the active species."""
+        count = len(self.species)
+        dE_dN = np.zeros((count, count))
+        dE_dT = np.zeros(count)
+        charges = self.charge_numbers
+        positive = charges > 0
+
+        charge_sum = particle_numbers[positive] @ charges[positive]
+        charge_square_sum = particle_numbers[positive] @ charges[positive] ** 2
+        z_star = charge_square_sum / charge_sum
+        denominator = z_star + 1
+
+        dzstar_dN = np.zeros(count)
+        dzstar_dN[positive] = (
+            charges[positive] ** 2 * charge_sum
+            - charge_square_sum * charges[positive]
+        ) / charge_sum**2
+
+        total_particles = particle_numbers.sum()
+        electron_index = count - 1
+        electron_particles = particle_numbers[electron_index]
+        volume = total_particles * u.k_b * self.T / self.P
+        electron_density = electron_particles / volume
+        debye_pow3 = (
+            u.epsilon_0
+            * u.k_b
+            * self.T
+            / (4 * np.pi * denominator * electron_density * u.e**2)
+        ) ** (3 / 2)
+
+        dlog_ratio_dN = 1.5 * dzstar_dN / denominator - 0.5 / total_particles
+        dlog_ratio_dN[electron_index] += 0.5 / electron_particles
+
+        for i, charge in enumerate(charges):
+            if charge <= 0:
+                continue
+            ion_sphere_pow3 = 3 * charge / (4 * np.pi * electron_density)
+            ratio = ion_sphere_pow3 / debye_pow3
+            shape = (ratio + 1) ** (2 / 3) - 1
+            shape_derivative = 2 / 3 * (ratio + 1) ** (-1 / 3)
+            prefactor = u.k_b * self.T / 2
+
+            ratio_dN = ratio * dlog_ratio_dN
+            dE_dN[i] = prefactor * (
+                shape_derivative * ratio_dN / denominator
+                - shape * dzstar_dN / denominator**2
+            )
+            dE_dT[i] = (
+                u.k_b
+                / (2 * denominator)
+                * (shape - 2 * ratio * shape_derivative)
+            )
+
+        return dE_dN, dE_dT
 
     def _get_species_for_iteration(
         self, number_densities: np.ndarray
@@ -473,6 +547,44 @@ class LTE:
         # Return the reference energy and ionisation energy lowering.
         return E0, dE
 
+    def __get_reference_energy_derivatives(
+        self,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return derivatives of reference energies with respect to N and T."""
+        dE_dN, dE_dT = self._ionization_lowering_derivatives(self.__Ni)
+        E0_dN = np.zeros_like(dE_dN)
+        E0_dT = np.zeros_like(dE_dT)
+
+        neutral_species = [sp for sp in self.species if sp.charge_number == 0]
+        for neutral_sp in neutral_species:
+            negative = sorted(
+                (
+                    (i, sp)
+                    for i, sp in enumerate(self.species)
+                    if sp.stoichiometry == neutral_sp.stoichiometry
+                    and sp.charge_number <= 0
+                ),
+                key=lambda item: item[1].charge_number,
+                reverse=True,
+            )
+            positive = sorted(
+                (
+                    (i, sp)
+                    for i, sp in enumerate(self.species)
+                    if sp.stoichiometry == neutral_sp.stoichiometry
+                    and sp.charge_number >= 0
+                ),
+                key=lambda item: item[1].charge_number,
+            )
+            for (source, _), (target, _) in zip(positive[:-1], positive[1:]):
+                E0_dN[target] = E0_dN[source] - dE_dN[source]
+                E0_dT[target] = E0_dT[source] - dE_dT[source]
+            for (source, _), (target, _) in zip(negative[:-1], negative[1:]):
+                E0_dN[target] = E0_dN[source] + dE_dN[target]
+                E0_dT[target] = E0_dT[source] + dE_dT[target]
+
+        return E0_dN, E0_dT
+
     def calculate_composition(self) -> np.ndarray:
         r"""Calculate the LTE composition of the plasma in m^-3.
 
@@ -615,23 +727,12 @@ class LTE:
         # The first nb_species rows and columns are for the species.
         # The next len(self._elements) rows and columns are for the elements.
         # The last row and column are for the charge neutrality.
-        A_matrix_constraints = np.zeros((len(self.species), constraints_dof))
-        A_matrix_constraints_transpose = np.zeros(
-            (constraints_dof, len(self.species))
-        )
+        A_matrix_constraints = self._constraint_matrix()
+        A_matrix_constraints_transpose = A_matrix_constraints.T
         b_vector_constraints = np.zeros(constraints_dof)
 
         for i, element in enumerate(elements):
-            stoichiometric_coefficients = element["stoich_coeff"]
-            assert isinstance(stoichiometric_coefficients, list)
-            for j, sc in enumerate(stoichiometric_coefficients):
-                A_matrix_constraints[j, i] = sc
-                A_matrix_constraints_transpose[i, j] = sc
             b_vector_constraints[i] = element["N_tot"]
-
-        self._setup_charge_constraints(
-            A_matrix_constraints, A_matrix_constraints_transpose
-        )
 
         gfe_matrix[:nb_species, nb_species:] = A_matrix_constraints
         gfe_matrix[nb_species:, :nb_species] = A_matrix_constraints_transpose
@@ -750,6 +851,67 @@ class LTE:
         N_tot = N_i.sum()  # Total number of particles in the plasma.
         V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
         return N_i / V  # Number density of each species, in particles/m3.
+
+    def calculate_composition_temperature_derivative(self) -> np.ndarray:
+        r"""Calculate the piecewise analytical derivative of mole fractions.
+
+        The equilibrium conditions are differentiated implicitly at the
+        converged state. Electronic levels below the ionisation-lowered cutoff
+        retain their current active/inactive status, so the result is the
+        one-sided analytical branch between discrete level crossings.
+
+        Returns
+        -------
+        np.ndarray
+            :math:`dx_i/dT`, in :math:`\text{K}^{-1}`.
+        """
+        self.calculate_composition()
+        particle_numbers = self.__Ni
+        particle_total = particle_numbers.sum()
+        count = len(self.species)
+        kbt = u.k_b * self.T
+        volume = particle_total * kbt / self.P
+
+        _, lowering = self.__get_reference_energies()
+        reference_dN, reference_dT = self.__get_reference_energy_derivatives()
+        partitions = np.array(
+            [
+                species.total_partition_function(volume, self.T, dE)
+                for species, dE in zip(self.species, lowering)
+            ]
+        )
+        log_partition_ratio = np.log(partitions / particle_numbers)
+        dlog_partition_dT = np.array(
+            [
+                1 / self.T + species.dlog_total_partition_dT(self.T, dE)
+                for species, dE in zip(self.species, lowering)
+            ]
+        )
+        chemical_potential_dT = (
+            reference_dT
+            - u.k_b * log_partition_ratio
+            - kbt * dlog_partition_dT
+        )
+
+        constraints = self._constraint_matrix()
+        constraint_count = constraints.shape[1]
+        system = np.zeros((count + constraint_count,) * 2)
+        system[:count, :count] = (
+            -kbt / particle_total
+            + np.diag(kbt / particle_numbers)
+            + reference_dN
+        )
+        system[:count, count:] = constraints
+        system[count:, :count] = constraints.T
+
+        rhs = np.zeros(count + constraint_count)
+        rhs[:count] = -chemical_potential_dT
+        particle_derivative = np.linalg.solve(system, rhs)[:count]
+        total_derivative = particle_derivative.sum()
+        return (
+            particle_derivative / particle_total
+            - particle_numbers * total_derivative / particle_total**2
+        )
 
     def _equilibrium_state(self) -> _EquilibriumState:
         """Return all commonly used quantities for the current LTE state."""
@@ -1145,6 +1307,13 @@ class LTEWithoutElectrons(LTE):
         """Calculate ionization energy lowering (no electrons case)."""
         nb_species = len(self.species)
         return np.zeros(nb_species)  # No ionization lowering without electrons
+
+    def _ionization_lowering_derivatives(
+        self, particle_numbers: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return zero lowering derivatives for electron-free mixtures."""
+        count = len(self.species)
+        return np.zeros((count, count)), np.zeros(count)
 
     def _get_species_for_iteration(
         self, number_densities: np.ndarray
