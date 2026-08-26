@@ -121,6 +121,10 @@ class BaseSpecies:
     def internal_energy(self, T, dE):
         raise NotImplementedError
 
+    def dinternal_energy_dT(self, T, dE):
+        """Return the fixed-active-set temperature derivative of energy."""
+        raise NotImplementedError
+
 
 class Species(BaseSpecies):
     def __init__(
@@ -335,14 +339,18 @@ class Monatomic(Species):
             f"Emission lines: {len(self.emission_lines)}"
         )
 
-    def _electronic_moments(self, T: float, dE: float) -> tuple[float, float]:
-        """Electronic partition sum and its energy-weighted first moment."""
+    def _electronic_moments(
+        self, T: float, dE: float
+    ) -> tuple[float, float, float]:
+        """Electronic partition sum and first two energy moments."""
         beta = 1 / (u.k_b * T)
         below = self._level_energies < (self.ionisation_energy - dE)
         weights = self._degeneracies * below
         boltzmann = np.exp(-beta * self._level_energies)
-        return float(weights @ boltzmann), float(
-            (weights * self._level_energies) @ boltzmann
+        return (
+            float(weights @ boltzmann),
+            float((weights * self._level_energies) @ boltzmann),
+            float((weights * self._level_energies**2) @ boltzmann),
         )
 
     def internal_partition_function(self, T: float, dE: float) -> float:
@@ -387,7 +395,7 @@ class Monatomic(Species):
 
             g_i = 2J_i + 1
         """
-        partition, _ = self._electronic_moments(T, dE)
+        partition, _, _ = self._electronic_moments(T, dE)
         return partition
 
     def internal_energy(self, T: float, dE: float) -> float:
@@ -438,9 +446,18 @@ class Monatomic(Species):
         # Calculate the translational energy.
         translational_energy = 3 / 2 * u.k_b * T
 
-        partition, energy_moment = self._electronic_moments(T, dE)
+        partition, energy_moment, _ = self._electronic_moments(T, dE)
         electronic_energy = energy_moment / partition
         return translational_energy + electronic_energy
+
+    def dinternal_energy_dT(self, T: float, dE: float) -> float:
+        """Return piecewise analytical monatomic heat capacity per particle."""
+        partition, first_moment, second_moment = self._electronic_moments(
+            T, dE
+        )
+        mean = first_moment / partition
+        variance = second_moment / partition - mean**2
+        return 1.5 * u.k_b + variance / (u.k_b * T**2)
 
 
 class Diatomic(Species):
@@ -738,6 +755,12 @@ class Diatomic(Species):
             + rotational_energy
             + vibrational_energy
         )
+
+    def dinternal_energy_dT(self, T: float, dE: float) -> float:
+        """Return analytical diatomic heat capacity per particle."""
+        ratio = self.w_e / (2 * u.k_b * T)
+        inverse_sinh = 2 * np.exp(-ratio) / (-np.expm1(-2 * ratio))
+        return 2.5 * u.k_b + u.k_b * (ratio * inverse_sinh) ** 2
 
 
 class Polyatomic(Species):
@@ -1066,6 +1089,15 @@ class Polyatomic(Species):
             + vibrational_energy
         )
 
+    def dinternal_energy_dT(self, T: float, dE: float) -> float:
+        """Return analytical polyatomic heat capacity per particle."""
+        ratios = np.asarray(self.wi_e) / (2 * u.k_b * T)
+        inverse_sinh = 2 * np.exp(-ratios) / (-np.expm1(-2 * ratios))
+        rotational = 1.0 if self.linear_yn else 1.5
+        return u.k_b * (
+            1.5 + rotational + np.sum((ratios * inverse_sinh) ** 2)
+        )
+
 
 class Electron(BaseSpecies):
     def __init__(self):
@@ -1162,6 +1194,10 @@ class Electron(BaseSpecies):
         electronic_energy = 0.0
         # Return the total internal energy.
         return translational_energy + electronic_energy
+
+    def dinternal_energy_dT(self, T: float, dE: float) -> float:
+        """Return electron heat capacity per particle."""
+        return 1.5 * u.k_b
 
 
 def from_file(datafile: str | Path) -> Monatomic | Diatomic | Polyatomic:
