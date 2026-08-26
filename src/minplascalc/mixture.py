@@ -38,6 +38,15 @@ class _EquilibriumState:
     mean_particle_mass: float
 
 
+@dataclass(frozen=True)
+class _EquilibriumTemperatureTangent:
+    """Piecewise derivative of the constrained equilibrium state."""
+
+    particle_derivative: np.ndarray
+    mole_fraction_derivative: np.ndarray
+    reference_energy_derivative: np.ndarray
+
+
 class LTE:
     def __init__(
         self,
@@ -852,19 +861,10 @@ class LTE:
         V = N_tot * kbt / self.P  # Volume of the plasma, in m3.
         return N_i / V  # Number density of each species, in particles/m3.
 
-    def calculate_composition_temperature_derivative(self) -> np.ndarray:
-        r"""Calculate the piecewise analytical derivative of mole fractions.
-
-        The equilibrium conditions are differentiated implicitly at the
-        converged state. Electronic levels below the ionisation-lowered cutoff
-        retain their current active/inactive status, so the result is the
-        one-sided analytical branch between discrete level crossings.
-
-        Returns
-        -------
-        np.ndarray
-            :math:`dx_i/dT`, in :math:`\text{K}^{-1}`.
-        """
+    def _equilibrium_temperature_tangent(
+        self,
+    ) -> _EquilibriumTemperatureTangent:
+        """Differentiate the full constrained equilibrium state."""
         self.calculate_composition()
         particle_numbers = self.__Ni
         particle_total = particle_numbers.sum()
@@ -908,10 +908,33 @@ class LTE:
         rhs[:count] = -chemical_potential_dT
         particle_derivative = np.linalg.solve(system, rhs)[:count]
         total_derivative = particle_derivative.sum()
-        return (
+        mole_fraction_derivative = (
             particle_derivative / particle_total
             - particle_numbers * total_derivative / particle_total**2
         )
+        reference_energy_derivative = (
+            reference_dT + reference_dN @ particle_derivative
+        )
+        return _EquilibriumTemperatureTangent(
+            particle_derivative=particle_derivative,
+            mole_fraction_derivative=mole_fraction_derivative,
+            reference_energy_derivative=reference_energy_derivative,
+        )
+
+    def calculate_composition_temperature_derivative(self) -> np.ndarray:
+        r"""Calculate the piecewise analytical derivative of mole fractions.
+
+        The equilibrium conditions are differentiated implicitly at the
+        converged state. Electronic levels below the ionisation-lowered cutoff
+        retain their current active/inactive status, so the result is the
+        one-sided analytical branch between discrete level crossings.
+
+        Returns
+        -------
+        np.ndarray
+            :math:`dx_i/dT`, in :math:`\text{K}^{-1}`.
+        """
+        return self._equilibrium_temperature_tangent().mole_fraction_derivative
 
     def _equilibrium_state(self) -> _EquilibriumState:
         """Return all commonly used quantities for the current LTE state."""
