@@ -88,6 +88,30 @@ def test_log_equilibrium_analytical_jacobian():
     assert analytical == pytest.approx(numerical, rel=2e-8, abs=2e-9)
 
 
+def test_log_equilibrium_temperature_tangent_matches_production():
+    production = make_sico(T=12000.0)
+    expected = production.calculate_composition_temperature_derivative()
+    expected_cp = production.calculate_heat_capacity()
+
+    system = LogEquilibriumSystem(make_sico(T=12000.0))
+    result = system.solve(tolerance=1e-11)
+    tangent = system.temperature_tangent(result)
+
+    assert tangent.mole_fraction_derivative == pytest.approx(
+        expected, rel=2e-8, abs=2e-12
+    )
+    assert system.heat_capacity(result) == pytest.approx(expected_cp, rel=2e-8)
+
+
+def test_log_heat_capacity_survives_production_log_zero_case():
+    system = LogEquilibriumSystem(make_sico(T=1000.0, P=10132500.0))
+    result = system.solve_temperature_path(np.array([1000.0])).states[0]
+
+    heat_capacity = system.heat_capacity(result)
+    assert np.isfinite(heat_capacity)
+    assert heat_capacity > 0
+
+
 @pytest.mark.parametrize("factory", [make_simple, make_sico])
 @pytest.mark.parametrize("temperature", [8000.0, 12000.0, 25000.0])
 def test_log_equilibrium_cold_midrange_matches_production(
