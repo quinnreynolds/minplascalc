@@ -264,6 +264,20 @@ def test_thermal_conductivity_complex(mixture_complex, x0, result, tol):
     assert thisresult == pytest.approx(result, abs=tol)
 
 
+def test_thermal_conductivity_is_temperature_step_independent(
+    mixture_complex,
+):
+    mixture_complex.T = 20862.0
+    wide_step = mixture_complex.calculate_thermal_conductivity(rel_delta_T=0.1)
+    narrow_step = mixture_complex.calculate_thermal_conductivity(
+        rel_delta_T=1e-8
+    )
+
+    assert np.isfinite(wide_step)
+    assert wide_step > 0
+    assert narrow_step == wide_step
+
+
 @pytest.mark.parametrize(
     "T, P, result, tol",
     [

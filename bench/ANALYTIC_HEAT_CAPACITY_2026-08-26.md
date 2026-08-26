@@ -84,6 +84,31 @@ For 20 temperatures and three SiCO ratios, with seven alternating repetitions:
 The analytical implementation is **2.68x faster**. It also ignores the legacy
 `rel_delta_T` argument, which is retained for API compatibility.
 
+## Connection to the log formulation
+
+The same explicit temperature residual has also been added to the exploratory
+log system. Solving its already-available Jacobian for `du/dT`, where
+`u = log(N)`, reproduces the production analytical mole-fraction tangent and
+heat capacity to `2e-8` relative tolerance at 12000 K.
+
+More importantly, at 10.1325 MPa and 1000 K the production equilibrium reaches
+`log(0)` before a heat capacity can be formed. Log equilibrium converges to a
+`3.5e-11` residual and returns a finite positive heat capacity of
+`950.492919 J/(kg K)`. At 1013.25 Pa and 23000 K, where production warns of
+non-convergence, log equilibrium returns `22364.133435 J/(kg K)`.
+
+This separates the two improvements cleanly: the analytical chain rule removes
+temperature-difference noise, while log variables prevent the underlying
+equilibrium solve from generating zeros or invalid tangents.
+
+## Thermal conductivity check
+
+Thermal conductivity already uses the analytical equilibrium tangent on this
+branch. Across a 0.1 K grid around the known 20862 K Si+ cutoff, changing the
+legacy `rel_delta_T` argument from `0.1` to `1e-8` changes the result bit for
+bit. Every value is finite; the largest local kink is
+`5.6e-6 W/(m K)`. A regression test now fixes this step independence.
+
 ## Remaining discontinuity
 
 This removes numerical derivative excursions, but it cannot make the hard
