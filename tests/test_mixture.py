@@ -142,11 +142,11 @@ def test_density_complex(mixture_complex, x0, result, tol):
 @pytest.mark.parametrize(
     "T, P, result, tol",
     [
-        (MID_T, MID_P, 3248.959, 1e-2),
+        (MID_T, MID_P, 3248.946, 1e-2),
         (LOW_T, LOW_P, 1081.252, 1e-2),
-        (HIGH_T, LOW_P, 27606.7, 1e-1),
+        (HIGH_T, LOW_P, 27606.856, 1e-1),
         (LOW_T, HIGH_P, 1081.252, 1e-2),
-        (HIGH_T, HIGH_P, 7297.516, 1e-2),
+        (HIGH_T, HIGH_P, 7297.441, 1e-2),
     ],
 )
 def test_heat_capacity_simple(mixture_simple, T, P, result, tol):
@@ -161,9 +161,9 @@ def test_heat_capacity_simple(mixture_simple, T, P, result, tol):
 @pytest.mark.parametrize(
     "x0, result, tol",
     [
-        (LOW_X0, 6027.484, 1e-2),
-        (MID_X0, 5504.194, 1e-2),
-        (HIGH_X0, 6061.864, 1e-2),
+        (LOW_X0, 6027.503, 1e-2),
+        (MID_X0, 5504.183, 1e-2),
+        (HIGH_X0, 6061.862, 1e-2),
     ],
 )
 def test_heat_capacity_complex(mixture_complex, x0, result, tol):
@@ -172,6 +172,26 @@ def test_heat_capacity_complex(mixture_complex, x0, result, tol):
     thisresult = mixture_complex.calculate_heat_capacity()
 
     assert thisresult == pytest.approx(result, abs=tol)
+
+
+@pytest.mark.parametrize("fixture_name", ["mixture_simple", "mixture_complex"])
+def test_heat_capacity_is_analytical_temperature_derivative(
+    request, fixture_name
+):
+    mixture = request.getfixturevalue(fixture_name)
+    mixture.T = 12000.0
+    analytical = mixture.calculate_heat_capacity(rel_delta_T=0.1)
+    assert mixture.calculate_heat_capacity(rel_delta_T=1e-8) == analytical
+
+    relative_step = 1e-5
+    with mixture._at_temperature(mixture.T * (1 - relative_step)):
+        enthalpy_low = mixture.calculate_enthalpy()
+    with mixture._at_temperature(mixture.T * (1 + relative_step)):
+        enthalpy_high = mixture.calculate_enthalpy()
+    finite_difference = (enthalpy_high - enthalpy_low) / (
+        2 * relative_step * mixture.T
+    )
+    assert analytical == pytest.approx(finite_difference, rel=2e-8)
 
 
 @pytest.mark.parametrize(

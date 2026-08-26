@@ -1160,20 +1160,16 @@ class LTE:
     def calculate_heat_capacity(self, rel_delta_T: float = 0.001) -> float:
         r"""Calculate the LTE heat capacity at constant pressure of the plasma.
 
-        Calculate the LTE heat capacity at constant pressure of the plasma
-        based on current conditions and species composition.
-
-        This is done by performing multiple LTE composition recalculations and
-        can be time-consuming to execute - when performing large quantities of
-        Cp calculations at different temperatures, it is more efficient to
-        calculate enthalpies and perform a numerical derivative external to
-        minplascalc.
+        The equilibrium enthalpy is differentiated analytically along the
+        constrained composition tangent. The electronic-level active set and
+        the species with the lowest reference energy are held fixed, making
+        this a piecewise derivative between discrete model transitions.
 
         Parameters
         ----------
         rel_delta_T : float, optional
-            Relative change in temperature to calculate the numerical
-            derivative, by default 0.001.
+            Retained for API compatibility; the analytical derivative does not
+            use a temperature step.
 
         Returns
         -------
@@ -1187,22 +1183,66 @@ class LTE:
         .. math::
 
             C_p = \frac{dH}{dT}
-                \approx \frac{H(T + \Delta T) - H(T - \Delta T)}{2 \Delta T}
 
         where:
 
         * :math:`C_p` is the heat capacity at constant pressure,
           in :math:`\text{J.kg}^{-1}.\text{K}^{-1}`,
         * :math:`H` is the enthalpy of the plasma, in :math:`\text{J.kg}^{-1}`,
-        * :math:`T` is the temperature, in :math:`\text{K}`, and
-        * :math:`\Delta T` is the relative change in temperature.
+        * :math:`T` is the temperature, in :math:`\text{K}`.
         """
-        start_temperature = self.T
-        with self._at_temperature(start_temperature * (1 - rel_delta_T)):
-            enthalpy_low = self.calculate_enthalpy()
-        with self._at_temperature(start_temperature * (1 + rel_delta_T)):
-            enthalpy_high = self.calculate_enthalpy()
-        return (enthalpy_high - enthalpy_low) / (2 * rel_delta_T * self.T)
+        del rel_delta_T
+        state = self._equilibrium_state()
+        tangent = self._equilibrium_temperature_tangent()
+        internal_energies = np.array(
+            [
+                species.internal_energy(state.T, lowering)
+                for species, lowering in zip(
+                    self.species, state.ionization_lowering
+                )
+            ]
+        )
+        internal_energy_derivatives = np.array(
+            [
+                species.dinternal_energy_dT(state.T, lowering)
+                for species, lowering in zip(
+                    self.species, state.ionization_lowering
+                )
+            ]
+        )
+        particle_enthalpies = (
+            internal_energies + state.reference_energies + state.kbt
+        )
+        particle_enthalpy_derivatives = (
+            internal_energy_derivatives
+            + tangent.reference_energy_derivative
+            + u.k_b
+        )
+
+        minimum = int(np.argmin(state.reference_energies))
+        mass_ratios = state.masses / state.masses[minimum]
+        relative_enthalpies = (
+            particle_enthalpies
+            - state.reference_energies[minimum] * mass_ratios
+        )
+        relative_enthalpy_derivatives = (
+            particle_enthalpy_derivatives
+            - tangent.reference_energy_derivative[minimum] * mass_ratios
+        )
+
+        mole_fractions = state.mole_fractions
+        mole_fraction_derivative = tangent.mole_fraction_derivative
+        mean_mass = mole_fractions @ state.masses
+        mean_mass_derivative = mole_fraction_derivative @ state.masses
+        enthalpy_per_particle = mole_fractions @ relative_enthalpies
+        enthalpy_derivative = (
+            mole_fraction_derivative @ relative_enthalpies
+            + mole_fractions @ relative_enthalpy_derivatives
+        )
+        return (
+            enthalpy_derivative * mean_mass
+            - enthalpy_per_particle * mean_mass_derivative
+        ) / mean_mass**2
 
     def calculate_viscosity(self) -> float:
         r"""Calculate the LTE viscosity of the plasma in :math:`\text{Pa.s}`.
