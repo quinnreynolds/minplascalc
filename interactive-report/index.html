@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="An interactive technical report on analytical temperature derivatives and log-space equilibrium in minplascalc."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="One equilibrium solve. Derivatives included." />
+    <meta property="og:description" content="Analytical temperature derivatives and log-space equilibrium in minplascalc." />
+    <meta property="og:image" content="og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="One equilibrium solve. Derivatives included." />
+    <meta name="twitter:description" content="Analytical temperature derivatives and log-space equilibrium in minplascalc." />
+    <meta name="twitter:image" content="og.png" />
+    <title>minplascalc | Equilibrium reformulation study</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <div class="reading-progress" aria-hidden="true"><span>&nbsp;</span></div>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Back to top">
+        <span class="brand-mark">mp</span>
+        <span>minplascalc <small>development study</small></span>
+      </a>
+      <nav aria-label="Report sections">
+        <a href="#finding">Finding</a>
+        <a href="#formulation">Formulation</a>
+        <a href="#evidence">Evidence</a>
+        <a href="#cutoff">Sharp features</a>
+        <a href="#roadmap">Roadmap</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell">
+        <div class="eyebrow"><span aria-hidden="true">&nbsp;</span> Branch report · August 2026</div>
+        <h1>One equilibrium solve.<br /><em>Derivatives included.</em></h1>
+        <p class="hero-copy">
+          Replacing temperature excursions led to a larger opportunity: solve
+          the constrained equilibrium in log particle numbers, then recover
+          the temperature tangent directly from the same analytical Jacobian.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#finding">Walk through the result</a>
+          <a
+            class="button secondary"
+            href="https://github.com/quinnreynolds/minplascalc/tree/feature/consolidate-computation-state"
+            >Browse the branch ↗</a
+          >
+        </div>
+        <div class="route-picker" aria-label="Choose a reading route">
+          <span>Jump to</span>
+          <button data-jump="#finding">The conclusion</button>
+          <button data-jump="#formulation">The mathematics</button>
+          <button data-jump="#evidence">The measurements</button>
+        </div>
+        <div class="metric-strip" aria-label="Headline results">
+          <article><strong>2.62×</strong><span>equilibrium speedup</span></article>
+          <article><strong>2.68×</strong><span>heat-capacity speedup</span></article>
+          <article><strong>10.5×</strong><span>fewer Newton iterations</span></article>
+          <article><strong>149</strong><span>tests passing</span></article>
+        </div>
+      </section>
+
+      <section id="finding" class="section-shell report-section">
+        <div class="section-number">01</div>
+        <div class="section-heading">
+          <p class="kicker">The central finding</p>
+          <h2>The derivative problem was also a solver problem.</h2>
+          <p>
+            Numerical temperature excursions introduce truncation error,
+            duplicate equilibrium work, and can straddle a discontinuous
+            electronic active set. Analytical differentiation removes that
+            noise. Log variables solve the deeper conditioning problem by
+            making positivity structural.
+          </p>
+        </div>
+        <div class="finding-grid">
+          <article class="finding-card old">
+            <span class="card-label">Previous path</span>
+            <h3>Three temperatures for one value</h3>
+            <p>T − ΔT</p><i aria-hidden="true">&nbsp;</i><p>T</p><i aria-hidden="true">&nbsp;</i><p>T + ΔT</p>
+            <footer>Independent solves can land on different branches.</footer>
+          </article>
+          <article class="finding-card new">
+            <span class="card-label">Explored path</span>
+            <h3>One state, one Jacobian</h3>
+            <div class="jacobian-orbit"><b>J</b><span>state</span><span>dN/dT</span><span>dx/dT</span></div>
+            <footer>The converged system supplies its own tangent.</footer>
+          </article>
+        </div>
+      </section>
+
+      <section id="formulation" class="section-shell report-section">
+        <div class="section-number">02</div>
+        <div class="section-heading">
+          <p class="kicker">The formulation</p>
+          <h2>Positivity becomes a coordinate choice.</h2>
+          <p>
+            Write each particle number as <code>uᵢ = log Nᵢ</code>, scale the
+            conservation multipliers by <code>k<sub>B</sub>T</code>, and solve
+            chemical equilibrium, element conservation, and charge neutrality
+            together. No clipping or particle-change governor is required.
+          </p>
+        </div>
+        <div class="equation-explorer">
+          <div class="tab-list" role="tablist" aria-label="Formulation views">
+            <button id="tab-residual" role="tab" aria-selected="true" aria-controls="panel-residual" data-equation="residual">Coupled residual</button>
+            <button id="tab-tangent" role="tab" aria-selected="false" aria-controls="panel-tangent" data-equation="tangent">Temperature tangent</button>
+            <button id="tab-capacity" role="tab" aria-selected="false" aria-controls="panel-capacity" data-equation="capacity">Heat capacity</button>
+          </div>
+          <div id="panel-residual" class="equation-panel active" role="tabpanel" aria-labelledby="tab-residual" data-panel="residual">
+            <div class="equation-line"><span>Chemical</span><strong>Eᵢ⁰/(k<sub>B</sub>T) − log(Zᵢ/Nᵢ) + Aᵢλ = 0</strong></div>
+            <div class="equation-line"><span>Elements</span><strong>log((A<sup>T</sup>N)<sub>e</sub> / b<sub>e</sub>) = 0</strong></div>
+            <div class="equation-line"><span>Charge</span><strong>z<sup>T</sup>N / ΣN = 0</strong></div>
+            <p>Every species and every conservation law participates in one dimensionless Newton system.</p>
+          </div>
+          <div id="panel-tangent" class="equation-panel" role="tabpanel" aria-labelledby="tab-tangent" data-panel="tangent" hidden>
+            <div class="equation-hero"><b>J</b><span>d y / dT</span><i>=</i><span>−∂F / ∂T</span></div>
+            <p>The converged Jacobian is reused. Solving one new right-hand side yields <code>d log N/dT</code>, then <code>dx/dT</code>, reference-energy derivatives, <code>C<sub>P</sub></code>, and the reactional terms in <code>κ</code>.</p>
+          </div>
+          <div id="panel-capacity" class="equation-panel" role="tabpanel" aria-labelledby="tab-capacity" data-panel="capacity" hidden>
+            <div class="equation-line"><span>Enthalpy</span><strong>H = (Σ xᵢ Aᵢ) / (Σ xᵢ mᵢ)</strong></div>
+            <div class="equation-line"><span>Lowering</span><strong>dE⁰/dT = ∂E⁰/∂T + (∂E⁰/∂N) · dN/dT</strong></div>
+            <div class="equation-line"><span>Monatomic C<sub>V</sub></span><strong>3k<sub>B</sub>/2 + Var(E)/(k<sub>B</sub>T²)</strong></div>
+            <p>The quotient rule completes the mixture heat capacity with the current electronic active set held fixed.</p>
+          </div>
+        </div>
+        <div class="system-flow" aria-label="Calculation flow">
+          <article><span>01</span><b>Pack thermodynamics</b><small>levels · partitions · lowering</small></article>
+          <i>→</i>
+          <article><span>02</span><b>Solve log equilibrium</b><small>one coupled residual</small></article>
+          <i>→</i>
+          <article><span>03</span><b>Reuse Jacobian</b><small>one tangent right-hand side</small></article>
+          <i>→</i>
+          <article><span>04</span><b>Evaluate properties</b><small>C<sub>P</sub> · κ · transport</small></article>
+        </div>
+      </section>
+
+      <section id="evidence" class="section-shell report-section">
+        <div class="section-number">03</div>
+        <div class="section-heading">
+          <p class="kicker">Measured evidence</p>
+          <h2>Explore the benchmark, not just the headline.</h2>
+          <p>Select a workload to compare the kernel result with its real end-to-end effect. All timings are medians from alternating runs on AC power.</p>
+        </div>
+        <div class="benchmark-explorer">
+          <div class="benchmark-controls" role="tablist" aria-label="Benchmark workload">
+            <button class="active" role="tab" aria-selected="true" data-benchmark="equilibrium">Equilibrium</button>
+            <button role="tab" aria-selected="false" data-benchmark="capacity">Heat capacity</button>
+            <button role="tab" aria-selected="false" data-benchmark="collision">Collision floor</button>
+          </div>
+          <div class="benchmark-card interactive" aria-live="polite">
+            <div class="benchmark-head">
+              <div>
+                <span id="bench-context" class="card-label">SiCO · 20 temperatures · 3 ratios</span>
+                <h3 id="bench-title">Equilibrium sweep</h3>
+              </div>
+              <strong id="bench-speedup">2.62× faster</strong>
+            </div>
+            <div class="bar-row">
+              <span id="bench-old-label">Production</span><div><i id="bench-old-bar" style="--value: 100%"></i></div><b id="bench-old-value">0.297 s</b>
+            </div>
+            <div class="bar-row accent">
+              <span id="bench-new-label">Log Newton</span><div><i id="bench-new-bar" style="--value: 38.2%"></i></div><b id="bench-new-value">0.114 s</b>
+            </div>
+            <p id="bench-note" class="benchmark-note">2574 production iterations versus 610 log iterations. Maximum absolute mole-fraction difference: 1.24×10⁻⁸.</p>
+          </div>
+          <aside class="amdahl-note">
+            <span>Profiling lesson</span>
+            <p id="bench-lesson">The dense linear solve is only about 4% of prototype runtime. Thermodynamic evaluation—not linear algebra—is the remaining optimization target.</p>
+          </aside>
+        </div>
+        <div class="progression">
+          <div class="progression-head"><span class="card-label">Log-solver optimization sequence</span><strong>1.28× → 2.62×</strong></div>
+          <ol>
+            <li style="--gain: 49%"><b>Prototype</b><span>1.28×</span><small>full coupled residual</small></li>
+            <li style="--gain: 61%"><b>Pack</b><span>1.59×</span><small>fused level arrays</small></li>
+            <li style="--gain: 75%"><b>Reuse</b><span>1.97×</span><small>accepted candidate state</small></li>
+            <li style="--gain: 84%"><b>Cache</b><span>2.20×</span><small>fixed-temperature factors</small></li>
+            <li style="--gain: 100%"><b>Vectorize</b><span>2.62×</span><small>lowering + derivative</small></li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="validation" class="section-shell report-section">
+        <div class="section-number">04</div>
+        <div class="section-heading">
+          <p class="kicker">Validation envelope</p>
+          <h2>The formulation improves difficult states, not only timings.</h2>
+          <p>
+            The prototype was exercised across both workload families, four
+            orders of magnitude in pressure, and both sweep directions. Open
+            any card for the underlying observation.
+          </p>
+        </div>
+        <div class="validation-grid">
+          <details open><summary><span>Range</span><b>1000–25,000 K</b></summary><p>Simple oxygen and 16-species SiCO, ascending and descending continuation, from 1,013.25 Pa to 10.1325 MPa. Every log state remained finite and strictly positive.</p></details>
+          <details><summary><span>Jacobian</span><b>1.5×10⁻¹⁰</b></summary><p>Relative-norm agreement between the exact analytical Jacobian and a central numerical Jacobian at the 16-species, 12,000 K state.</p></details>
+          <details><summary><span>High pressure</span><b>No log(0)</b></summary><p>At 10.1325 MPa and 1,000 K, production returns a non-finite composition. Log equilibrium reaches a 3.5×10⁻¹¹ residual and gives C<sub>P</sub> = 950.492919 J/(kg·K).</p></details>
+          <details><summary><span>Low pressure</span><b>Converged root</b></summary><p>At 1,013.25 Pa and 23,000 K, production warns of non-convergence. Log equilibrium converges to roundoff and gives C<sub>P</sub> = 22,364.133435 J/(kg·K).</p></details>
+          <details><summary><span>Heat capacity</span><b>2×10⁻⁸</b></summary><p>The log-Jacobian tangent reproduces the production analytical mole-fraction tangent and heat capacity to 2×10⁻⁸ relative tolerance at 12,000 K.</p></details>
+          <details><summary><span>Thermal conductivity</span><b>Step invariant</b></summary><p>Around the known Si+ cutoff, changing the legacy relative temperature step from 0.1 to 10⁻⁸ changes κ bit for bit by zero.</p></details>
+        </div>
+      </section>
+
+      <section id="cutoff" class="section-shell report-section cutoff-section">
+        <div class="section-number">05</div>
+        <div class="section-heading">
+          <p class="kicker">The sharp-feature question</p>
+          <h2>The numerical outlier is gone. The model discontinuity remains.</h2>
+          <p>A hard ionisation-lowered level cutoff changes the partition sum discretely. The analytical result is therefore piecewise: well-defined between crossings, but with two one-sided values at the crossing itself.</p>
+        </div>
+        <div class="cutoff-lab">
+          <div class="cutoff-controls">
+            <label for="temperature-slider">Explore the observed Si+ crossing window <output id="temperature-output">20,862.00 K</output></label>
+            <input id="temperature-slider" type="range" min="20860" max="20864" value="20862" step="0.05" />
+            <div class="scale"><span>20,860 K</span><i aria-hidden="true">&nbsp;</i><span>20,864 K</span></div>
+          </div>
+          <div class="active-readout">
+            <div><span>Observed active set</span><strong id="active-count">27 ↔ 28</strong><small>Si+ electronic levels</small></div>
+            <div><span>Local status</span><strong id="branch-status">Two roots</strong><small id="branch-detail">The 28-level root has lower Gibbs objective.</small></div>
+          </div>
+          <p class="lab-caption">Conceptual readout from the 0.05 K branch scan; it is not an interpolation of thermodynamic properties.</p>
+        </div>
+        <div class="policy-grid">
+          <article class="recommended"><span>Recommended now</span><h3>Retain the piecewise derivative</h3><p>It removes finite-difference artifacts without silently changing the physical model. Surface crossings explicitly in tests and diagnostics.</p></article>
+          <article><span>Separate investigation</span><h3>Mollify level occupation</h3><p>A smooth occupation function would make the Jacobian globally continuous, but changes thermodynamics and needs Quinn’s input on the appropriate physical policy.</p></article>
+        </div>
+      </section>
+
+      <section id="history" class="section-shell report-section">
+        <div class="section-number">06</div>
+        <div class="section-heading">
+          <p class="kicker">Reproducible checkpoints</p>
+          <h2>The branch is an experiment log, not one large leap.</h2>
+          <p>Filter the sequence to see how consolidation, kernel work, equilibrium reformulation, and analytical properties built on one another.</p>
+        </div>
+        <div class="timeline-controls" aria-label="Filter checkpoints">
+          <button class="active" data-phase="all">All</button>
+          <button data-phase="foundation">Foundation</button>
+          <button data-phase="kernel">Kernels</button>
+          <button data-phase="equilibrium">Equilibrium</button>
+          <button data-phase="properties">Properties</button>
+        </div>
+        <ol class="timeline">
+          <li data-phase="foundation"><time>1b7afca</time><div><b>Consolidate equilibrium state</b><p>Create the common state boundary needed for safe reuse.</p></div></li>
+          <li data-phase="kernel"><time>77f3192</time><div><b>Compile the collision-pair kernel</b><p>Move all hot pair loops into one numeric kernel.</p></div></li>
+          <li data-phase="kernel"><time>7b800ca</time><div><b>Establish the Fortran floor</b><p>4.4× faster kernel, but only 1.002× end-to-end: stop optimizing the wrong 1.9%.</p></div></li>
+          <li data-phase="properties"><time>3ccd188</time><div><b>Use the implicit equilibrium derivative</b><p>Remove temperature excursions from thermal conductivity.</p></div></li>
+          <li data-phase="equilibrium"><time>869fa77</time><div><b>Prototype the coupled log solver</b><p>Make positivity structural and solve all constraints together.</p></div></li>
+          <li data-phase="equilibrium"><time>f87ddfe</time><div><b>Reach the packed-kernel checkpoint</b><p>2.62× equilibrium speedup after fusion, reuse, caching, and vectorized lowering.</p></div></li>
+          <li data-phase="equilibrium"><time>151758c</time><div><b>Validate pressure and direction</b><p>Finite positive states throughout the expanded matrix.</p></div></li>
+          <li data-phase="properties"><time>1246a7f</time><div><b>Replace heat-capacity differencing</b><p>Complete the analytical enthalpy chain rule and gain 2.68×.</p></div></li>
+          <li data-phase="properties"><time>9a55029</time><div><b>Fix the stability envelope</b><p>149 tests cover derivatives, cutoffs, and step invariance.</p></div></li>
+        </ol>
+      </section>
+
+      <section id="roadmap" class="section-shell report-section roadmap-section">
+        <div class="section-number">07</div>
+        <div class="section-heading">
+          <p class="kicker">Suggested integration path</p>
+          <h2>Bank the numerical win before changing the model.</h2>
+          <p>The prototype deliberately does not chase full API compatibility. A staged merge keeps review units small and makes the physical cutoff decision independent.</p>
+        </div>
+        <ol class="roadmap">
+          <li><span>01</span><div><b>Land analytical property derivatives</b><p>The species moments, equilibrium tangent, C<sub>P</sub>, and κ path are independently useful and already regression-tested.</p></div><em>Low API risk</em></li>
+          <li><span>02</span><div><b>Introduce an internal equilibrium result</b><p>Return composition, thermodynamic state, Jacobian, active set, and diagnostics from one solver boundary.</p></div><em>Enables reuse</em></li>
+          <li><span>03</span><div><b>Port the packed log solver behind that boundary</b><p>Preserve current public methods while replacing the governed particle-number iteration.</p></div><em>Main performance step</em></li>
+          <li><span>04</span><div><b>Choose an explicit crossing policy</b><p>Keep the piecewise branch selector or develop a physically justified mollification in a separate change.</p></div><em>Needs technical input</em></li>
+        </ol>
+        <div class="decision-card">
+          <div><span class="card-label">Bottom line</span><h3>The rewrite is now justified by three independent signals.</h3></div>
+          <ul><li>Fewer iterations</li><li>Lower wall-clock cost</li><li>Better difficult-state behaviour</li></ul>
+        </div>
+      </section>
+
+      <section class="section-shell report-section appendix">
+        <div class="section-number">A</div>
+        <div class="section-heading">
+          <p class="kicker">Scope and method</p>
+          <h2>What these numbers do—and do not—claim.</h2>
+        </div>
+        <div class="appendix-grid">
+          <div><h3>Workload</h3><p>The main benchmark is the tutorial-style 16-species SiCO workload: three SiO fractions and 20 temperatures from 1,000 to 25,000 K.</p></div>
+          <div><h3>Timing</h3><p>Seven alternating runs on an Apple arm64 machine under AC power. Medians are reported to reduce ordering and thermal effects.</p></div>
+          <div><h3>Status</h3><p>The analytical derivatives are in the production classes on this branch. The packed log solver remains an isolated benchmark prototype.</p></div>
+          <div><h3>Source</h3><p>All harnesses, validation tests, numerical reports, and benchmark tags are retained in the branch history for reproduction.</p></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      <span>feature/consolidate-computation-state · 9a55029</span>
+      <a href="#top">Back to top ↑</a>
+      <span>Prepared from reproducible branch benchmarks · August 2026</span>
+    </footer>
+  </body>
+</html>
