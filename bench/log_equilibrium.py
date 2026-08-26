@@ -50,6 +50,16 @@ class LogEquilibriumBranchResult:
 
 
 @dataclass(frozen=True)
+class LogEquilibriumTemperatureTangent:
+    """Temperature derivative recovered from the log-system Jacobian."""
+
+    log_particle_derivative: np.ndarray
+    particle_derivative: np.ndarray
+    mole_fraction_derivative: np.ndarray
+    reference_energy_derivative: np.ndarray
+
+
+@dataclass(frozen=True)
 class _PackedThermodynamics:
     """Thermodynamic values shared by the residual and Jacobian."""
 
@@ -631,6 +641,121 @@ class LogEquilibriumSystem:
             + result.log_particles
         )
         return float(thermodynamics.particle_numbers @ chemical_potential)
+
+    def temperature_tangent(
+        self, result: LogEquilibriumResult
+    ) -> LogEquilibriumTemperatureTangent:
+        """Differentiate the coupled log equilibrium at a converged state."""
+        thermodynamics = self._packed_thermodynamics(
+            result.log_particles, derivatives=True
+        )
+        derivative = self._jacobian_from_thermodynamics(thermodynamics)
+        self._set_particle_numbers(thermodynamics.particle_numbers)
+        reference_dN, reference_dT = (
+            self.mixture._LTE__get_reference_energy_derivatives()
+        )
+        temperature = self.mixture.T
+        kbt = u.k_b * temperature
+        dlog_partition_dT = np.array(
+            [
+                1 / temperature
+                + species.dlog_total_partition_dT(temperature, lowering)
+                for species, lowering in zip(
+                    self.mixture.species,
+                    thermodynamics.ionization_lowering,
+                )
+            ]
+        )
+        explicit_derivative = np.zeros(
+            self.species_count + self.constraint_count
+        )
+        explicit_derivative[: self.species_count] = (
+            reference_dT / kbt
+            - thermodynamics.reference_energies / (kbt * temperature)
+            - dlog_partition_dT
+        )
+        state_derivative = np.linalg.solve(derivative, -explicit_derivative)
+        log_particle_derivative = state_derivative[: self.species_count]
+        particle_derivative = (
+            thermodynamics.particle_numbers * log_particle_derivative
+        )
+        mole_fractions = (
+            thermodynamics.particle_numbers / thermodynamics.particle_total
+        )
+        mole_fraction_derivative = mole_fractions * (
+            log_particle_derivative - mole_fractions @ log_particle_derivative
+        )
+        return LogEquilibriumTemperatureTangent(
+            log_particle_derivative=log_particle_derivative,
+            particle_derivative=particle_derivative,
+            mole_fraction_derivative=mole_fraction_derivative,
+            reference_energy_derivative=(
+                reference_dT + reference_dN @ particle_derivative
+            ),
+        )
+
+    def heat_capacity(self, result: LogEquilibriumResult) -> float:
+        """Return piecewise analytical Cp at a log-equilibrium result."""
+        thermodynamics = self._packed_thermodynamics(
+            result.log_particles, derivatives=False
+        )
+        tangent = self.temperature_tangent(result)
+        temperature = self.mixture.T
+        species = self.mixture.species
+        internal_energies = np.array(
+            [
+                item.internal_energy(temperature, lowering)
+                for item, lowering in zip(
+                    species, thermodynamics.ionization_lowering
+                )
+            ]
+        )
+        internal_energy_derivatives = np.array(
+            [
+                item.dinternal_energy_dT(temperature, lowering)
+                for item, lowering in zip(
+                    species, thermodynamics.ionization_lowering
+                )
+            ]
+        )
+        enthalpies = (
+            internal_energies
+            + thermodynamics.reference_energies
+            + u.k_b * temperature
+        )
+        enthalpy_derivatives = (
+            internal_energy_derivatives
+            + tangent.reference_energy_derivative
+            + u.k_b
+        )
+        minimum = int(np.argmin(thermodynamics.reference_energies))
+        masses = self.mixture.masses
+        mass_ratios = masses / masses[minimum]
+        relative_enthalpies = (
+            enthalpies
+            - thermodynamics.reference_energies[minimum] * mass_ratios
+        )
+        relative_enthalpy_derivatives = (
+            enthalpy_derivatives
+            - tangent.reference_energy_derivative[minimum] * mass_ratios
+        )
+        mole_fractions = (
+            thermodynamics.particle_numbers / thermodynamics.particle_total
+        )
+        mean_mass = mole_fractions @ masses
+        mean_mass_derivative = tangent.mole_fraction_derivative @ masses
+        enthalpy_per_particle = mole_fractions @ relative_enthalpies
+        enthalpy_derivative = (
+            tangent.mole_fraction_derivative @ relative_enthalpies
+            + mole_fractions @ relative_enthalpy_derivatives
+        )
+        return float(
+            (
+                enthalpy_derivative * mean_mass
+                - enthalpy_per_particle * mean_mass_derivative
+            )
+            / mean_mass**2
+        )
 
     def solve_lowest_gibbs_branch(
         self,
