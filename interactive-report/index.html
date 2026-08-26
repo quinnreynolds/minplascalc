@@ -31,6 +31,7 @@
         <a href="#formulation">Formulation</a>
         <a href="#evidence">Evidence</a>
         <a href="#cutoff">Sharp features</a>
+        <a href="#reduced">Reduced system</a>
         <a href="#roadmap">Roadmap</a>
       </nav>
     </header>
@@ -260,8 +261,63 @@
         </ol>
       </section>
 
-      <section id="roadmap" class="section-shell report-section roadmap-section">
+      <section id="reduced" class="section-shell report-section reduced-section">
         <div class="section-number">07</div>
+        <div class="section-heading">
+          <p class="kicker">The more radical option</p>
+          <h2>Eliminate the species variables altogether.</h2>
+          <p>
+            The measured log solver still treats every <code>log Nᵢ</code> as
+            an independent Newton variable. A more radical reduction uses the
+            chemical-equilibrium equations to express every species density
+            analytically in terms of a much smaller set of elemental and
+            charge potentials.
+          </p>
+        </div>
+        <div class="reduced-status"><span>Design direction</span><b>Not yet implemented or benchmarked</b><p>This is a plausible next experiment, not part of the 2.62× result.</p></div>
+        <div class="elimination-stage">
+          <div class="system-box full-system">
+            <span class="card-label">Measured coupled formulation</span>
+            <strong id="full-unknowns">20</strong>
+            <b>nonlinear unknowns</b>
+            <div class="variable-cloud"><i>u₁</i><i>u₂</i><i>…</i><i id="last-species-variable">u₁₆</i><i>λ₁</i><i>…</i><i>λ<sub>e</sub></i><i>λ<sub>z</sub></i></div>
+          </div>
+          <div class="elimination-arrow"><span>analytically eliminate</span><b>Nᵢ</b><i>→</i></div>
+          <div class="system-box reduced-system">
+            <span class="card-label">Radically reduced formulation</span>
+            <strong id="reduced-unknowns">6</strong>
+            <b>nonlinear unknowns</b>
+            <div class="variable-cloud"><i>λ₁</i><i>…</i><i>λ<sub>e</sub></i><i>λ<sub>z</sub></i><i class="lowering-variable">log n<sub>e</sub></i><i class="lowering-variable">log z*</i></div>
+          </div>
+        </div>
+        <div class="reduced-equation">
+          <span>Species reconstruction</span>
+          <strong>nᵢ = qᵢ(T, ΔE) · exp[−Eᵢ⁰(ΔE)/(k<sub>B</sub>T) − Aᵢλ]</strong>
+          <p>Once the reduced variables are known, all species densities are reconstructed in one packed evaluation.</p>
+        </div>
+        <div class="reduction-lab">
+          <div class="reduction-inputs">
+            <label>Species <output id="species-output">16</output><input id="species-slider" type="range" min="4" max="40" step="1" value="16" /></label>
+            <label>Elements <output id="elements-output">3</output><input id="elements-slider" type="range" min="1" max="6" step="1" value="3" /></label>
+            <label class="closure-toggle"><input id="lowering-toggle" type="checkbox" checked /><span>Include two ionisation-lowering closures</span></label>
+          </div>
+          <div class="reduction-result"><strong id="reduction-percent">70%</strong><span>fewer nonlinear unknowns</span><small id="reduction-detail">20 → 6 for the selected system</small></div>
+        </div>
+        <div class="closure-grid">
+          <article><span>01</span><h3>Pressure closure</h3><p><code>Σ nᵢ k<sub>B</sub>T = P</code> fixes the otherwise free potential gauge and removes the arbitrary particle scale.</p></article>
+          <article><span>02</span><h3>Element ratios</h3><p>Elemental totals are enforced as density ratios, leaving only the independent feed-composition constraints.</p></article>
+          <article><span>03</span><h3>Charge neutrality</h3><p><code>Σ zᵢ nᵢ = 0</code> remains a direct reduced residual.</p></article>
+          <article><span>04</span><h3>Lowering closures</h3><p><code>n<sub>e</sub></code> and <code>z*</code> are retained as variables so ionisation lowering is solved simultaneously, not hidden in a subsolver.</p></article>
+        </div>
+        <div class="tradeoff-grid">
+          <article class="upside"><span>Why explore it</span><ul><li>A 20×20 SiCO solve becomes roughly 6×6</li><li>No particle scale, volume variable, or positivity handling</li><li>The reduced Jacobian supplies property tangents too</li><li>A compact fixed-active-set system is friendly to AD</li></ul></article>
+          <article class="risk"><span>Why it may not win</span><ul><li>Linear algebra is only about 4% of current prototype time</li><li>Exponential reconstruction can stiffen globalization</li><li>Zero-feed elements and potential gauge need careful handling</li><li>Hard level cutoffs remain discontinuous</li></ul></article>
+        </div>
+        <div class="reduced-conclusion"><b>Best use of this experiment</b><p>Establish whether the smaller state improves robustness, continuation, and derivative reuse—not merely whether a 6×6 solve is cheaper than a 20×20 solve.</p></div>
+      </section>
+
+      <section id="roadmap" class="section-shell report-section roadmap-section">
+        <div class="section-number">08</div>
         <div class="section-heading">
           <p class="kicker">Suggested integration path</p>
           <h2>Bank the numerical win before changing the model.</h2>
@@ -271,7 +327,8 @@
           <li><span>01</span><div><b>Land analytical property derivatives</b><p>The species moments, equilibrium tangent, C<sub>P</sub>, and κ path are independently useful and already regression-tested.</p></div><em>Low API risk</em></li>
           <li><span>02</span><div><b>Introduce an internal equilibrium result</b><p>Return composition, thermodynamic state, Jacobian, active set, and diagnostics from one solver boundary.</p></div><em>Enables reuse</em></li>
           <li><span>03</span><div><b>Port the packed log solver behind that boundary</b><p>Preserve current public methods while replacing the governed particle-number iteration.</p></div><em>Main performance step</em></li>
-          <li><span>04</span><div><b>Choose an explicit crossing policy</b><p>Keep the piecewise branch selector or develop a physically justified mollification in a separate change.</p></div><em>Needs technical input</em></li>
+          <li><span>04</span><div><b>Benchmark the reduced-potential variant</b><p>Use the packed thermodynamic kernel as a common base and compare convergence, conditioning, and tangent cost—not only matrix size.</p></div><em>Research branch</em></li>
+          <li><span>05</span><div><b>Choose an explicit crossing policy</b><p>Keep the piecewise branch selector or develop a physically justified mollification in a separate change.</p></div><em>Needs technical input</em></li>
         </ol>
         <div class="decision-card">
           <div><span class="card-label">Bottom line</span><h3>The rewrite is now justified by three independent signals.</h3></div>

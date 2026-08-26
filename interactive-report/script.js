@@ -150,6 +150,44 @@ function updateCutoffLab() {
 temperatureSlider.addEventListener("input", updateCutoffLab);
 updateCutoffLab();
 
+const speciesSlider = document.querySelector("#species-slider");
+const elementsSlider = document.querySelector("#elements-slider");
+const loweringToggle = document.querySelector("#lowering-toggle");
+const speciesOutput = document.querySelector("#species-output");
+const elementsOutput = document.querySelector("#elements-output");
+const fullUnknowns = document.querySelector("#full-unknowns");
+const reducedUnknowns = document.querySelector("#reduced-unknowns");
+const reductionPercent = document.querySelector("#reduction-percent");
+const reductionDetail = document.querySelector("#reduction-detail");
+const lastSpeciesVariable = document.querySelector("#last-species-variable");
+
+const subscriptDigits = "₀₁₂₃₄₅₆₇₈₉";
+function toSubscript(value) {
+  return String(value).replace(/\d/g, (digit) => subscriptDigits[Number(digit)]);
+}
+
+function updateReductionLab() {
+  const species = Number(speciesSlider.value);
+  const elements = Number(elementsSlider.value);
+  const full = species + elements + 1;
+  const reduced = elements + 1 + (loweringToggle.checked ? 2 : 0);
+  const reduction = Math.round((1 - reduced / full) * 100);
+  speciesOutput.textContent = species;
+  elementsOutput.textContent = elements;
+  fullUnknowns.textContent = full;
+  reducedUnknowns.textContent = reduced;
+  reductionPercent.textContent = `${reduction}%`;
+  reductionDetail.textContent = `${full} → ${reduced} for the selected system`;
+  lastSpeciesVariable.textContent = `u${toSubscript(species)}`;
+  document.querySelectorAll(".lowering-variable").forEach((variable) => {
+    variable.hidden = !loweringToggle.checked;
+  });
+}
+
+[speciesSlider, elementsSlider].forEach((input) => input.addEventListener("input", updateReductionLab));
+loweringToggle.addEventListener("change", updateReductionLab);
+updateReductionLab();
+
 const timelineItems = [...document.querySelectorAll(".timeline li")];
 
 document.querySelectorAll(".timeline-controls button").forEach((button) => {
