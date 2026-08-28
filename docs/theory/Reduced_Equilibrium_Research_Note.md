@@ -856,6 +856,16 @@ The existing approximately 4% dense-linear-solve share belongs only to the
 packed full-log prototype. It is not a production-time share for the reduced
 solver and must not be used as a reduced-solver speedup claim.
 
+The first implementation follow-up then shared the packed partition/reference
+kernel between both prototypes and cached reduced reconstruction by temperature
+and potential values across residual/Jacobian callbacks. On the same SiCO
+sweep, reduced end-to-end time fell from 0.412530 to 0.160236 seconds. The
+reduced formulation is consequently 2.03 times faster than production and
+1.49 times slower than full log at this checkpoint. True reconstructions fell
+to 727 for 1,531 optimizer callbacks, with 804 cache hits. Oxygen end-to-end
+time fell from 0.063869 to 0.031342 seconds. All accuracy, tangent, continuation,
+and exact-fingerprint checks remain in force.
+
 One additional basin limitation remains material for any future benchmark:
 direct least-squares from a generic state fails for simple oxygen at 20,000 K
 and 1,013.25 Pa (optimizer status 2, residual 1.0), whereas the 12,000 K
@@ -898,10 +908,10 @@ multiple trace-lowering roots, direct cold starts can fail, and the hard
 cutoff creates locally competing branches.
 
 Do not replace `LTE.calculate_composition` or fold the prototype into the
-public API. The measured reduced solver is slower end to end than both
-production and full log on the recorded workloads, despite materially better
-warm/hot conditioning. The dense solve is also a small share of the already
-measured full-log prototype runtime. Any complete transport-property
-integration and production API change should be proposed and benchmarked
-separately after a new kernel/globalisation design addresses the reduced
-prototype's evaluation cost and cold trace-root basin.
+public API yet. Packed-kernel consolidation makes the reduced solver faster
+than production on the recorded equilibrium workload, but it remains slower
+than full log and retains the cold trace-root basin limitations. The dense
+solve is also a small share of the measured full-log runtime. Any complete
+transport-property integration and production API change should be proposed
+and benchmarked separately after continuation/globalisation work addresses the
+remaining evaluation count and cold trace-root basin.

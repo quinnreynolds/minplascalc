@@ -39,6 +39,8 @@ class ReducedEquilibriumResult:
     backtracks: int
     jacobian_condition: float
     ionization_lowering: np.ndarray
+    reconstruction_evaluations: int = 0
+    reconstruction_cache_hits: int = 0
     temperature: float = 0.0
     method: str = "newton"
 
@@ -52,6 +54,8 @@ class ReducedEquilibriumPathResult:
     total_residual_evaluations: int
     total_backtracks: int
     continuation_solves: int
+    total_reconstruction_evaluations: int
+    total_reconstruction_cache_hits: int
 
 
 @dataclass(frozen=True)
@@ -93,6 +97,20 @@ class ReducedEquilibriumTemperatureTangent:
     def particle_derivative(self) -> np.ndarray:
         """Compatibility alias for the full log-space prototype."""
         return self.number_density_derivative
+
+
+@dataclass(frozen=True)
+class _ReducedReconstructedState:
+    """Thermodynamic reconstruction shared by residual and Jacobian calls."""
+
+    log_densities: np.ndarray
+    fractions: np.ndarray
+    slopes: np.ndarray
+    lowering: np.ndarray
+    log_total: float
+    log_moments: np.ndarray
+    log_positive_moment_one: float | None
+    log_positive_moment_two: float | None
 
 
 class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
@@ -238,6 +256,11 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
                 "factor finite and positive."
             )
         self.residual_evaluations = 0
+        self.reconstruction_evaluations = 0
+        self.reconstruction_cache_hits = 0
+        self._reconstruction_cache_temperature = np.nan
+        self._reconstruction_cache_potentials = None
+        self._reconstruction_cache_state = None
 
     def _refresh_temperature_cache(self) -> None:
         """Refresh fixed-lowering quantities after ``mixture.T`` changes."""
@@ -360,11 +383,12 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
             lowering, derivative_matrix
         )
 
-    def _reconstruct(
+    def _reconstruct_components(
         self, potentials: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Return logs, normalized densities, and stationarity slopes."""
-        self._refresh_temperature_cache()
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+        """Return the primitive reconstructed species state."""
+        if not self.coupled_ionization_lowering:
+            self._refresh_temperature_cache()
         base = potentials[: self.base_potential_count]
         if self.coupled_ionization_lowering:
             lowering, d_eta, d_xi = self._coupled_lowering(
@@ -389,17 +413,85 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
         log_total = _logsumexp(log_densities)
         with np.errstate(over="ignore", invalid="ignore"):
             fractions = np.exp(log_densities - log_total)
-        return log_densities, fractions, slopes, lowering
+        return log_densities, fractions, slopes, lowering, log_total
+
+    def _reconstruct(
+        self, potentials: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Return logs, normalized densities, and stationarity slopes."""
+        return self._reconstruct_components(potentials)[:4]
+
+    def _build_reconstructed_state(
+        self, potentials: np.ndarray
+    ) -> _ReducedReconstructedState:
+        """Build all thermodynamic values shared by residual and Jacobian."""
+        self.reconstruction_evaluations += 1
+        (
+            log_densities,
+            fractions,
+            slopes,
+            lowering,
+            log_total,
+        ) = self._reconstruct_components(potentials)
+        log_moments = np.empty(self.element_count)
+        for column in range(self.element_count):
+            coefficients = self.stoichiometry[:, column]
+            present = coefficients > 0
+            log_moments[column] = _logsumexp(
+                log_densities[present] + np.log(coefficients[present])
+            )
+        log_moment_one = None
+        log_moment_two = None
+        if self.coupled_ionization_lowering:
+            positive = self.positive_indices
+            log_moment_one = _logsumexp(
+                log_densities[positive] + np.log(self.charges[positive])
+            )
+            log_moment_two = _logsumexp(
+                log_densities[positive] + 2 * np.log(self.charges[positive])
+            )
+        return _ReducedReconstructedState(
+            log_densities=log_densities,
+            fractions=fractions,
+            slopes=slopes,
+            lowering=lowering,
+            log_total=log_total,
+            log_moments=log_moments,
+            log_positive_moment_one=log_moment_one,
+            log_positive_moment_two=log_moment_two,
+        )
+
+    def _cached_reconstructed_state(
+        self, potentials: np.ndarray
+    ) -> _ReducedReconstructedState:
+        """Return a value-keyed reconstruction for the current temperature."""
+        temperature = float(self.mixture.T)
+        cached_potentials = self._reconstruction_cache_potentials
+        if (
+            temperature == self._reconstruction_cache_temperature
+            and cached_potentials is not None
+            and np.array_equal(potentials, cached_potentials)
+        ):
+            self.reconstruction_cache_hits += 1
+            assert self._reconstruction_cache_state is not None
+            return self._reconstruction_cache_state
+        state = self._build_reconstructed_state(potentials)
+        self._reconstruction_cache_temperature = temperature
+        self._reconstruction_cache_potentials = potentials.copy()
+        self._reconstruction_cache_state = state
+        return state
 
     def _evaluate_state(
         self, potentials: np.ndarray, *, jacobian: bool
     ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray, np.ndarray]:
         self.residual_evaluations += 1
         with np.errstate(all="ignore"):
-            log_densities, fractions, slopes, lowering = self._reconstruct(
-                potentials
-            )
-        log_total = _logsumexp(log_densities)
+            state = self._cached_reconstructed_state(potentials)
+        log_densities = state.log_densities
+        fractions = state.fractions
+        slopes = state.slopes
+        lowering = state.lowering
+        log_total = state.log_total
         if not np.isfinite(log_total) or np.any(~np.isfinite(fractions)):
             size = 1 + self.element_count - 1 + self.has_charge_constraint
             if self.coupled_ionization_lowering:
@@ -410,23 +502,11 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
         residual = [
             np.log(u.k_b * self.mixture.T / self.mixture.P) + log_total
         ]
-        log_moments = []
-        for column in range(self.element_count):
-            coefficients = self.stoichiometry[:, column]
-            present = coefficients > 0
-            log_moments.append(
-                _logsumexp(
-                    log_densities[present] + np.log(coefficients[present])
-                )
-            )
+        log_moments = state.log_moments
         if self.coupled_ionization_lowering:
-            positive = self.positive_indices
-            log_moment_one = _logsumexp(
-                log_densities[positive] + np.log(self.charges[positive])
-            )
-            log_moment_two = _logsumexp(
-                log_densities[positive] + 2 * np.log(self.charges[positive])
-            )
+            log_moment_one = state.log_positive_moment_one
+            log_moment_two = state.log_positive_moment_two
+            assert log_moment_one is not None and log_moment_two is not None
         reference = 0
         for column in range(1, self.element_count):
             residual.append(
@@ -575,6 +655,14 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
             raise ValueError("initial potentials must be finite.")
         return potentials
 
+    def _reset_evaluation_cache(self) -> None:
+        """Reset per-solve diagnostics and value-keyed reconstruction state."""
+        self.residual_evaluations = 0
+        self.reconstruction_evaluations = 0
+        self.reconstruction_cache_hits = 0
+        self._reconstruction_cache_potentials = None
+        self._reconstruction_cache_state = None
+
     def _solve_newton(
         self,
         initial: np.ndarray | None = None,
@@ -585,7 +673,7 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
     ) -> ReducedEquilibriumResult:
         """Solve with analytical Newton steps and Armijo backtracking."""
         potentials = self._initial_potentials(initial)
-        self.residual_evaluations = 0
+        self._reset_evaluation_cache()
         backtracks = 0
         for iteration in range(max_iterations + 1):
             residual, jacobian, log_densities, lowering = self._evaluate_state(
@@ -605,6 +693,10 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
                     backtracks=backtracks,
                     jacobian_condition=condition,
                     ionization_lowering=lowering.copy(),
+                    reconstruction_evaluations=(
+                        self.reconstruction_evaluations
+                    ),
+                    reconstruction_cache_hits=self.reconstruction_cache_hits,
                     temperature=float(self.mixture.T),
                     method="newton",
                 )
@@ -659,7 +751,7 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
         from scipy.optimize import least_squares
 
         potentials = self._initial_potentials(initial)
-        self.residual_evaluations = 0
+        self._reset_evaluation_cache()
 
         def residual_function(values: np.ndarray) -> np.ndarray:
             residual, _, _, _ = self._evaluate_state(values, jacobian=False)
@@ -707,6 +799,8 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
             backtracks=0,
             jacobian_condition=float(np.linalg.cond(jacobian)),
             ionization_lowering=lowering.copy(),
+            reconstruction_evaluations=self.reconstruction_evaluations,
+            reconstruction_cache_hits=self.reconstruction_cache_hits,
             temperature=float(self.mixture.T),
             method="least_squares",
         )
@@ -745,14 +839,19 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
         total_evaluations = 0
         total_backtracks = 0
         continuation_solves = 0
+        total_reconstructions = 0
+        total_cache_hits = 0
 
         def record(state: ReducedEquilibriumResult) -> None:
             nonlocal total_iterations, total_evaluations
             nonlocal total_backtracks, continuation_solves
+            nonlocal total_reconstructions, total_cache_hits
             total_iterations += state.iterations
             total_evaluations += state.residual_evaluations
             total_backtracks += state.backtracks
             continuation_solves += 1
+            total_reconstructions += state.reconstruction_evaluations
+            total_cache_hits += state.reconstruction_cache_hits
 
         try:
             self.mixture.T = float(bootstrap_temperature)
@@ -816,6 +915,8 @@ class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
             total_residual_evaluations=total_evaluations,
             total_backtracks=total_backtracks,
             continuation_solves=continuation_solves,
+            total_reconstruction_evaluations=total_reconstructions,
+            total_reconstruction_cache_hits=total_cache_hits,
         )
 
     def dimensionless_gibbs(self, result: ReducedEquilibriumResult) -> float:

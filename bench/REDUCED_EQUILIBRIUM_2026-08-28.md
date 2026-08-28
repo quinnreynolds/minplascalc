@@ -55,6 +55,35 @@ dense solves took 5.04 microseconds for the 20-dimensional full system and
 saving is real but is overwhelmed by reconstruction and the larger number of
 trust-region evaluations.
 
+## Implemented packed-kernel checkpoint
+
+The first follow-up optimization consolidated full-log and reduced partition
+and reference-energy work in one packed kernel. The second reused a value-keyed
+reconstructed state across SciPy's residual and Jacobian callbacks. The cache
+is keyed by temperature and potential values; pressure-dependent residual
+terms are always reassembled.
+
+The same benchmark after both changes measured:
+
+| Workload | Formulation | Equilibrium (s) | End-to-end (s) | Reconstructions / callbacks | Tangent (s) |
+|---|---|---:|---:|---:|---:|
+| Oxygen, 20 states | full log | 0.013327 | 0.015895 | — | 0.002705 |
+| | reduced | 0.028504 | 0.031342 | 214 / 439 | 0.004331 |
+| SiCO, 60 states | production | 0.298645 | 0.324460 | — | — |
+| | full log | 0.071005 | 0.107281 | — | 0.015349 |
+| | reduced | 0.132856 | 0.160236 | 727 / 1,531 | 0.020772 |
+
+For SiCO, reduced end-to-end time fell from 0.412530 to 0.160236 seconds, a
+2.57-times improvement. It is now 2.03 times faster than production, although
+still 1.49 times slower than full log. The shared kernel also improved the
+full-log path from 0.118104 to 0.107281 seconds.
+
+The cache records 804 reconstruction hits on the SiCO sweep without changing
+the 1,531 optimizer callback count. Representative reduced reconstruction now
+takes about 34.1 microseconds, and cached residual/Jacobian assembly about 31.0
+microseconds. This preserves the distinction between optimizer work and actual
+thermodynamic recomputation.
+
 ## Accuracy and roots
 
 Against the full log continuation:

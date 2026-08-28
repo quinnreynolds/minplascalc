@@ -44,6 +44,8 @@ class SolverRun:
     dimension: int
     iterations: int
     residual_evaluations: int
+    reconstruction_evaluations: int
+    reconstruction_cache_hits: int
     backtracks: int
     solves: int
     failures: int
@@ -108,7 +110,7 @@ def _component_probe(system, state, reduced: bool) -> dict[str, float]:
             "reconstruction": _median_call_microseconds(
                 lambda: system._reconstruct(potentials)
             ),
-            "residual_jacobian": _median_call_microseconds(
+            "cached_residual_jacobian": _median_call_microseconds(
                 lambda: system._evaluate_state(potentials, jacobian=True)
             ),
             "dense_solve": _median_call_microseconds(
@@ -194,6 +196,8 @@ def _production_sweep(
         dimension=species_count,
         iterations=iterations,
         residual_evaluations=0,
+        reconstruction_evaluations=0,
+        reconstruction_cache_hits=0,
         backtracks=0,
         solves=len(states),
         failures=failures,
@@ -215,6 +219,8 @@ def _prototype_sweep(
     states: list[np.ndarray] = []
     iterations = 0
     evaluations = 0
+    reconstruction_evaluations = 0
+    reconstruction_cache_hits = 0
     backtracks = 0
     solves = 0
     failures = 0
@@ -279,6 +285,13 @@ def _prototype_sweep(
             states.extend(state.number_densities for state in path.states)
             iterations += path.total_iterations
             evaluations += path.total_residual_evaluations
+            if reduced:
+                reconstruction_evaluations += (
+                    path.total_reconstruction_evaluations
+                )
+                reconstruction_cache_hits += (
+                    path.total_reconstruction_cache_hits
+                )
             backtracks += 0 if not reduced else path.total_backtracks
             solves += path.continuation_solves
             max_residual = max(
@@ -315,6 +328,8 @@ def _prototype_sweep(
         dimension=dimension,
         iterations=iterations,
         residual_evaluations=evaluations,
+        reconstruction_evaluations=reconstruction_evaluations,
+        reconstruction_cache_hits=reconstruction_cache_hits,
         backtracks=backtracks,
         solves=solves,
         failures=failures,
@@ -457,7 +472,8 @@ def _print_table(summaries: tuple[BenchmarkSummary, ...]) -> None:
         )
         print(
             "solver        setup s   equilibrium s  end-to-end s  dimension  "
-            "iterations  evaluations  solves  failures  tangent s  dense s"
+            "iterations  evaluations  reconstructions  cache hits  solves  "
+            "failures  tangent s  dense s"
         )
         for solver, run in summary.solver_runs.items():
             print(
@@ -465,6 +481,8 @@ def _print_table(summaries: tuple[BenchmarkSummary, ...]) -> None:
                 f"{summary.median_equilibrium_seconds[solver]:13.6f} "
                 f"{summary.median_seconds[solver]:12.6f} {run.dimension:10d} "
                 f"{run.iterations:11d} {run.residual_evaluations:11d} "
+                f"{run.reconstruction_evaluations:15d} "
+                f"{run.reconstruction_cache_hits:10d} "
                 f"{run.solves:7d} {run.failures:9d} "
                 f"{summary.median_tangent_seconds[solver]:10.6f} "
                 f"{summary.median_linear_solve_seconds[solver]:8.6f}"
