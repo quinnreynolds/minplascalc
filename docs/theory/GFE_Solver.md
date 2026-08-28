@@ -393,6 +393,7 @@ Jacobians, compare both temperature tangents, exercise difficult production
 states, and verify competing Si+ cutoff branches and their fingerprints.
 
 Agreement on this envelope is evidence for the formulation, not a general
-equivalence proof. The separate reduced-system research study must establish
-its own algebraic equivalence and broader mixture coverage before production
-consideration.
+equivalence proof. The [reduced-equilibrium research
+note](Reduced_Equilibrium_Research_Note.md) derives the proposed smaller system
+and defines the additional proof and validation obligations that must be met
+before production consideration.
