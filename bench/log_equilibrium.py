@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from minplascalc import species as species_module
+from bench.equilibrium_thermodynamics import PackedEquilibriumThermodynamics
 from minplascalc import units as u
 from minplascalc.mixture import LTE, ActiveLevelFingerprint
 
@@ -72,7 +72,7 @@ class _PackedThermodynamics:
     active_level_counts: np.ndarray
 
 
-class LogEquilibriumSystem:
+class LogEquilibriumSystem(PackedEquilibriumThermodynamics):
     """Coupled dimensionless equilibrium residual in log variables."""
 
     def __init__(
@@ -130,161 +130,6 @@ class LogEquilibriumSystem:
         self.has_charge_constraint = self.constraint_count > self.element_count
         self.residual_evaluations = 0
         self._prepare_packed_thermodynamics()
-        self._cached_temperature = np.nan
-
-    def _prepare_packed_thermodynamics(self) -> None:
-        """Pack immutable species data for vectorized evaluation."""
-        count = self.species_count
-        self.charges = np.asarray(
-            self.mixture.charge_numbers, dtype=np.float64
-        )
-        self.positive_indices = np.flatnonzero(self.charges > 0)
-        self.positive_charges = self.charges[self.positive_indices]
-        self.electron_index = next(
-            (
-                index
-                for index, species in enumerate(self.mixture.species)
-                if species.name == "e"
-            ),
-            -1,
-        )
-        self.log_translational_prefactors = 1.5 * np.log(
-            2
-            * np.pi
-            * np.array(
-                [species.molar_mass for species in self.mixture.species]
-            )
-            * u.k_b
-            / (u.N_a * u.h**2)
-        )
-
-        monatomic = [
-            (index, species)
-            for index, species in enumerate(self.mixture.species)
-            if isinstance(species, species_module.Monatomic)
-        ]
-        self.monatomic_indices = np.array(
-            [index for index, _ in monatomic], dtype=np.int64
-        )
-        self.monatomic_ionization = np.zeros(count)
-        level_owners = []
-        level_energies = []
-        level_degeneracies = []
-        for index, species in monatomic:
-            self.monatomic_ionization[index] = species.ionisation_energy
-            level_owners.extend([index] * len(species._level_energies))
-            level_energies.extend(species._level_energies)
-            level_degeneracies.extend(species._degeneracies)
-        self.level_owners = np.asarray(level_owners, dtype=np.int64)
-        self.level_energies = np.asarray(level_energies, dtype=np.float64)
-        self.level_degeneracies = np.asarray(
-            level_degeneracies, dtype=np.float64
-        )
-
-        diatomic = [
-            (index, species)
-            for index, species in enumerate(self.mixture.species)
-            if isinstance(species, species_module.Diatomic)
-        ]
-        self.diatomic_indices = np.array(
-            [index for index, _ in diatomic], dtype=np.int64
-        )
-        self.diatomic_g0 = np.array([species.g0 for _, species in diatomic])
-        self.diatomic_w = np.array([species.w_e for _, species in diatomic])
-        self.diatomic_rotation = np.array(
-            [species.sigma_s * species.b_e for _, species in diatomic]
-        )
-        known = set(self.monatomic_indices) | set(self.diatomic_indices)
-        if self.electron_index >= 0:
-            known.add(self.electron_index)
-        self.fallback_indices = np.array(
-            [index for index in range(count) if index not in known],
-            dtype=np.int64,
-        )
-
-        self.base_reference_energies = np.zeros(count)
-        for index, species in enumerate(self.mixture.species):
-            if sum(species.stoichiometry.values()) >= 2:
-                self.base_reference_energies[
-                    index
-                ] = -species.dissociation_energy
-
-        self.reference_chains = []
-        neutral_species = [
-            species
-            for species in self.mixture.species
-            if species.charge_number == 0
-        ]
-        for neutral in neutral_species:
-            negative = sorted(
-                (
-                    (index, species)
-                    for index, species in enumerate(self.mixture.species)
-                    if species.stoichiometry == neutral.stoichiometry
-                    and species.charge_number <= 0
-                ),
-                key=lambda item: item[1].charge_number,
-                reverse=True,
-            )
-            positive = sorted(
-                (
-                    (index, species)
-                    for index, species in enumerate(self.mixture.species)
-                    if species.stoichiometry == neutral.stoichiometry
-                    and species.charge_number >= 0
-                ),
-                key=lambda item: item[1].charge_number,
-            )
-            for (source, source_species), (target, _) in zip(
-                positive[:-1], positive[1:]
-            ):
-                self.reference_chains.append(
-                    (
-                        source,
-                        target,
-                        source,
-                        -1.0,
-                        source_species.ionisation_energy,
-                    )
-                )
-            for (source, _), (target, target_species) in zip(
-                negative[:-1], negative[1:]
-            ):
-                self.reference_chains.append(
-                    (
-                        source,
-                        target,
-                        target,
-                        1.0,
-                        -target_species.ionisation_energy,
-                    )
-                )
-
-    def _prepare_temperature_thermodynamics(self) -> None:
-        """Cache factors invariant during a fixed-temperature solve."""
-        temperature = self.mixture.T
-        if temperature == self._cached_temperature:
-            return
-
-        kbt = u.k_b * temperature
-        self.level_boltzmann_terms = self.level_degeneracies * np.exp(
-            -self.level_energies / kbt
-        )
-        self.temperature_log_internal = np.full(self.species_count, np.nan)
-        if self.diatomic_indices.size:
-            vibration_ratio = self.diatomic_w / kbt
-            self.temperature_log_internal[self.diatomic_indices] = (
-                np.log(self.diatomic_g0)
-                - vibration_ratio / 2
-                - np.log1p(-np.exp(-vibration_ratio))
-                + np.log(kbt / self.diatomic_rotation)
-            )
-        if self.electron_index >= 0:
-            self.temperature_log_internal[self.electron_index] = np.log(2.0)
-        self.temperature_log_partition = (
-            self.log_translational_prefactors + 1.5 * np.log(temperature)
-        )
-        self._cached_temperature = temperature
 
     def _set_particle_numbers(self, particle_numbers: np.ndarray) -> None:
         """Set the private iterate on the prototype-owned mixture."""
@@ -362,61 +207,17 @@ class LogEquilibriumSystem:
         particle_total = float(particle_numbers.sum())
         temperature = self.mixture.T
         kbt = u.k_b * temperature
-        self._prepare_temperature_thermodynamics()
         volume = particle_total * kbt / self.mixture.P
         lowering, lowering_dN = self._packed_lowering(
             particle_numbers, derivatives=derivatives
         )
-
-        reference = self.base_reference_energies.copy()
-        reference_dN = (
-            np.zeros((self.species_count, self.species_count))
-            if derivatives
-            else None
+        reference, reference_dN = self._packed_reference_from_lowering(
+            lowering, lowering_dN
         )
-        for (
-            source,
-            target,
-            lowering_index,
-            sign,
-            offset,
-        ) in self.reference_chains:
-            reference[target] = (
-                reference[source] + offset + sign * lowering[lowering_index]
-            )
-            if derivatives:
-                assert reference_dN is not None and lowering_dN is not None
-                reference_dN[target] = (
-                    reference_dN[source] + sign * lowering_dN[lowering_index]
-                )
-
-        log_internal = self.temperature_log_internal.copy()
-        active_counts = np.zeros(self.species_count, dtype=np.int64)
-        if self.monatomic_indices.size:
-            owners = self.level_owners
-            active = self.level_energies < (
-                self.monatomic_ionization[owners] - lowering[owners]
-            )
-            level_terms = self.level_boltzmann_terms * active
-            sums = np.bincount(
-                owners, weights=level_terms, minlength=self.species_count
-            )
-            active_counts = np.bincount(
-                owners, weights=active, minlength=self.species_count
-            ).astype(np.int64)
-            log_internal[self.monatomic_indices] = np.log(
-                sums[self.monatomic_indices]
-            )
-        for index in self.fallback_indices:
-            log_internal[index] = np.log(
-                self.mixture.species[index].internal_partition_function(
-                    temperature, lowering[index]
-                )
-            )
-
-        log_partitions = (
-            np.log(volume) + self.temperature_log_partition + log_internal
+        log_partition_density, active_counts = (
+            self._packed_log_partition_per_volume(lowering)
         )
+        log_partitions = np.log(volume) + log_partition_density
         return _PackedThermodynamics(
             particle_numbers=particle_numbers,
             particle_total=particle_total,
@@ -463,11 +264,10 @@ class LogEquilibriumSystem:
             particle_numbers, derivatives=True
         )
         assert lowering_dN is not None
-        reference_dN = np.zeros((self.species_count, self.species_count))
-        for source, target, lowering_index, sign, _ in self.reference_chains:
-            reference_dN[target] = (
-                reference_dN[source] + sign * lowering_dN[lowering_index]
-            )
+        _, reference_dN = self._packed_reference_from_lowering(
+            np.zeros(self.species_count), lowering_dN
+        )
+        assert reference_dN is not None
         return reference_dN
 
     def _jacobian_from_thermodynamics(

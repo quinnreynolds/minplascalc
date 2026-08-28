@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from minplascalc import species as species_module
+from bench.equilibrium_thermodynamics import PackedEquilibriumThermodynamics
 from minplascalc import units as u
 
 
@@ -95,7 +95,7 @@ class ReducedEquilibriumTemperatureTangent:
         return self.number_density_derivative
 
 
-class ReducedEquilibriumSystem:
+class ReducedEquilibriumSystem(PackedEquilibriumThermodynamics):
     """Fixed-lowering reduced equilibrium system for an LTE mixture."""
 
     def __init__(
@@ -224,6 +224,7 @@ class ReducedEquilibriumSystem:
                 f"(rank {rank}, expected {self.base_potential_count})."
             )
 
+        self._prepare_packed_thermodynamics()
         self.base_reference_energies = self._reference_energies()
         self._cached_temperature = np.nan
         self._log_q = np.empty(self.species_count)
@@ -251,48 +252,9 @@ class ReducedEquilibriumSystem:
 
     def _reference_energies(self) -> np.ndarray:
         """Reproduce the mixture reference-energy chain at fixed lowering."""
-        reference = np.zeros(self.species_count, dtype=np.float64)
-        for index, species in enumerate(self.species):
-            if sum(species.stoichiometry.values()) >= 2:
-                reference[index] = -species.dissociation_energy
-
-        lowering = self.fixed_ionization_lowering
-        for neutral in (s for s in self.species if s.charge_number == 0):
-            positive = sorted(
-                (
-                    (i, species)
-                    for i, species in enumerate(self.species)
-                    if species.stoichiometry == neutral.stoichiometry
-                    and species.charge_number >= 0
-                ),
-                key=lambda item: item[1].charge_number,
-            )
-            negative = sorted(
-                (
-                    (i, species)
-                    for i, species in enumerate(self.species)
-                    if species.stoichiometry == neutral.stoichiometry
-                    and species.charge_number <= 0
-                ),
-                key=lambda item: item[1].charge_number,
-                reverse=True,
-            )
-            for (source, source_species), (target, _) in zip(
-                positive[:-1], positive[1:]
-            ):
-                reference[target] = (
-                    reference[source]
-                    + source_species.ionisation_energy
-                    - lowering[source]
-                )
-            for (source, _), (target, target_species) in zip(
-                negative[:-1], negative[1:]
-            ):
-                reference[target] = (
-                    reference[source]
-                    - target_species.ionisation_energy
-                    + lowering[target]
-                )
+        reference, _ = self._packed_reference_from_lowering(
+            self.fixed_ionization_lowering
+        )
         return reference
 
     def _log_partition_per_volume(
@@ -301,32 +263,7 @@ class ReducedEquilibriumSystem:
         """Evaluate ``log(q_i)`` without introducing a volume or state."""
         if lowering is None:
             lowering = self.fixed_ionization_lowering
-        temperature = float(self.mixture.T)
-        result = np.empty(self.species_count, dtype=np.float64)
-        for index, species in enumerate(self.species):
-            if isinstance(species, species_module.Monatomic):
-                terms = np.log(species._degeneracies) - (
-                    species._level_energies / (u.k_b * temperature)
-                )
-                active = species._level_energies < (
-                    species.ionisation_energy - lowering[index]
-                )
-                if not np.any(active):
-                    result[index] = -np.inf
-                    continue
-                log_internal = _logsumexp(terms[active])
-            else:
-                internal = species.internal_partition_function(
-                    temperature, lowering[index]
-                )
-                if not np.isfinite(internal) or internal <= 0:
-                    result[index] = np.nan
-                    continue
-                log_internal = float(np.log(internal))
-            translational = species.translational_partition_function(
-                temperature
-            )
-            result[index] = float(np.log(translational) + log_internal)
+        result, _ = self._packed_log_partition_per_volume(lowering)
         return result
 
     def _coupled_lowering(
@@ -414,61 +351,14 @@ class ReducedEquilibriumSystem:
         lowering_derivatives: tuple[np.ndarray, np.ndarray] | None = None,
     ) -> tuple[np.ndarray, np.ndarray | None]:
         """Build reference energies and optional eta/xi derivatives."""
-        reference = np.zeros(self.species_count, dtype=np.float64)
-        for index, species in enumerate(self.species):
-            if sum(species.stoichiometry.values()) >= 2:
-                reference[index] = -species.dissociation_energy
-        derivatives = lowering_derivatives is not None
-        reference_derivative = (
-            np.zeros((self.species_count, 2)) if derivatives else None
+        derivative_matrix = (
+            None
+            if lowering_derivatives is None
+            else np.column_stack(lowering_derivatives)
         )
-        if derivatives:
-            d_eta, d_xi = lowering_derivatives
-        for neutral in (s for s in self.species if s.charge_number == 0):
-            positive = sorted(
-                (
-                    (i, species)
-                    for i, species in enumerate(self.species)
-                    if species.stoichiometry == neutral.stoichiometry
-                    and species.charge_number >= 0
-                ),
-                key=lambda item: item[1].charge_number,
-            )
-            negative = sorted(
-                (
-                    (i, species)
-                    for i, species in enumerate(self.species)
-                    if species.stoichiometry == neutral.stoichiometry
-                    and species.charge_number <= 0
-                ),
-                key=lambda item: item[1].charge_number,
-                reverse=True,
-            )
-            for (source, source_species), (target, _) in zip(
-                positive[:-1], positive[1:]
-            ):
-                reference[target] = (
-                    reference[source]
-                    + source_species.ionisation_energy
-                    - lowering[source]
-                )
-                if derivatives:
-                    reference_derivative[target] = reference_derivative[
-                        source
-                    ] - np.array([d_eta[source], d_xi[source]])
-            for (source, _), (target, target_species) in zip(
-                negative[:-1], negative[1:]
-            ):
-                reference[target] = (
-                    reference[source]
-                    - target_species.ionisation_energy
-                    + lowering[target]
-                )
-                if derivatives:
-                    reference_derivative[target] = reference_derivative[
-                        source
-                    ] + np.array([d_eta[target], d_xi[target]])
-        return reference, reference_derivative
+        return self._packed_reference_from_lowering(
+            lowering, derivative_matrix
+        )
 
     def _reconstruct(
         self, potentials: np.ndarray
