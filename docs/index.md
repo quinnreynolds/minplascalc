@@ -10,6 +10,7 @@ auto_examples/index
 API Reference <_api/minplascalc/index>
 Background/Theory <theory/Background_Theory>
 Gibbs free-energy solver <theory/GFE_Solver>
+Reduced equilibrium research note <theory/Reduced_Equilibrium_Research_Note>
 References <references/_bibliography>
 ```
 
