@@ -213,8 +213,8 @@
         <div class="section-number">05</div>
         <div class="section-heading">
           <p class="kicker">The sharp-feature question</p>
-          <h2>The numerical outlier is gone. The model discontinuity remains.</h2>
-          <p>A hard ionisation-lowered level cutoff changes the partition sum discretely. The analytical result is therefore piecewise: well-defined between crossings, but with two one-sided values at the crossing itself.</p>
+          <h2>The numerical outlier is gone. The physical step stays.</h2>
+          <p>A hard ionisation-lowered level cutoff changes the partition sum discretely. Quinn confirmed that this is a real quantum-mechanical effect, so the analytical result will remain piecewise: well-defined between crossings, with two one-sided values at the crossing itself.</p>
         </div>
         <div class="cutoff-lab">
           <div class="cutoff-controls">
@@ -229,8 +229,8 @@
           <p class="lab-caption">Conceptual readout from the 0.05 K branch scan; it is not an interpolation of thermodynamic properties.</p>
         </div>
         <div class="policy-grid">
-          <article class="recommended"><span>Recommended now</span><h3>Retain the piecewise derivative</h3><p>It removes finite-difference artifacts without silently changing the physical model. Surface crossings explicitly in tests and diagnostics.</p></article>
-          <article><span>Separate investigation</span><h3>Mollify level occupation</h3><p>A smooth occupation function would make the Jacobian globally continuous, but changes thermodynamics and needs Quinn’s input on the appropriate physical policy.</p></article>
+          <article class="recommended"><span>Decision after review</span><h3>Retain the piecewise derivative</h3><p>Small, physically explainable discontinuities are acceptable. The analytical derivative removes the giant finite-difference spikes without silently changing the thermodynamic model.</p></article>
+          <article><span>Make the step explainable</span><h3>Fingerprint the active levels</h3><p>An optional diagnostic should record the exact electronic active set, per-species level counts, and the nearest cutoff margin so a reported discontinuity can be tied to a specific level crossing.</p></article>
         </div>
       </section>
 
@@ -321,14 +321,14 @@
         <div class="section-heading">
           <p class="kicker">Suggested integration path</p>
           <h2>Bank the numerical win before changing the model.</h2>
-          <p>The prototype deliberately does not chase full API compatibility. A staged merge keeps review units small and makes the physical cutoff decision independent.</p>
+          <p>The prototype deliberately does not chase full API compatibility. A staged merge keeps review units small, while the reviewed physical cutoff policy remains explicit.</p>
         </div>
         <ol class="roadmap">
           <li><span>01</span><div><b>Land analytical property derivatives</b><p>The species moments, equilibrium tangent, C<sub>P</sub>, and κ path are independently useful and already regression-tested.</p></div><em>Low API risk</em></li>
           <li><span>02</span><div><b>Introduce an internal equilibrium result</b><p>Return composition, thermodynamic state, Jacobian, active set, and diagnostics from one solver boundary.</p></div><em>Enables reuse</em></li>
           <li><span>03</span><div><b>Port the packed log solver behind that boundary</b><p>Preserve current public methods while replacing the governed particle-number iteration.</p></div><em>Main performance step</em></li>
           <li><span>04</span><div><b>Benchmark the reduced-potential variant</b><p>Use the packed thermodynamic kernel as a common base and compare convergence, conditioning, and tangent cost—not only matrix size.</p></div><em>Research branch</em></li>
-          <li><span>05</span><div><b>Choose an explicit crossing policy</b><p>Keep the piecewise branch selector or develop a physically justified mollification in a separate change.</p></div><em>Needs technical input</em></li>
+          <li><span>05</span><div><b>Expose active-level diagnostics</b><p>Keep the piecewise branch selector and attach a deterministic fingerprint, per-species counts, and nearest-cutoff margin to investigations of sharp features.</p></div><em>Reviewed policy</em></li>
         </ol>
         <div class="decision-card">
           <div><span class="card-label">Bottom line</span><h3>The rewrite is now justified by three independent signals.</h3></div>
