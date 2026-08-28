@@ -659,7 +659,9 @@ class LTE:
 
             Z_{\text{tot}, i} = Z_{tr, i} Z_{rot, i} Z_{vib, i} Z_{el, i}
 
-        TODO: write how the minimisation is done.
+        The complete production algorithm and the experimental log-space
+        formulation are described in the ``Gibbs free-energy solver`` theory
+        page in the project documentation.
         """
         nb_species = len(self.species)
         kbt = u.k_b * self.T

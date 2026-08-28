@@ -89,9 +89,9 @@ $$V = \\frac{k_B T \\sum_i N_i}{P}$$
 
 where $P$ is the specified pressure of the system.
 
-A system at equilibrium is characterised by a minimum stationary point in {math}`G`, giving an independent equation for each species i which simplifies to:
+A system at equilibrium is characterised by a constrained minimum stationary point in {math}`G`. Introducing one Lagrange multiplier {math}`\lambda_k` for each conservation law gives an independent stationarity equation for each species i:
 
-$$\\frac{\\partial G}{\\partial N_i} = \\mu_i = 0$$
+$$\\frac{\\partial G}{\\partial N_i} + \\sum_k A\_{ik}\\lambda_k = \\mu_i + \\sum_k A\_{ik}\\lambda_k = 0$$
 
 This set of equations must be solved subject to constraints supplied by the conservation of mass of each element present:
 
@@ -101,7 +101,7 @@ where {math}`v_{ik}` is the stoichiometric coefficient representing the number o
 
 $$\\sum_i z_i N_i = 0$$
 
-In minplascalc, the previous three sets of equations are solved using an iterative Lagrange multiplier approach to obtain the set of {math}`N_i` (and hence number density {math}`n_i = N_i / V`) at LTE starting from an initial guess.
+In minplascalc, the previous three sets of equations are solved using an iterative Lagrange multiplier approach to obtain the set of {math}`N_i` (and hence number density {math}`n_i = N_i / V`) at LTE starting from an initial guess. See [Gibbs free-energy equilibrium solver](GFE_Solver.md) for the complete production procedure, the experimental log-space formulation, and the analytical temperature tangent.
 
 #### Ionisation energy lowering
 
@@ -151,13 +151,13 @@ The enthalpy calculation is exposed to the user in the minplascalc API via a fun
 
 #### Plasma heat capacity
 
-A direct calculation of {math}`C_P` given an arbitrary plasma composition is possible if some knowledge of the reaction paths between species is also supplied. Although any set of consistent reaction paths will give the same result, choosing one actual set of paths from the many possible options implies that it represents reality, and this is certainly open to some debate. In the spirit of keeping minplascalc focused on path-independent equilibrium plasma problems, the heat capacity calculation is instead performed by numerical derivative of the enthalpy around the temperature of interest:
+A direct calculation of {math}`C_P` given an arbitrary plasma composition is possible if some knowledge of the reaction paths between species is also supplied. Although any set of consistent reaction paths will give the same result, choosing one actual set of paths from the many possible options implies that it represents reality, and this is certainly open to some debate. Minplascalc instead differentiates the constrained equilibrium equations implicitly, so no reaction path or finite temperature excursion is required:
 
 ```{math}
-C_{P,LTE} = \left( \frac{\partial H}{\partial T} \right)_p \approx \frac{H_{T+\Delta T,p} - H_{T-\Delta T,p}}{2 \Delta T}
+C_{P,LTE} = \left( \frac{\partial H}{\partial T} \right)_p
 ```
 
-Here, {math}`H_{T+\Delta T,p}` and {math}`H_{T-\Delta T,p}` are enthalpy calculations for the LTE plasma composition at fixed pressure, and temperatures slightly above and slightly below the target temperature $T$. This calculation is exposed to the user in the minplascalc API via a function call, and it is important to note that it only gives the heat capacity of LTE compositions.
+The equilibrium Jacobian gives {math}`dN_i/dT` at fixed pressure. The chain rule then includes the corresponding mole-fraction derivative, reference-energy derivative, and analytical species internal-energy derivatives. The electronic-level active set is held fixed, so this is the exact derivative on the current piecewise branch. This calculation is exposed to the user in the minplascalc API via a function call, and it is important to note that it only gives the heat capacity of LTE compositions.
 
 ### Calculation of transport properties
 
@@ -298,11 +298,11 @@ The molecular thermal conductivity {math}`\kappa'` is determined using the $a$ v
 
 $$ \\kappa' = -\\frac{5 k_B}{4} \\sum_j n_j \\left( \\frac{2 k_B T}{m_j} \\right)^{\\frac{1}{2}} a\_{j1} $$
 
-As in the case of the plasma heat capacity it is possible to develop analytical expressions for the {math}`\frac{dx_j}{dT}` term if some assumptions are made about reaction pathways, but this can be avoided simply by evaluating it numerically at the temperature of interest:
+As in the heat-capacity calculation, minplascalc obtains {math}`\frac{dx_j}{dT}` by implicit differentiation of the complete constrained equilibrium system at the current electronic active set:
 
-$$\\frac{dx_j}{dT} \\approx \\frac{x\_{j,T+\\Delta T} - x\_{j,T-\\Delta T}}{2 \\Delta T}$$
+$$\\frac{dx_i}{dT}=\\frac{1}{N\_\\mathrm{tot}}\\frac{dN_i}{dT}-\\frac{N_i}{N\_\\mathrm{tot}^2}\\sum_j\\frac{dN_j}{dT}$$
 
-This calculation is exposed to the user in the minplascalc API via a function call, and it is important to note that it only gives the total thermal conductivity at LTE compositions.
+This removes the two neighbouring-temperature equilibrium solves formerly required by the thermal-conductivity calculation. The calculation is exposed to the user in the minplascalc API via a function call, and it is important to note that it only gives the total thermal conductivity at LTE compositions.
 
 ### Calculation of radiation properties
 
