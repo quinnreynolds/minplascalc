@@ -56,6 +56,61 @@ def test_packed_thermodynamics_matches_species_evaluation(
     )
 
 
+@pytest.mark.parametrize("factory", [make_simple, make_sico])
+def test_zero_frozen_lowering_converges_to_finite_state(factory):
+    mixture = factory(T=12000.0)
+    fixed_lowering = np.zeros(len(mixture.species))
+    system = LogEquilibriumSystem(
+        mixture, fixed_ionization_lowering=fixed_lowering
+    )
+
+    result = system.solve(tolerance=1e-10)
+
+    assert result.residual_norm < 1e-10
+    assert np.all(np.isfinite(result.number_densities))
+    assert np.all(result.number_densities > 0)
+
+
+def test_frozen_lowering_and_reference_derivatives_are_constant():
+    mixture = make_sico(T=12000.0)
+    fixed_lowering = np.linspace(0.0, 1.0e-22, len(mixture.species))
+    system = LogEquilibriumSystem(
+        mixture, fixed_ionization_lowering=fixed_lowering
+    )
+    log_particles, _ = system.initial_state()
+    particle_numbers = np.exp(log_particles)
+
+    lowering, lowering_dN = system._packed_lowering(
+        particle_numbers, derivatives=True
+    )
+    packed = system._packed_thermodynamics(log_particles, derivatives=True)
+
+    assert lowering == pytest.approx(fixed_lowering)
+    assert lowering_dN is not None
+    assert lowering_dN == pytest.approx(
+        np.zeros((system.species_count, system.species_count))
+    )
+    assert packed.reference_dN is not None
+    assert packed.reference_dN == pytest.approx(
+        np.zeros((system.species_count, system.species_count))
+    )
+
+
+def test_frozen_lowering_is_validated():
+    mixture = make_simple(T=12000.0)
+
+    invalid_lowerings = (
+        np.zeros(len(mixture.species) - 1),
+        np.full(len(mixture.species), np.nan),
+        np.full(len(mixture.species), -1.0),
+    )
+    for fixed_lowering in invalid_lowerings:
+        with pytest.raises(ValueError):
+            LogEquilibriumSystem(
+                mixture, fixed_ionization_lowering=fixed_lowering
+            )
+
+
 def test_log_equilibrium_analytical_jacobian():
     system = LogEquilibriumSystem(make_sico(T=12000.0))
     result = system.solve(tolerance=1e-11)

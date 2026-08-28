@@ -75,9 +75,35 @@ class _PackedThermodynamics:
 class LogEquilibriumSystem:
     """Coupled dimensionless equilibrium residual in log variables."""
 
-    def __init__(self, mixture: LTE):
+    def __init__(
+        self,
+        mixture: LTE,
+        *,
+        fixed_ionization_lowering: np.ndarray | None = None,
+    ):
         self.mixture = mixture
         self.species_count = len(mixture.species)
+        if fixed_ionization_lowering is None:
+            self.fixed_ionization_lowering = None
+        else:
+            fixed_ionization_lowering = np.asarray(
+                fixed_ionization_lowering, dtype=np.float64
+            )
+            if fixed_ionization_lowering.shape != (self.species_count,):
+                raise ValueError(
+                    "fixed_ionization_lowering must have one value per "
+                    "species."
+                )
+            if not np.all(np.isfinite(fixed_ionization_lowering)):
+                raise ValueError(
+                    "fixed_ionization_lowering must contain only finite "
+                    "values."
+                )
+            if np.any(fixed_ionization_lowering < 0):
+                raise ValueError(
+                    "fixed_ionization_lowering must be nonnegative."
+                )
+            self.fixed_ionization_lowering = fixed_ionization_lowering.copy()
         self.constraints = mixture._constraint_matrix()
         self.constraint_count = self.constraints.shape[1]
         self.element_names = sorted(
@@ -269,6 +295,10 @@ class LogEquilibriumSystem:
     ) -> tuple[np.ndarray, np.ndarray | None]:
         """Evaluate ionisation lowering and its particle-number Jacobian."""
         count = self.species_count
+        if self.fixed_ionization_lowering is not None:
+            derivative = np.zeros((count, count)) if derivatives else None
+            return self.fixed_ionization_lowering.copy(), derivative
+
         lowering = np.zeros(count)
         derivative = np.zeros((count, count)) if derivatives else None
         if self.electron_index < 0:
