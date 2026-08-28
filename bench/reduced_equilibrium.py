@@ -38,6 +38,38 @@ class ReducedEquilibriumResult:
     residual_evaluations: int
     backtracks: int
     jacobian_condition: float
+    ionization_lowering: np.ndarray
+
+
+@dataclass(frozen=True)
+class ReducedEquilibriumTemperatureTangent:
+    """Piecewise fixed-active-set temperature tangent of a reduced state."""
+
+    log_number_density_derivative: np.ndarray
+    number_density_derivative: np.ndarray
+    mole_fraction_derivative: np.ndarray
+    potential_derivative: np.ndarray
+    reference_energy_derivative: np.ndarray
+
+    @property
+    def log_density_derivative(self) -> np.ndarray:
+        """Alias using the shorter density terminology."""
+        return self.log_number_density_derivative
+
+    @property
+    def density_derivative(self) -> np.ndarray:
+        """Alias using the shorter density terminology."""
+        return self.number_density_derivative
+
+    @property
+    def log_particle_derivative(self) -> np.ndarray:
+        """Compatibility alias for the full log-space prototype."""
+        return self.log_number_density_derivative
+
+    @property
+    def particle_derivative(self) -> np.ndarray:
+        """Compatibility alias for the full log-space prototype."""
+        return self.number_density_derivative
 
 
 class ReducedEquilibriumSystem:
@@ -48,8 +80,18 @@ class ReducedEquilibriumSystem:
         mixture,
         *,
         fixed_ionization_lowering: np.ndarray | None = None,
+        coupled_ionization_lowering: bool = False,
     ):
         self.mixture = mixture
+        self.coupled_ionization_lowering = bool(coupled_ionization_lowering)
+        if (
+            self.coupled_ionization_lowering
+            and fixed_ionization_lowering is not None
+        ):
+            raise ValueError(
+                "coupled ionisation lowering cannot be combined with a "
+                "fixed lowering vector."
+            )
         self.species = tuple(mixture.species)
         self.species_count = len(self.species)
         if self.species_count == 0:
@@ -98,13 +140,26 @@ class ReducedEquilibriumSystem:
             -1,
         )
         self.has_charge_constraint = self.electron_index >= 0
+        self.positive_indices = np.flatnonzero(self.charges > 0)
+        if self.coupled_ionization_lowering:
+            if not self.has_charge_constraint:
+                raise ValueError(
+                    "Coupled ionisation lowering requires an electron."
+                )
+            if self.positive_indices.size == 0:
+                raise ValueError(
+                    "Coupled ionisation lowering requires positive ions."
+                )
         if self.has_charge_constraint:
             self.constraint_matrix = np.column_stack(
                 (self.stoichiometry, self.charges)
             )
         else:
             self.constraint_matrix = self.stoichiometry.copy()
-        self.potential_count = self.constraint_matrix.shape[1]
+        self.base_potential_count = self.constraint_matrix.shape[1]
+        self.potential_count = self.base_potential_count + (
+            2 if self.coupled_ionization_lowering else 0
+        )
 
         x0 = np.asarray(mixture.x0, dtype=np.float64)
         if x0.shape != (self.species_count,):
@@ -140,10 +195,10 @@ class ReducedEquilibriumSystem:
         self.fixed_ionization_lowering = lowering
 
         rank = np.linalg.matrix_rank(self.constraint_matrix)
-        if rank < self.potential_count:
+        if rank < self.base_potential_count:
             raise ValueError(
                 "The elemental/charge potential matrix is rank deficient "
-                f"(rank {rank}, expected {self.potential_count})."
+                f"(rank {rank}, expected {self.base_potential_count})."
             )
 
         self.base_reference_energies = self._reference_energies()
@@ -204,8 +259,12 @@ class ReducedEquilibriumSystem:
                 )
         return reference
 
-    def _log_partition_per_volume(self) -> np.ndarray:
+    def _log_partition_per_volume(
+        self, lowering: np.ndarray | None = None
+    ) -> np.ndarray:
         """Evaluate ``log(q_i)`` without introducing a volume or state."""
+        if lowering is None:
+            lowering = self.fixed_ionization_lowering
         temperature = float(self.mixture.T)
         result = np.empty(self.species_count, dtype=np.float64)
         for index, species in enumerate(self.species):
@@ -214,8 +273,7 @@ class ReducedEquilibriumSystem:
                     species._level_energies / (u.k_b * temperature)
                 )
                 active = species._level_energies < (
-                    species.ionisation_energy
-                    - self.fixed_ionization_lowering[index]
+                    species.ionisation_energy - lowering[index]
                 )
                 if not np.any(active):
                     result[index] = -np.inf
@@ -223,7 +281,7 @@ class ReducedEquilibriumSystem:
                 log_internal = _logsumexp(terms[active])
             else:
                 internal = species.internal_partition_function(
-                    temperature, self.fixed_ionization_lowering[index]
+                    temperature, lowering[index]
                 )
                 if not np.isfinite(internal) or internal <= 0:
                     result[index] = np.nan
@@ -235,30 +293,189 @@ class ReducedEquilibriumSystem:
             result[index] = float(np.log(translational) + log_internal)
         return result
 
+    def _coupled_lowering(
+        self, eta: float, xi: float
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return lowering and its derivatives with respect to eta and xi."""
+        temperature = float(self.mixture.T)
+        kbt = u.k_b * temperature
+        with np.errstate(over="ignore", invalid="ignore"):
+            electron_density = np.exp(eta)
+            z_star = np.exp(xi)
+        denominator = z_star + 1.0
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+            debye_pow3 = (
+                u.epsilon_0
+                * kbt
+                / (4 * np.pi * denominator * electron_density * u.e**2)
+            ) ** 1.5
+            ion_sphere_pow3 = (
+                3
+                * self.charges[self.positive_indices]
+                / (4 * np.pi * electron_density)
+            )
+            ratio = ion_sphere_pow3 / debye_pow3
+            shape = (ratio + 1.0) ** (2.0 / 3.0) - 1.0
+            shape_derivative = (2.0 / 3.0) * (ratio + 1.0) ** (-1.0 / 3.0)
+
+        lowering = np.zeros(self.species_count)
+        d_eta = np.zeros(self.species_count)
+        d_xi = np.zeros(self.species_count)
+        lowering[self.positive_indices] = kbt * shape / (2 * denominator)
+        dlog_ratio_dxi = 1.5 * z_star / denominator
+        ratio_d_eta = 0.5 * ratio
+        ratio_d_xi = ratio * dlog_ratio_dxi
+        d_eta[self.positive_indices] = (
+            kbt / (2 * denominator) * shape_derivative * ratio_d_eta
+        )
+        d_xi[self.positive_indices] = (
+            kbt
+            / 2
+            * (
+                shape_derivative * ratio_d_xi / denominator
+                - shape * z_star / denominator**2
+            )
+        )
+        return lowering, d_eta, d_xi
+
+    def _coupled_temperature_lowering_derivative(
+        self, eta: float, xi: float
+    ) -> np.ndarray:
+        """Return explicit d(lowering)/dT at fixed eta and xi."""
+        temperature = float(self.mixture.T)
+        kbt = u.k_b * temperature
+        with np.errstate(over="ignore", invalid="ignore"):
+            electron_density = np.exp(eta)
+            z_star = np.exp(xi)
+        denominator = z_star + 1.0
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+            debye_pow3 = (
+                u.epsilon_0
+                * kbt
+                / (4 * np.pi * denominator * electron_density * u.e**2)
+            ) ** 1.5
+            ion_sphere_pow3 = (
+                3
+                * self.charges[self.positive_indices]
+                / (4 * np.pi * electron_density)
+            )
+            ratio = ion_sphere_pow3 / debye_pow3
+            shape = (ratio + 1.0) ** (2.0 / 3.0) - 1.0
+            shape_derivative = (2.0 / 3.0) * (ratio + 1.0) ** (-1.0 / 3.0)
+        derivative = np.zeros(self.species_count)
+        derivative[self.positive_indices] = (
+            u.k_b
+            / (2 * denominator)
+            * (shape - 1.5 * ratio * shape_derivative)
+        )
+        return derivative
+
+    def _reference_from_lowering(
+        self,
+        lowering: np.ndarray,
+        lowering_derivatives: tuple[np.ndarray, np.ndarray] | None = None,
+    ) -> tuple[np.ndarray, np.ndarray | None]:
+        """Build reference energies and optional eta/xi derivatives."""
+        reference = np.zeros(self.species_count, dtype=np.float64)
+        for index, species in enumerate(self.species):
+            if sum(species.stoichiometry.values()) >= 2:
+                reference[index] = -species.dissociation_energy
+        derivatives = lowering_derivatives is not None
+        reference_derivative = (
+            np.zeros((self.species_count, 2)) if derivatives else None
+        )
+        if derivatives:
+            d_eta, d_xi = lowering_derivatives
+        for neutral in (s for s in self.species if s.charge_number == 0):
+            positive = sorted(
+                (
+                    (i, species)
+                    for i, species in enumerate(self.species)
+                    if species.stoichiometry == neutral.stoichiometry
+                    and species.charge_number >= 0
+                ),
+                key=lambda item: item[1].charge_number,
+            )
+            negative = sorted(
+                (
+                    (i, species)
+                    for i, species in enumerate(self.species)
+                    if species.stoichiometry == neutral.stoichiometry
+                    and species.charge_number <= 0
+                ),
+                key=lambda item: item[1].charge_number,
+                reverse=True,
+            )
+            for (source, source_species), (target, _) in zip(
+                positive[:-1], positive[1:]
+            ):
+                reference[target] = (
+                    reference[source]
+                    + source_species.ionisation_energy
+                    - lowering[source]
+                )
+                if derivatives:
+                    reference_derivative[target] = reference_derivative[
+                        source
+                    ] - np.array([d_eta[source], d_xi[source]])
+            for (source, _), (target, target_species) in zip(
+                negative[:-1], negative[1:]
+            ):
+                reference[target] = (
+                    reference[source]
+                    - target_species.ionisation_energy
+                    + lowering[target]
+                )
+                if derivatives:
+                    reference_derivative[target] = reference_derivative[
+                        source
+                    ] + np.array([d_eta[target], d_xi[target]])
+        return reference, reference_derivative
+
     def _reconstruct(
         self, potentials: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Return logs, normalized densities, and stationarity slopes."""
-        log_densities = (
-            self._base_log_densities - self.constraint_matrix @ potentials
-        )
+        base = potentials[: self.base_potential_count]
+        if self.coupled_ionization_lowering:
+            lowering, d_eta, d_xi = self._coupled_lowering(
+                potentials[-2], potentials[-1]
+            )
+            reference, reference_derivative = self._reference_from_lowering(
+                lowering, (d_eta, d_xi)
+            )
+            log_q = self._log_partition_per_volume(lowering)
+            base_log_densities = log_q - reference / (u.k_b * self.mixture.T)
+            slopes = np.column_stack(
+                (
+                    -self.constraint_matrix,
+                    -reference_derivative / (u.k_b * self.mixture.T),
+                )
+            )
+        else:
+            lowering = self.fixed_ionization_lowering
+            base_log_densities = self._base_log_densities
+            slopes = -self.constraint_matrix
+        log_densities = base_log_densities - self.constraint_matrix @ base
         log_total = _logsumexp(log_densities)
         with np.errstate(over="ignore", invalid="ignore"):
             fractions = np.exp(log_densities - log_total)
-        slopes = -self.constraint_matrix
-        return log_densities, fractions, slopes
+        return log_densities, fractions, slopes, lowering
 
     def _evaluate_state(
         self, potentials: np.ndarray, *, jacobian: bool
-    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray, np.ndarray]:
         self.residual_evaluations += 1
-        log_densities, fractions, slopes = self._reconstruct(potentials)
+        log_densities, fractions, slopes, lowering = self._reconstruct(
+            potentials
+        )
         log_total = _logsumexp(log_densities)
         if not np.isfinite(log_total) or np.any(~np.isfinite(fractions)):
-            residual = np.full(
-                1 + self.element_count - 1 + self.has_charge_constraint, np.inf
-            )
-            return residual, None, log_densities
+            size = 1 + self.element_count - 1 + self.has_charge_constraint
+            if self.coupled_ionization_lowering:
+                size += 2
+            residual = np.full(size, np.inf)
+            return residual, None, log_densities, lowering
 
         residual = [
             np.log(u.k_b * self.mixture.T / self.mixture.P) + log_total
@@ -272,6 +489,14 @@ class ReducedEquilibriumSystem:
                     log_densities[present] + np.log(coefficients[present])
                 )
             )
+        if self.coupled_ionization_lowering:
+            positive = self.positive_indices
+            log_moment_one = _logsumexp(
+                log_densities[positive] + np.log(self.charges[positive])
+            )
+            log_moment_two = _logsumexp(
+                log_densities[positive] + 2 * np.log(self.charges[positive])
+            )
         reference = 0
         for column in range(1, self.element_count):
             residual.append(
@@ -283,10 +508,18 @@ class ReducedEquilibriumSystem:
         charge_residual = float(fractions @ self.charges)
         if self.has_charge_constraint:
             residual.append(charge_residual)
+        if self.coupled_ionization_lowering:
+            eta, xi = potentials[-2:]
+            residual.extend(
+                (
+                    log_densities[self.electron_index] - eta,
+                    log_moment_two - log_moment_one - xi,
+                )
+            )
         residual_array = np.asarray(residual, dtype=np.float64)
 
         if not jacobian:
-            return residual_array, None, log_densities
+            return residual_array, None, log_densities, lowering
 
         derivative = np.empty((residual_array.size, self.potential_count))
         derivative[0] = fractions @ slopes
@@ -305,10 +538,27 @@ class ReducedEquilibriumSystem:
             )
             derivative[row] = (weights - reference_weights) @ slopes
         if self.has_charge_constraint:
-            derivative[-1] = (
+            charge_row = self.element_count
+            derivative[charge_row] = (
                 fractions * (self.charges - charge_residual)
             ) @ slopes
-        return residual_array, derivative, log_densities
+        if self.coupled_ionization_lowering:
+            electron_row = self.element_count + self.has_charge_constraint
+            zstar_row = electron_row + 1
+            derivative[electron_row] = slopes[self.electron_index]
+            derivative[electron_row, -2] -= 1.0
+            positive = self.positive_indices
+            rho_one = np.zeros(self.species_count)
+            rho_two = np.zeros(self.species_count)
+            rho_one[positive] = self.charges[positive] * np.exp(
+                log_densities[positive] - log_moment_one
+            )
+            rho_two[positive] = self.charges[positive] ** 2 * np.exp(
+                log_densities[positive] - log_moment_two
+            )
+            derivative[zstar_row] = (rho_two - rho_one) @ slopes
+            derivative[zstar_row, -1] -= 1.0
+        return residual_array, derivative, log_densities, lowering
 
     def evaluate(
         self, potentials: np.ndarray, *, jacobian: bool = True
@@ -321,7 +571,7 @@ class ReducedEquilibriumSystem:
             )
         if np.any(~np.isfinite(values)):
             raise ValueError("potentials must be finite.")
-        residual, derivative, _ = self._evaluate_state(
+        residual, derivative, _, _ = self._evaluate_state(
             values, jacobian=jacobian
         )
         return residual, derivative
@@ -334,11 +584,25 @@ class ReducedEquilibriumSystem:
         desired = np.log(self.mixture.P / (u.k_b * self.mixture.T)) + np.log(
             weights
         )
-        return np.linalg.lstsq(
+        base = np.linalg.lstsq(
             self.constraint_matrix,
             self._base_log_densities - desired,
             rcond=None,
         )[0]
+        if not self.coupled_ionization_lowering:
+            return base
+        electron_density = self.mixture.P / (u.k_b * self.mixture.T)
+        electron_density *= weights[self.electron_index]
+        positive = self.positive_indices
+        z_star = (weights[positive] @ self.charges[positive] ** 2) / (
+            weights[positive] @ self.charges[positive]
+        )
+        return np.concatenate(
+            (
+                base,
+                [np.log(electron_density), np.log(z_star)],
+            )
+        )
 
     def solve(
         self,
@@ -363,7 +627,7 @@ class ReducedEquilibriumSystem:
         self.residual_evaluations = 0
         backtracks = 0
         for iteration in range(max_iterations + 1):
-            residual, jacobian, log_densities = self._evaluate_state(
+            residual, jacobian, log_densities, lowering = self._evaluate_state(
                 potentials, jacobian=True
             )
             residual_norm = float(np.linalg.norm(residual, ord=np.inf))
@@ -379,6 +643,7 @@ class ReducedEquilibriumSystem:
                     residual_evaluations=self.residual_evaluations,
                     backtracks=backtracks,
                     jacobian_condition=condition,
+                    ionization_lowering=lowering.copy(),
                 )
             if iteration == max_iterations:
                 break
@@ -397,7 +662,7 @@ class ReducedEquilibriumSystem:
             for _ in range(max_backtracks + 1):
                 candidate_potentials = potentials + step * update
                 if np.all(np.isfinite(candidate_potentials)):
-                    candidate, _, candidate_logs = self._evaluate_state(
+                    candidate, _, _, _ = self._evaluate_state(
                         candidate_potentials, jacobian=False
                     )
                     candidate_merit = 0.5 * float(candidate @ candidate)
@@ -420,9 +685,130 @@ class ReducedEquilibriumSystem:
             f"iterations; residual={residual_norm:.3e}."
         )
 
+    def temperature_tangent(
+        self, result: ReducedEquilibriumResult
+    ) -> ReducedEquilibriumTemperatureTangent:
+        """Differentiate a converged reduced state at fixed pressure."""
+        potentials = np.asarray(result.potentials, dtype=np.float64)
+        residual, jacobian, log_densities, lowering = self._evaluate_state(
+            potentials, jacobian=True
+        )
+        del residual
+        if jacobian is None:
+            raise RuntimeError(
+                "Cannot differentiate a non-finite reduced state."
+            )
+
+        temperature = float(self.mixture.T)
+        kbt = u.k_b * temperature
+        if self.coupled_ionization_lowering:
+            _, d_lowering_deta, d_lowering_dxi = self._coupled_lowering(
+                potentials[-2], potentials[-1]
+            )
+            reference, reference_auxiliary_derivative = (
+                self._reference_from_lowering(
+                    lowering, (d_lowering_deta, d_lowering_dxi)
+                )
+            )
+            assert reference_auxiliary_derivative is not None
+            d_lowering_dT = self._coupled_temperature_lowering_derivative(
+                potentials[-2], potentials[-1]
+            )
+            _, reference_derivative = self._reference_from_lowering(
+                lowering, (d_lowering_dT, np.zeros(self.species_count))
+            )
+            assert reference_derivative is not None
+            reference_dT = reference_derivative[:, 0]
+        else:
+            reference_dT = np.zeros(self.species_count)
+            reference = self.base_reference_energies
+            reference_auxiliary_derivative = None
+        dlog_q_dT = np.array(
+            [
+                species.dlog_total_partition_dT(temperature, dE)
+                for species, dE in zip(self.species, lowering)
+            ]
+        )
+        explicit_species = (
+            dlog_q_dT - reference_dT / kbt + reference / (kbt * temperature)
+        )
+        _, fractions, slopes, _ = self._reconstruct(potentials)
+        explicit = [1.0 / temperature + float(fractions @ explicit_species)]
+        log_moments = []
+        for column in range(self.element_count):
+            present = self.stoichiometry[:, column] > 0
+            log_moments.append(
+                _logsumexp(
+                    log_densities[present]
+                    + np.log(self.stoichiometry[present, column])
+                )
+            )
+        for column in range(1, self.element_count):
+            weights = np.zeros(self.species_count)
+            present = self.stoichiometry[:, column] > 0
+            weights[present] = self.stoichiometry[present, column] * np.exp(
+                log_densities[present] - log_moments[column]
+            )
+            reference_weights = np.zeros(self.species_count)
+            present_reference = self.stoichiometry[:, 0] > 0
+            reference_weights[present_reference] = self.stoichiometry[
+                present_reference, 0
+            ] * np.exp(log_densities[present_reference] - log_moments[0])
+            explicit.append((weights - reference_weights) @ explicit_species)
+        charge_residual = float(fractions @ self.charges)
+        if self.has_charge_constraint:
+            explicit.append(
+                (fractions * (self.charges - charge_residual))
+                @ explicit_species
+            )
+        if self.coupled_ionization_lowering:
+            positive = self.positive_indices
+            log_moment_one = _logsumexp(
+                log_densities[positive] + np.log(self.charges[positive])
+            )
+            log_moment_two = _logsumexp(
+                log_densities[positive] + 2 * np.log(self.charges[positive])
+            )
+            rho_one = np.zeros(self.species_count)
+            rho_two = np.zeros(self.species_count)
+            rho_one[positive] = self.charges[positive] * np.exp(
+                log_densities[positive] - log_moment_one
+            )
+            rho_two[positive] = self.charges[positive] ** 2 * np.exp(
+                log_densities[positive] - log_moment_two
+            )
+            explicit.append(explicit_species[self.electron_index])
+            explicit.append((rho_two - rho_one) @ explicit_species)
+        explicit_array = np.asarray(explicit)
+        potential_derivative = np.linalg.solve(jacobian, -explicit_array)
+        log_density_derivative = (
+            explicit_species + slopes @ potential_derivative
+        )
+        total_reference_derivative = reference_dT
+        if reference_auxiliary_derivative is not None:
+            total_reference_derivative = (
+                reference_dT
+                + reference_auxiliary_derivative @ potential_derivative[-2:]
+            )
+        densities = np.exp(log_densities)
+        number_density_derivative = densities * log_density_derivative
+        mole_fractions = fractions
+        mole_fraction_derivative = mole_fractions * (
+            log_density_derivative - mole_fractions @ log_density_derivative
+        )
+        return ReducedEquilibriumTemperatureTangent(
+            log_number_density_derivative=log_density_derivative,
+            number_density_derivative=number_density_derivative,
+            mole_fraction_derivative=mole_fraction_derivative,
+            potential_derivative=potential_derivative,
+            reference_energy_derivative=total_reference_derivative,
+        )
+
     def active_level_fingerprint(self, result: ReducedEquilibriumResult):
         """Return active-level diagnostics for a reduced result."""
-        del result
-        return self.mixture._active_level_fingerprint(
-            self.fixed_ionization_lowering
-        )
+        lowering = np.asarray(result.ionization_lowering, dtype=np.float64)
+        if lowering.shape != (self.species_count,):
+            raise ValueError(
+                "result has an invalid ionisation-lowering shape."
+            )
+        return self.mixture._active_level_fingerprint(lowering)
