@@ -4,12 +4,13 @@
 [#100](https://github.com/quinnreynolds/minplascalc/issues/100)**
 
 ```{admonition} Status
-:class: warning
+:class: note
 
-This is a derivation and experiment design for a development branch. The
-radically reduced solver has not been implemented, validated, benchmarked, or
-approved as a production replacement. The measured speedups elsewhere on the
-branch belong to the full log-equilibrium prototype, not to this proposal.
+Stages 1--5 are now implemented and evaluated as research-only prototypes on
+the development branch. The benchmark supports a research recommendation, not
+a production replacement. The measured speedups reported elsewhere on the
+branch belong to the full log-equilibrium prototype, not to the reduced
+formulation.
 ```
 
 ## Executive summary
@@ -119,7 +120,7 @@ treated separately below.
 
 | Feature | Production governed GFE | Full log prototype | Radically reduced proposal |
 |---|---|---|---|
-| Status | Public implementation | Isolated branch prototype | Derivation only |
+| Status | Public implementation | Isolated branch prototype | Research-only prototype; Stages 2--5 validated |
 | Species set | Supplied up front | Same supplied set | Same supplied set |
 | Nonlinear species variables | $N_i$ | $u_i=\\log N_i$ | None |
 | Other variables | dimensional multipliers | scaled multipliers | element/charge potentials and optional lowering auxiliaries |
@@ -732,7 +733,7 @@ constraint counting, scale handling, and proof scope.
 Decision gate: agree that root equivalence on a fixed active set is the right
 initial claim and that the zero-feed boundary problem can remain unsupported.
 
-### Stage 2: fixed-lowering prototype
+### Stage 2: fixed-lowering prototype — complete
 
 Output: a research-only reduced solver using the packed thermodynamic kernel
 with lowering disabled or frozen.
@@ -740,27 +741,127 @@ with lowering disabled or frozen.
 Decision gate: reproduce atomic, molecular, and electron-free full-log roots
 and analytical Jacobians without using a full-solver initial state.
 
-### Stage 3: lowering auxiliaries
+Evidence: `bench/reduced_equilibrium.py` implements the density reconstruction,
+pressure closure, independent elemental ratios, and optional charge closure.
+The fixed-lowering validation covers oxygen, SiCO, electron-free oxygen, and a
+minimal CO/C/O mixture. It also covers the analytical reduced Jacobian,
+multi-element molecular coupling, deterministic active fingerprints, zero-feed
+and rank/shape diagnostics, and independent and perturbed potential starts.
+
+The fixed-lowering roots agree with the frozen `LogEquilibriumSystem` at the
+tested 8,000, 12,000, and 18,000 K states. The test suite intentionally keeps
+the participating species set unchanged; reduction removes nonlinear species
+variables, not molecular species.
+
+### Stage 3: lowering auxiliaries — complete
 
 Output: explicit $\\eta$ and $\\xi$ closures and their analytical derivatives.
 
 Decision gate: reproduce oxygen and SiCO roots, lowering values, and tangents
 through the pressure/temperature envelope.
 
-### Stage 4: continuation and active sets
+Evidence: the coupled system retains
+$\\eta=\\log n_e$ and $\\xi=\\log z^\*$, validates their Stewart--Pyatt
+closures and analytical derivatives, and lifts the temperature tangent through
+species reconstruction. The coupled oxygen and SiCO roots match the ordinary
+full log solver at 8,000 and 12,000 K and at 1,013.25 Pa and 10.1325 MPa
+probes at 12,000 K. The coupled Jacobian and tangent checks pass on the fixed
+active branch, including mole fractions, log densities, and densities.
+
+### Stage 4: continuation and active sets — complete with limitations
 
 Output: robust globalisation, two-way continuation, active fingerprints, and
 local cutoff probes.
 
 Decision gate: characterize rather than conceal alternate roots and failures.
 
-### Stage 5: benchmark and recommendation
+Evidence: two-way reduced continuation over a 1,000--25,000 K, nine-point
+grid converges for oxygen and SiCO at 101,325 Pa and 10.1325 MPa, with both
+ascending and descending requests. The continuation path uses a 12,000 K
+bootstrap and 1,000 K maximum temperature step. A direct cold start is not a
+reliable basin: the 1,000 K solve is expected to fail without continuation.
+At cold SiCO endpoints, multiple trace-lowering roots can be reached. The
+reduced continuation and full-log continuation agree in bulk composition and
+the full root maps back into the reduced residual, while trace species can
+differ by many orders of magnitude. This is recorded as a basin and
+trace-observability limitation, not hidden by a relaxed global assertion.
+
+The local Si$^+$ cutoff probe at 20,862 K returns the same two exact active
+fingerprints in both formulations. The 27-level branch is
+`2601eaf3dcc74750313eaf4fad79aaed40c0ee72bfb36e17766293a4bec26dfc` and the
+28-level branch is
+`4e83253e14eb442cdefc3e1afb8419bb469928d1203826f5db1c3cb762cbe4c2`.
+The corresponding Si$^+$ nearest margins are $-1.76518\\times10^{-6} k_BT$
+and $+1.91060\\times10^{-6} k_BT$, respectively. Both solvers select the
+28-level branch under their local Gibbs diagnostic. The branch metadata's
+single primary-root distance is allowed to differ because the two solvers may
+choose opposite primary roots; candidate matching is by exact fingerprint.
+At 20,861.5 K the Si$^+$ diagnostic is negative
+($-1.16754\\times10^{-5} k_BT$) with 27 active levels; at 20,862.5 K it is
+positive ($+2.85265\\times10^{-6} k_BT$) with 29 active levels. The probe is
+window-gated and deduplicated by exact fingerprint, and is not a global search
+over active sets.
+
+### Stage 5: benchmark and recommendation — complete
 
 Output: reproducible robustness, conditioning, tangent-cost, component, and
 end-to-end comparisons with both existing formulations.
 
 Decision gate: recommend one of continued research, a revised formulation, a
 separate production proposal, or retention as a documented negative result.
+
+Evidence is recorded in
+`bench/REDUCED_EQUILIBRIUM_2026-08-28.md`. The benchmark sweeps 20 states from
+1,000 to 25,000 K, with SiCO repeated at SiO feed fractions 0.1, 0.5, and
+0.9. Both coupled prototype sweeps completed without failures, and all
+requested-state residuals were below $10^{-9}$.
+
+| Workload | Formulation | Equilibrium time | End-to-end time | Tangent time |
+|---|---|---:|---:|---:|
+| Oxygen, 20 states | full log | 0.014825 s | 0.017316 s | 0.002699 s |
+| | reduced | 0.061350 s | 0.063869 s | 0.006969 s |
+| SiCO, 60 states | full log | 0.082781 s | 0.118104 s | 0.014873 s |
+| | reduced | 0.385151 s | 0.412530 s | 0.043061 s |
+
+The reduced prototype is 1.356 times slower than production end to end for
+oxygen and 1.295 times slower for SiCO; it is 3.688 and 3.493 times slower
+than full log for oxygen and SiCO, respectively. Thus the smaller nonlinear
+matrix does not currently reduce wall time. The measured reduced/full-log
+SiCO maximum absolute mole-fraction errors are $3.405\\times10^{-10}$ and
+$4.810\\times10^{-11}$ for SiCO and oxygen, respectively. Maximum absolute
+log-density errors reach 85.36 and 42.67 for cold trace roots, so those values
+must not be interpreted as bulk-composition errors.
+
+The component probes identify reconstruction rather than the dense solve as
+the immediate cost. On SiCO, full-log packed thermodynamics and its combined
+residual/Jacobian took 69.11 and 91.65 microseconds. Reduced lowering alone
+took 12.64 microseconds, but reconstruction and the combined reduced
+residual/Jacobian took 157.32 and 219.36 microseconds. Direct NumPy dense
+solves took 5.04 microseconds for the 20-dimensional full system and 3.24
+microseconds for the 6-dimensional reduced system. The reduced trust-region
+path also used 1,531 residual evaluations versus 787 for full log on the SiCO
+sweep. SciPy's internal trust-region linear algebra is not included in the
+NumPy solve probe, so this is a directional component result rather than a
+complete optimizer profile.
+
+One-pass row/column equilibration gives warm/hot reduced condition ranges of
+3.00--3.01 for oxygen and 3.13--6.85 for SiCO, compared with 7.03--11.33
+and 16.65--34.14 for full log. This advantage is not uniform at 1,000 K:
+trace-ionisation closure degeneracy leaves equilibrated SiCO reduced condition
+numbers around $2.8\\times10^{11}$--$3.2\\times10^{14}$ over the tested
+pressures. The complete transport-property integration and any production API
+change remain a separate production proposal, outside this benchmark.
+
+The existing approximately 4% dense-linear-solve share belongs only to the
+packed full-log prototype. It is not a production-time share for the reduced
+solver and must not be used as a reduced-solver speedup claim.
+
+One additional basin limitation remains material for any future benchmark:
+direct least-squares from a generic state fails for simple oxygen at 20,000 K
+and 1,013.25 Pa (optimizer status 2, residual 1.0), whereas the 12,000 K
+bootstrap continuation reaches the state. Timing and robustness measurements
+must therefore report both independent-start and continuation paths rather
+than silently substituting one for the other.
 
 ## Acceptance criteria for the research programme
 
@@ -788,8 +889,19 @@ separate production proposal, or retention as a documented negative result.
 
 ## Current recommendation
 
-Proceed to a small fixed-lowering prototype only after review of this
-derivation. The reduction is algebraically plausible and offers a cleaner
-nonlinear state, but its strongest prospective benefit is better robustness
-and conditioning, not the arithmetic cost of a smaller dense solve. Retain the
-full log formulation as the reference implementation throughout the study.
+Retain the reduced formulation as a research-only development-branch
+prototype, and retain the full log formulation as the reference implementation.
+Stages 2--5 establish algebraic equivalence on matched roots, explicit
+ionisation-lowering closures, continuation behaviour, and local active-set
+diagnostics. They do not establish a single global basin: cold states can have
+multiple trace-lowering roots, direct cold starts can fail, and the hard
+cutoff creates locally competing branches.
+
+Do not replace `LTE.calculate_composition` or fold the prototype into the
+public API. The measured reduced solver is slower end to end than both
+production and full log on the recorded workloads, despite materially better
+warm/hot conditioning. The dense solve is also a small share of the already
+measured full-log prototype runtime. Any complete transport-property
+integration and production API change should be proposed and benchmarked
+separately after a new kernel/globalisation design addresses the reduced
+prototype's evaluation cost and cold trace-root basin.
