@@ -83,6 +83,51 @@ def test_piecewise_composition_temperature_derivative(
     assert analytical.sum() == pytest.approx(0.0, abs=1e-18)
 
 
+def test_active_level_fingerprint_identifies_known_silicon_crossing():
+    names = [
+        "O2",
+        "O2+",
+        "O",
+        "O+",
+        "O++",
+        "CO",
+        "CO+",
+        "C",
+        "C+",
+        "C++",
+        "SiO",
+        "SiO+",
+        "Si",
+        "Si+",
+        "Si++",
+    ]
+    x0 = [0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0]
+    low = mpc.mixture.lte_from_names(names, x0=x0, T=20862.0, P=101325.0)
+    high = mpc.mixture.lte_from_names(names, x0=x0, T=20862.5, P=101325.0)
+
+    low_fingerprint = low.calculate_active_level_fingerprint()
+    repeated = low.calculate_active_level_fingerprint()
+    high_fingerprint = high.calculate_active_level_fingerprint()
+
+    assert repeated == low_fingerprint
+    assert len(low_fingerprint.fingerprint) == 64
+    assert low_fingerprint.fingerprint != high_fingerprint.fingerprint
+    assert low_fingerprint.nearest_cutoff_species_name == "Si+"
+    assert high_fingerprint.nearest_cutoff_species_name == "Si+"
+    assert low_fingerprint.nearest_cutoff_margin_over_kbt < 0
+    assert high_fingerprint.nearest_cutoff_margin_over_kbt > 0
+
+    low_counts = {
+        state.species_name: state.active_level_count
+        for state in low_fingerprint.species
+    }
+    high_counts = {
+        state.species_name: state.active_level_count
+        for state in high_fingerprint.species
+    }
+    assert low_counts["Si+"] < high_counts["Si+"]
+
+
 def test_electron_free_composition_temperature_derivative():
     mixture = mpc.mixture.lte_from_names(
         ["O2", "O"],

@@ -205,3 +205,19 @@ def test_log_equilibrium_selects_lower_gibbs_cutoff_branch():
         )
         == 1
     )
+
+    fingerprints = [
+        system.active_level_fingerprint(candidate)
+        for candidate in branches.candidates
+    ]
+    assert fingerprints[0].fingerprint != fingerprints[1].fingerprint
+    assert {
+        fingerprint.nearest_cutoff_species_name for fingerprint in fingerprints
+    } == {"Si+"}
+    per_species = [
+        {state.species_name: state for state in fingerprint.species}
+        for fingerprint in fingerprints
+    ]
+    assert (
+        per_species[0]["Si+"].fingerprint != per_species[1]["Si+"].fingerprint
+    )

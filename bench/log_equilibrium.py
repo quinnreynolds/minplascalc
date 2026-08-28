@@ -14,7 +14,7 @@ import numpy as np
 
 from minplascalc import species as species_module
 from minplascalc import units as u
-from minplascalc.mixture import LTE
+from minplascalc.mixture import LTE, ActiveLevelFingerprint
 
 
 @dataclass(frozen=True)
@@ -641,6 +641,17 @@ class LogEquilibriumSystem:
             + result.log_particles
         )
         return float(thermodynamics.particle_numbers @ chemical_potential)
+
+    def active_level_fingerprint(
+        self, result: LogEquilibriumResult
+    ) -> ActiveLevelFingerprint:
+        """Return active-level diagnostics for a converged prototype state."""
+        thermodynamics = self._packed_thermodynamics(
+            result.log_particles, derivatives=False
+        )
+        return self.mixture._active_level_fingerprint(
+            thermodynamics.ionization_lowering
+        )
 
     def temperature_tangent(
         self, result: LogEquilibriumResult

@@ -3,6 +3,7 @@
 This includes species composition and thermodynamic properties.
 """
 
+import hashlib
 import logging
 import warnings
 from contextlib import contextmanager
@@ -15,7 +16,37 @@ from minplascalc import functions_radiation, functions_transport
 from minplascalc import species as _sp
 from minplascalc import units as u
 
-__all__ = ["lte_from_names", "LTE", "LTEWithoutElectrons"]
+__all__ = [
+    "ActiveLevelFingerprint",
+    "ActiveLevelSpeciesState",
+    "lte_from_names",
+    "LTE",
+    "LTEWithoutElectrons",
+]
+
+
+@dataclass(frozen=True)
+class ActiveLevelSpeciesState:
+    """Electronic active-set summary for one monatomic species."""
+
+    species_index: int
+    species_name: str
+    active_level_count: int
+    total_level_count: int
+    fingerprint: str
+
+
+@dataclass(frozen=True)
+class ActiveLevelFingerprint:
+    """Deterministic diagnostic for an equilibrium electronic active set."""
+
+    fingerprint: str
+    species: tuple[ActiveLevelSpeciesState, ...]
+    nearest_cutoff_species_index: int | None
+    nearest_cutoff_species_name: str | None
+    nearest_cutoff_level_index: int | None
+    nearest_cutoff_margin: float | None
+    nearest_cutoff_margin_over_kbt: float | None
 
 
 @dataclass(frozen=True)
@@ -907,6 +938,99 @@ class LTE:
             :math:`dx_i/dT`, in :math:`\text{K}^{-1}`.
         """
         return self._equilibrium_temperature_tangent().mole_fraction_derivative
+
+    def _active_level_fingerprint(
+        self, ionization_lowering: np.ndarray
+    ) -> ActiveLevelFingerprint:
+        """Summarise an exact electronic active set for diagnostics."""
+        digest = hashlib.sha256()
+        species_states = []
+        nearest = None
+
+        for species_index, (species, lowering) in enumerate(
+            zip(self.species, ionization_lowering)
+        ):
+            if not isinstance(species, _sp.Monatomic):
+                continue
+
+            margins = (
+                species.ionisation_energy - lowering - species._level_energies
+            )
+            active = margins > 0
+            packed = np.packbits(active, bitorder="big").tobytes()
+            name = species.name.encode("utf-8")
+            payload = (
+                len(name).to_bytes(4, "big")
+                + name
+                + active.size.to_bytes(8, "big")
+                + packed
+            )
+            species_digest = hashlib.sha256(payload).hexdigest()
+            digest.update(species_index.to_bytes(8, "big"))
+            digest.update(payload)
+            species_states.append(
+                ActiveLevelSpeciesState(
+                    species_index=species_index,
+                    species_name=species.name,
+                    active_level_count=int(np.count_nonzero(active)),
+                    total_level_count=int(active.size),
+                    fingerprint=species_digest,
+                )
+            )
+
+            if margins.size:
+                level_index = int(np.argmin(np.abs(margins)))
+                margin = float(margins[level_index])
+                if nearest is None or abs(margin) < abs(nearest[3]):
+                    nearest = (
+                        species_index,
+                        species.name,
+                        level_index,
+                        margin,
+                    )
+
+        if nearest is None:
+            nearest_species_index = None
+            nearest_species_name = None
+            nearest_level_index = None
+            nearest_margin = None
+            nearest_margin_over_kbt = None
+        else:
+            (
+                nearest_species_index,
+                nearest_species_name,
+                nearest_level_index,
+                nearest_margin,
+            ) = nearest
+            nearest_margin_over_kbt = nearest_margin / (u.k_b * self.T)
+
+        return ActiveLevelFingerprint(
+            fingerprint=digest.hexdigest(),
+            species=tuple(species_states),
+            nearest_cutoff_species_index=nearest_species_index,
+            nearest_cutoff_species_name=nearest_species_name,
+            nearest_cutoff_level_index=nearest_level_index,
+            nearest_cutoff_margin=nearest_margin,
+            nearest_cutoff_margin_over_kbt=nearest_margin_over_kbt,
+        )
+
+    def calculate_active_level_fingerprint(self) -> ActiveLevelFingerprint:
+        r"""Describe the electronic levels used by the equilibrium state.
+
+        The diagnostic identifies the exact active/inactive bit mask of every
+        monatomic species with a deterministic SHA-256 fingerprint. Per-species
+        counts and fingerprints make changes localisable, while the signed
+        nearest-cutoff margin identifies the level most likely to explain a
+        nearby discontinuity. A positive margin means that level is active.
+
+        Returns
+        -------
+        ActiveLevelFingerprint
+            Fingerprint and cutoff diagnostics for the current LTE state.
+        """
+        self.calculate_composition()
+        _, ionization_lowering = self.__get_reference_energies()
+        return self._active_level_fingerprint(ionization_lowering)
 
     def _equilibrium_state(self) -> _EquilibriumState:
         """Return all commonly used quantities for the current LTE state."""
