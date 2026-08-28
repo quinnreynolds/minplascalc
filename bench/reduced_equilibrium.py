@@ -39,6 +39,29 @@ class ReducedEquilibriumResult:
     backtracks: int
     jacobian_condition: float
     ionization_lowering: np.ndarray
+    temperature: float = 0.0
+    method: str = "newton"
+
+
+@dataclass(frozen=True)
+class ReducedEquilibriumPathResult:
+    """Requested temperature states and continuation diagnostics."""
+
+    states: tuple[ReducedEquilibriumResult, ...]
+    total_iterations: int
+    total_residual_evaluations: int
+    total_backtracks: int
+    continuation_solves: int
+
+
+@dataclass(frozen=True)
+class ReducedEquilibriumBranchResult:
+    """Locally competing active-set branches and their Gibbs diagnostics."""
+
+    selected: ReducedEquilibriumResult
+    candidates: tuple[ReducedEquilibriumResult, ...]
+    dimensionless_gibbs: tuple[float, ...]
+    nearest_cutoff_distance: float
 
 
 @dataclass(frozen=True)
@@ -202,16 +225,29 @@ class ReducedEquilibriumSystem:
             )
 
         self.base_reference_energies = self._reference_energies()
-        self._log_q = self._log_partition_per_volume()
-        if np.any(~np.isfinite(self._log_q)):
+        self._cached_temperature = np.nan
+        self._log_q = np.empty(self.species_count)
+        self._base_log_densities = np.empty(self.species_count)
+        self._refresh_temperature_cache()
+        if not self.coupled_ionization_lowering and np.any(
+            ~np.isfinite(self._log_q)
+        ):
             raise ValueError(
                 "The fixed lowering must leave every species partition "
                 "factor finite and positive."
             )
-        self._base_log_densities = (
-            self._log_q - self.base_reference_energies / (u.k_b * mixture.T)
-        )
         self.residual_evaluations = 0
+
+    def _refresh_temperature_cache(self) -> None:
+        """Refresh fixed-lowering quantities after ``mixture.T`` changes."""
+        temperature = float(self.mixture.T)
+        if temperature == self._cached_temperature:
+            return
+        self._log_q = self._log_partition_per_volume()
+        self._base_log_densities = (
+            self._log_q - self.base_reference_energies / (u.k_b * temperature)
+        )
+        self._cached_temperature = temperature
 
     def _reference_energies(self) -> np.ndarray:
         """Reproduce the mixture reference-energy chain at fixed lowering."""
@@ -321,21 +357,22 @@ class ReducedEquilibriumSystem:
         lowering = np.zeros(self.species_count)
         d_eta = np.zeros(self.species_count)
         d_xi = np.zeros(self.species_count)
-        lowering[self.positive_indices] = kbt * shape / (2 * denominator)
-        dlog_ratio_dxi = 1.5 * z_star / denominator
-        ratio_d_eta = 0.5 * ratio
-        ratio_d_xi = ratio * dlog_ratio_dxi
-        d_eta[self.positive_indices] = (
-            kbt / (2 * denominator) * shape_derivative * ratio_d_eta
-        )
-        d_xi[self.positive_indices] = (
-            kbt
-            / 2
-            * (
-                shape_derivative * ratio_d_xi / denominator
-                - shape * z_star / denominator**2
+        with np.errstate(all="ignore"):
+            lowering[self.positive_indices] = kbt * shape / (2 * denominator)
+            dlog_ratio_dxi = 1.5 * z_star / denominator
+            ratio_d_eta = 0.5 * ratio
+            ratio_d_xi = ratio * dlog_ratio_dxi
+            d_eta[self.positive_indices] = (
+                kbt / (2 * denominator) * shape_derivative * ratio_d_eta
             )
-        )
+            d_xi[self.positive_indices] = (
+                kbt
+                / 2
+                * (
+                    shape_derivative * ratio_d_xi / denominator
+                    - shape * z_star / denominator**2
+                )
+            )
         return lowering, d_eta, d_xi
 
     def _coupled_temperature_lowering_derivative(
@@ -363,11 +400,12 @@ class ReducedEquilibriumSystem:
             shape = (ratio + 1.0) ** (2.0 / 3.0) - 1.0
             shape_derivative = (2.0 / 3.0) * (ratio + 1.0) ** (-1.0 / 3.0)
         derivative = np.zeros(self.species_count)
-        derivative[self.positive_indices] = (
-            u.k_b
-            / (2 * denominator)
-            * (shape - 1.5 * ratio * shape_derivative)
-        )
+        with np.errstate(all="ignore"):
+            derivative[self.positive_indices] = (
+                u.k_b
+                / (2 * denominator)
+                * (shape - 1.5 * ratio * shape_derivative)
+            )
         return derivative
 
     def _reference_from_lowering(
@@ -436,6 +474,7 @@ class ReducedEquilibriumSystem:
         self, potentials: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Return logs, normalized densities, and stationarity slopes."""
+        self._refresh_temperature_cache()
         base = potentials[: self.base_potential_count]
         if self.coupled_ionization_lowering:
             lowering, d_eta, d_xi = self._coupled_lowering(
@@ -466,9 +505,10 @@ class ReducedEquilibriumSystem:
         self, potentials: np.ndarray, *, jacobian: bool
     ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray, np.ndarray]:
         self.residual_evaluations += 1
-        log_densities, fractions, slopes, lowering = self._reconstruct(
-            potentials
-        )
+        with np.errstate(all="ignore"):
+            log_densities, fractions, slopes, lowering = self._reconstruct(
+                potentials
+            )
         log_total = _logsumexp(log_densities)
         if not np.isfinite(log_total) or np.any(~np.isfinite(fractions)):
             size = 1 + self.element_count - 1 + self.has_charge_constraint
@@ -578,6 +618,7 @@ class ReducedEquilibriumSystem:
 
     def initial_state(self) -> np.ndarray:
         """Return a generic potential estimate without a full-system solve."""
+        self._refresh_temperature_cache()
         x0 = np.asarray(self.mixture.x0, dtype=np.float64)
         weights = np.maximum(x0, 1e-12)
         weights /= weights.sum()
@@ -611,8 +652,26 @@ class ReducedEquilibriumSystem:
         tolerance: float = 1e-10,
         max_iterations: int = 80,
         max_backtracks: int = 30,
+        method: str = "newton",
     ) -> ReducedEquilibriumResult:
-        """Solve with analytical Newton steps and Armijo backtracking."""
+        """Solve with Newton or analytical trust-region least squares."""
+        if method in {"least_squares", "trust_region", "trf"}:
+            return self._solve_least_squares(
+                initial,
+                tolerance=tolerance,
+                max_iterations=max_iterations,
+            )
+        if method != "newton":
+            raise ValueError("method must be 'newton' or 'least_squares'.")
+        return self._solve_newton(
+            initial,
+            tolerance=tolerance,
+            max_iterations=max_iterations,
+            max_backtracks=max_backtracks,
+        )
+
+    def _initial_potentials(self, initial: np.ndarray | None) -> np.ndarray:
+        """Validate and copy a starting reduced state."""
         potentials = (
             self.initial_state()
             if initial is None
@@ -624,6 +683,18 @@ class ReducedEquilibriumSystem:
             )
         if np.any(~np.isfinite(potentials)):
             raise ValueError("initial potentials must be finite.")
+        return potentials
+
+    def _solve_newton(
+        self,
+        initial: np.ndarray | None = None,
+        *,
+        tolerance: float = 1e-10,
+        max_iterations: int = 80,
+        max_backtracks: int = 30,
+    ) -> ReducedEquilibriumResult:
+        """Solve with analytical Newton steps and Armijo backtracking."""
+        potentials = self._initial_potentials(initial)
         self.residual_evaluations = 0
         backtracks = 0
         for iteration in range(max_iterations + 1):
@@ -644,6 +715,8 @@ class ReducedEquilibriumSystem:
                     backtracks=backtracks,
                     jacobian_condition=condition,
                     ionization_lowering=lowering.copy(),
+                    temperature=float(self.mixture.T),
+                    method="newton",
                 )
             if iteration == max_iterations:
                 break
@@ -683,6 +756,289 @@ class ReducedEquilibriumSystem:
             f"Reduced-equilibrium solver did not converge after "
             f"{max_iterations} "
             f"iterations; residual={residual_norm:.3e}."
+        )
+
+    def _solve_least_squares(
+        self,
+        initial: np.ndarray | None = None,
+        *,
+        tolerance: float = 1e-10,
+        max_iterations: int = 80,
+    ) -> ReducedEquilibriumResult:
+        """Solve with scipy's trust-region reflective least-squares method."""
+        from scipy.optimize import least_squares
+
+        potentials = self._initial_potentials(initial)
+        self.residual_evaluations = 0
+
+        def residual_function(values: np.ndarray) -> np.ndarray:
+            residual, _, _, _ = self._evaluate_state(values, jacobian=False)
+            return residual
+
+        def jacobian_function(values: np.ndarray) -> np.ndarray:
+            _, jacobian, _, _ = self._evaluate_state(values, jacobian=True)
+            if jacobian is None:
+                return np.zeros((self.potential_count, self.potential_count))
+            return jacobian
+
+        optimizer = least_squares(
+            residual_function,
+            potentials,
+            jac=jacobian_function,
+            method="trf",
+            x_scale="jac",
+            ftol=max(tolerance * 0.1, 1e-14),
+            xtol=max(tolerance * 0.1, 1e-14),
+            gtol=max(tolerance * 0.1, 1e-14),
+            max_nfev=max_iterations,
+        )
+        residual, jacobian, logs, lowering = self._evaluate_state(
+            optimizer.x, jacobian=True
+        )
+        residual_norm = float(np.linalg.norm(residual, ord=np.inf))
+        if (
+            not optimizer.success
+            or jacobian is None
+            or not np.isfinite(residual_norm)
+            or residual_norm >= tolerance
+        ):
+            raise RuntimeError(
+                "Reduced-equilibrium trust-region solve did not meet the "
+                f"residual tolerance (status={optimizer.status}, "
+                f"residual={residual_norm:.3e})."
+            )
+        return ReducedEquilibriumResult(
+            potentials=optimizer.x.copy(),
+            log_number_densities=logs.copy(),
+            number_densities=np.exp(logs),
+            residual_norm=residual_norm,
+            iterations=int(optimizer.nfev),
+            residual_evaluations=self.residual_evaluations,
+            backtracks=0,
+            jacobian_condition=float(np.linalg.cond(jacobian)),
+            ionization_lowering=lowering.copy(),
+            temperature=float(self.mixture.T),
+            method="least_squares",
+        )
+
+    def solve_temperature_path(
+        self,
+        temperatures: np.ndarray,
+        *,
+        bootstrap_temperature: float = 12000.0,
+        max_temperature_step: float = 1000.0,
+        method: str = "least_squares",
+        tolerance: float = 1e-10,
+        max_iterations: int = 80,
+        max_backtracks: int = 30,
+    ) -> ReducedEquilibriumPathResult:
+        """Solve requested temperatures by continuation from 12,000 K."""
+        requested = np.asarray(temperatures, dtype=np.float64)
+        if requested.ndim != 1 or requested.size == 0:
+            raise ValueError(
+                "temperatures must be a non-empty one-dimensional array."
+            )
+        if np.any(~np.isfinite(requested)) or np.any(requested <= 0):
+            raise ValueError("temperatures must be finite and positive.")
+        if (
+            not np.isfinite(bootstrap_temperature)
+            or bootstrap_temperature <= 0
+            or not np.isfinite(max_temperature_step)
+            or max_temperature_step <= 0
+        ):
+            raise ValueError(
+                "bootstrap temperature and step must be positive."
+            )
+
+        original_temperature = float(self.mixture.T)
+        total_iterations = 0
+        total_evaluations = 0
+        total_backtracks = 0
+        continuation_solves = 0
+
+        def record(state: ReducedEquilibriumResult) -> None:
+            nonlocal total_iterations, total_evaluations
+            nonlocal total_backtracks, continuation_solves
+            total_iterations += state.iterations
+            total_evaluations += state.residual_evaluations
+            total_backtracks += state.backtracks
+            continuation_solves += 1
+
+        try:
+            self.mixture.T = float(bootstrap_temperature)
+            bootstrap = self.solve(
+                method=method,
+                tolerance=tolerance,
+                max_iterations=max_iterations,
+                max_backtracks=max_backtracks,
+            )
+            record(bootstrap)
+            states: dict[float, ReducedEquilibriumResult] = {
+                float(bootstrap_temperature): bootstrap
+            }
+
+            lower = sorted(
+                {
+                    float(value)
+                    for value in requested
+                    if value < bootstrap_temperature
+                },
+                reverse=True,
+            )
+            upper = sorted(
+                {
+                    float(value)
+                    for value in requested
+                    if value > bootstrap_temperature
+                }
+            )
+            for direction in (lower, upper):
+                previous_temperature = float(bootstrap_temperature)
+                previous = bootstrap
+                for target in direction:
+                    distance = abs(target - previous_temperature)
+                    steps = max(
+                        1, int(np.ceil(distance / max_temperature_step))
+                    )
+                    for step in range(1, steps + 1):
+                        temperature = (
+                            previous_temperature
+                            + (target - previous_temperature) * step / steps
+                        )
+                        self.mixture.T = temperature
+                        previous = self.solve(
+                            initial=previous.potentials,
+                            method=method,
+                            tolerance=tolerance,
+                            max_iterations=max_iterations,
+                            max_backtracks=max_backtracks,
+                        )
+                        record(previous)
+                    previous_temperature = target
+                    states[target] = previous
+        finally:
+            self.mixture.T = original_temperature
+            self._refresh_temperature_cache()
+
+        return ReducedEquilibriumPathResult(
+            states=tuple(states[float(value)] for value in requested),
+            total_iterations=total_iterations,
+            total_residual_evaluations=total_evaluations,
+            total_backtracks=total_backtracks,
+            continuation_solves=continuation_solves,
+        )
+
+    def dimensionless_gibbs(self, result: ReducedEquilibriumResult) -> float:
+        """Return the reduced branch's qualified ``G/(k_B T)`` diagnostic."""
+        original_temperature = float(self.mixture.T)
+        try:
+            self.mixture.T = float(result.temperature)
+            logs = np.asarray(result.log_number_densities, dtype=np.float64)
+            lowering = np.asarray(result.ionization_lowering, dtype=np.float64)
+            reference, _ = self._reference_from_lowering(lowering)
+            log_q = self._log_partition_per_volume(lowering)
+            with np.errstate(over="ignore", invalid="ignore"):
+                densities = np.exp(logs)
+                chemical = (
+                    reference / (u.k_b * result.temperature) - log_q + logs
+                )
+                value = densities @ chemical
+            return float(value)
+        finally:
+            self.mixture.T = original_temperature
+            self._refresh_temperature_cache()
+
+    def solve_lowest_gibbs_branch(
+        self,
+        initial: np.ndarray | None = None,
+        *,
+        method: str = "least_squares",
+        tolerance: float = 1e-10,
+        max_iterations: int = 80,
+        max_backtracks: int = 30,
+        cutoff_window: float = 2e-5,
+        probe_distance: float = 1e-5,
+    ) -> ReducedEquilibriumBranchResult:
+        """Probe both sides of the nearest cutoff and select lowest ``G``."""
+        if not self.coupled_ionization_lowering:
+            raise ValueError(
+                "Cutoff branch probing requires coupled lowering."
+            )
+        if not np.isfinite(cutoff_window) or cutoff_window < 0:
+            raise ValueError("cutoff_window must be finite and nonnegative.")
+        if not np.isfinite(probe_distance) or probe_distance <= 0:
+            raise ValueError("probe_distance must be finite and positive.")
+        base = self.solve(
+            initial=initial,
+            method=method,
+            tolerance=tolerance,
+            max_iterations=max_iterations,
+            max_backtracks=max_backtracks,
+        )
+        fingerprint = self.active_level_fingerprint(base)
+        nearest_index = fingerprint.nearest_cutoff_species_index
+        nearest_level = fingerprint.nearest_cutoff_level_index
+        if nearest_index is None or nearest_level is None:
+            return ReducedEquilibriumBranchResult(
+                selected=base,
+                candidates=(base,),
+                dimensionless_gibbs=(self.dimensionless_gibbs(base),),
+                nearest_cutoff_distance=np.inf,
+            )
+        _, d_eta, d_xi = self._coupled_lowering(*base.potentials[-2:])
+        gradient = np.zeros(self.potential_count)
+        gradient[-2:] = (-d_eta[nearest_index], -d_xi[nearest_index])
+        gradient_norm_squared = float(gradient @ gradient)
+        distance = fingerprint.nearest_cutoff_margin
+        dimensionless_distance = (
+            np.inf
+            if distance is None
+            else abs(distance / (u.k_b * self.mixture.T))
+        )
+        if (
+            distance is None
+            or not np.isfinite(distance)
+            or not np.isfinite(gradient_norm_squared)
+            or gradient_norm_squared == 0
+            or dimensionless_distance >= cutoff_window
+        ):
+            return ReducedEquilibriumBranchResult(
+                selected=base,
+                candidates=(base,),
+                dimensionless_gibbs=(self.dimensionless_gibbs(base),),
+                nearest_cutoff_distance=dimensionless_distance,
+            )
+        probe_margin = probe_distance * u.k_b * self.mixture.T
+        candidates = [base]
+        seen = {fingerprint.fingerprint}
+        for sign in (-1.0, 1.0):
+            target_margin = sign * probe_margin
+            trial = base.potentials + (
+                (target_margin - distance) / gradient_norm_squared * gradient
+            )
+            try:
+                candidate = self.solve(
+                    initial=trial,
+                    method=method,
+                    tolerance=tolerance,
+                    max_iterations=max_iterations,
+                    max_backtracks=max_backtracks,
+                )
+            except RuntimeError:
+                continue
+            candidate_fingerprint = self.active_level_fingerprint(candidate)
+            if candidate_fingerprint.fingerprint not in seen:
+                seen.add(candidate_fingerprint.fingerprint)
+                candidates.append(candidate)
+        gibbs = tuple(
+            self.dimensionless_gibbs(candidate) for candidate in candidates
+        )
+        selected = candidates[int(np.argmin(gibbs))]
+        return ReducedEquilibriumBranchResult(
+            selected=selected,
+            candidates=tuple(candidates),
+            dimensionless_gibbs=gibbs,
+            nearest_cutoff_distance=dimensionless_distance,
         )
 
     def temperature_tangent(
@@ -811,4 +1167,10 @@ class ReducedEquilibriumSystem:
             raise ValueError(
                 "result has an invalid ionisation-lowering shape."
             )
-        return self.mixture._active_level_fingerprint(lowering)
+        original_temperature = float(self.mixture.T)
+        try:
+            self.mixture.T = float(result.temperature)
+            return self.mixture._active_level_fingerprint(lowering)
+        finally:
+            self.mixture.T = original_temperature
+            self._refresh_temperature_cache()
