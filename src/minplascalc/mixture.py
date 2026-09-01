@@ -111,6 +111,10 @@ class LTE:
             [sp.charge_number for sp in self.__species]
         )
 
+        self.__state: _EquilibriumState | None = None
+        self.__transport_workspace = None
+        self.__collision_model = None
+
         self.x0 = x0
         self.T = T
         self.P = P
@@ -124,9 +128,6 @@ class LTE:
 
         # Number of particles of each species.
         self.__Ni: np.ndarray = np.zeros(len(self.species))
-        self.__state: _EquilibriumState | None = None
-        self.__transport_workspace = None
-        self.__collision_model = None
 
     @property
     def species(self):
@@ -157,10 +158,8 @@ class LTE:
     @x0.setter
     def x0(self, x0):
         self._validate_x0_length(x0)
-        self.__isLTE = False
-        self.__state = None
-        self.__transport_workspace = None
         self.__x0 = self._format_x0(x0)
+        self._invalidate_equilibrium()
 
     @property
     def T(self):
@@ -168,10 +167,8 @@ class LTE:
 
     @T.setter
     def T(self, T):
-        self.__isLTE = False  # Reset LTE composition flag.
-        self.__state = None
-        self.__transport_workspace = None
         self.__T = T
+        self._invalidate_equilibrium()
 
     @property
     def P(self):
@@ -179,10 +176,41 @@ class LTE:
 
     @P.setter
     def P(self, P):
-        self.__isLTE = False  # Reset LTE composition flag.
+        self.__P = P
+        self._invalidate_equilibrium()
+
+    @property
+    def gfe_initial_particles(self):
+        return self.__gfe_initial_particles
+
+    @gfe_initial_particles.setter
+    def gfe_initial_particles(self, value):
+        self.__gfe_initial_particles = value
+        self._invalidate_equilibrium()
+
+    @property
+    def gfe_rtol(self):
+        return self.__gfe_rtol
+
+    @gfe_rtol.setter
+    def gfe_rtol(self, value):
+        self.__gfe_rtol = value
+        self._invalidate_equilibrium()
+
+    @property
+    def gfe_max_iter(self):
+        return self.__gfe_max_iter
+
+    @gfe_max_iter.setter
+    def gfe_max_iter(self, value):
+        self.__gfe_max_iter = value
+        self._invalidate_equilibrium()
+
+    def _invalidate_equilibrium(self) -> None:
+        """Discard quantities derived from mutable mixture inputs."""
+        self.__isLTE = False
         self.__state = None
         self.__transport_workspace = None
-        self.__P = P
 
     def __repr__(self):
         return (
