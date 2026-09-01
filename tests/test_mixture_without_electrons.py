@@ -86,11 +86,11 @@ def test_density_complex(mixture_complex, x0, result, tol):
 @pytest.mark.parametrize(
     "T, P, result, tol",
     [
-        (MID_T, MID_P, 3741.395, 1e-2),
+        (MID_T, MID_P, 3741.389, 1e-2),
         (LOW_T, LOW_P, 1143.126, 1e-2),
-        (HIGH_T, LOW_P, 1742.402, 1e-2),
+        (HIGH_T, LOW_P, 1742.367, 1e-2),
         (LOW_T, HIGH_P, 1143.126, 1e-2),
-        (HIGH_T, HIGH_P, 2451.842, 1e-2),
+        (HIGH_T, HIGH_P, 2451.824, 1e-2),
     ],
 )
 def test_heat_capacity_simple(mixture_simple, T, P, result, tol):

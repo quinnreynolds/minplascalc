@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 import minplascalc as mpc
@@ -49,6 +50,61 @@ HIGH_X0 = [0, 0, 0, 0, 0, 0.9, 0, 0, 0, 0, 0.1, 0, 0, 0, 0]
 
 
 @pytest.mark.parametrize(
+    "fixture_name,T",
+    [
+        ("mixture_simple", 2000.0),
+        ("mixture_simple", 12000.0),
+        ("mixture_simple", 25000.0),
+        ("mixture_complex", 2000.0),
+        ("mixture_complex", 12000.0),
+        ("mixture_complex", 25000.0),
+    ],
+)
+def test_piecewise_composition_temperature_derivative(
+    request, fixture_name, T
+):
+    mixture = request.getfixturevalue(fixture_name)
+    mixture.T = T
+    mixture.calculate_composition()
+    analytical = mixture.calculate_composition_temperature_derivative()
+
+    relative_step = 0.001
+    with mixture._at_temperature(T * (1 + relative_step)):
+        high = mixture.calculate_composition()
+        high /= high.sum()
+    with mixture._at_temperature(T * (1 - relative_step)):
+        low = mixture.calculate_composition()
+        low /= low.sum()
+    finite_difference = (high - low) / (2 * relative_step * T)
+
+    scaled_error = np.linalg.norm(T * (analytical - finite_difference))
+    scaled_reference = np.linalg.norm(T * finite_difference)
+    assert scaled_error <= 3e-4 * scaled_reference + 1e-9
+    assert analytical.sum() == pytest.approx(0.0, abs=1e-18)
+
+
+def test_electron_free_composition_temperature_derivative():
+    mixture = mpc.mixture.lte_from_names(
+        ["O2", "O"],
+        x0=[1, 0],
+        T=12000.0,
+        P=101325.0,
+        electrons_yn=False,
+    )
+    analytical = mixture.calculate_composition_temperature_derivative()
+    relative_step = 0.001
+    with mixture._at_temperature(mixture.T * (1 + relative_step)):
+        high = mixture.calculate_composition()
+        high /= high.sum()
+    with mixture._at_temperature(mixture.T * (1 - relative_step)):
+        low = mixture.calculate_composition()
+        low /= low.sum()
+    finite_difference = (high - low) / (2 * relative_step * mixture.T)
+
+    assert analytical == pytest.approx(finite_difference, rel=2e-5)
+
+
+@pytest.mark.parametrize(
     "T, P, result, tol",
     [
         (MID_T, MID_P, 0.01911387, 1e-7),
@@ -86,11 +142,11 @@ def test_density_complex(mixture_complex, x0, result, tol):
 @pytest.mark.parametrize(
     "T, P, result, tol",
     [
-        (MID_T, MID_P, 3248.959, 1e-2),
+        (MID_T, MID_P, 3248.946, 1e-2),
         (LOW_T, LOW_P, 1081.252, 1e-2),
-        (HIGH_T, LOW_P, 27606.7, 1e-1),
+        (HIGH_T, LOW_P, 27606.856, 1e-1),
         (LOW_T, HIGH_P, 1081.252, 1e-2),
-        (HIGH_T, HIGH_P, 7297.516, 1e-2),
+        (HIGH_T, HIGH_P, 7297.441, 1e-2),
     ],
 )
 def test_heat_capacity_simple(mixture_simple, T, P, result, tol):
@@ -105,9 +161,9 @@ def test_heat_capacity_simple(mixture_simple, T, P, result, tol):
 @pytest.mark.parametrize(
     "x0, result, tol",
     [
-        (LOW_X0, 6027.484, 1e-2),
-        (MID_X0, 5504.194, 1e-2),
-        (HIGH_X0, 6061.864, 1e-2),
+        (LOW_X0, 6027.503, 1e-2),
+        (MID_X0, 5504.183, 1e-2),
+        (HIGH_X0, 6061.862, 1e-2),
     ],
 )
 def test_heat_capacity_complex(mixture_complex, x0, result, tol):
@@ -116,6 +172,26 @@ def test_heat_capacity_complex(mixture_complex, x0, result, tol):
     thisresult = mixture_complex.calculate_heat_capacity()
 
     assert thisresult == pytest.approx(result, abs=tol)
+
+
+@pytest.mark.parametrize("fixture_name", ["mixture_simple", "mixture_complex"])
+def test_heat_capacity_is_analytical_temperature_derivative(
+    request, fixture_name
+):
+    mixture = request.getfixturevalue(fixture_name)
+    mixture.T = 12000.0
+    analytical = mixture.calculate_heat_capacity(rel_delta_T=0.1)
+    assert mixture.calculate_heat_capacity(rel_delta_T=1e-8) == analytical
+
+    relative_step = 1e-5
+    with mixture._at_temperature(mixture.T * (1 - relative_step)):
+        enthalpy_low = mixture.calculate_enthalpy()
+    with mixture._at_temperature(mixture.T * (1 + relative_step)):
+        enthalpy_high = mixture.calculate_enthalpy()
+    finite_difference = (enthalpy_high - enthalpy_low) / (
+        2 * relative_step * mixture.T
+    )
+    assert analytical == pytest.approx(finite_difference, rel=2e-8)
 
 
 @pytest.mark.parametrize(
@@ -156,11 +232,11 @@ def test_viscosity_complex(mixture_complex, x0, result, tol):
 @pytest.mark.parametrize(
     "T, P, result, tol",
     [
-        (MID_T, MID_P, 1.6059411995888206, 1e-5),
-        (LOW_T, LOW_P, 0.052125335672304166, 1e-7),
-        (HIGH_T, LOW_P, 5.469144033857229, 1e-5),
-        (LOW_T, HIGH_P, 0.0521253043533545, 1e-7),
-        (HIGH_T, HIGH_P, 8.04668554450143, 1e-5),
+        (MID_T, MID_P, 1.6059372309662145, 1e-5),
+        (LOW_T, LOW_P, 0.052125335668461684, 1e-7),
+        (HIGH_T, LOW_P, 5.469166699613663, 1e-5),
+        (LOW_T, HIGH_P, 0.05212530435312864, 1e-7),
+        (HIGH_T, HIGH_P, 8.046667069994843, 1e-5),
     ],
 )
 def test_thermal_conductivity_simple(mixture_simple, T, P, result, tol):
@@ -175,9 +251,9 @@ def test_thermal_conductivity_simple(mixture_simple, T, P, result, tol):
 @pytest.mark.parametrize(
     "x0, result, tol",
     [
-        (LOW_X0, 2.054123612714577, 1e-5),
-        (MID_X0, 2.275659141366203, 1e-5),
-        (HIGH_X0, 2.4269824515817566, 1e-5),
+        (LOW_X0, 2.054126160699179, 1e-5),
+        (MID_X0, 2.275655690865495, 1e-5),
+        (HIGH_X0, 2.426977891327536, 1e-5),
     ],
 )
 def test_thermal_conductivity_complex(mixture_complex, x0, result, tol):
@@ -186,6 +262,20 @@ def test_thermal_conductivity_complex(mixture_complex, x0, result, tol):
     thisresult = mixture_complex.calculate_thermal_conductivity()
 
     assert thisresult == pytest.approx(result, abs=tol)
+
+
+def test_thermal_conductivity_is_temperature_step_independent(
+    mixture_complex,
+):
+    mixture_complex.T = 20862.0
+    wide_step = mixture_complex.calculate_thermal_conductivity(rel_delta_T=0.1)
+    narrow_step = mixture_complex.calculate_thermal_conductivity(
+        rel_delta_T=1e-8
+    )
+
+    assert np.isfinite(wide_step)
+    assert wide_step > 0
+    assert narrow_step == wide_step
 
 
 @pytest.mark.parametrize(
