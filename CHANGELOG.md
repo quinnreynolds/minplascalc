@@ -7,22 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-01
+
 ### Added
 
-- Added numba as dependency and used it to optimise q and qhat calculation functions.
+- Added support for LTE mixtures without electrons ([#90](https://github.com/quinnreynolds/minplascalc/pull/90)).
 - Added a development-only symbolic derivation and randomized cross-check of
-  Devoto's A3--A22 collision-bracket matrices.
-- Added regressions for the reported Si-C-O thermal-conductivity outliers.
+  Devoto's A3--A22 collision-bracket matrices, plus regressions for the reported
+  Si-C-O thermal-conductivity outliers
+  ([#101](https://github.com/quinnreynolds/minplascalc/pull/101)).
+- Added ascending and descending temperature-sweep regression coverage
+  ([#95](https://github.com/quinnreynolds/minplascalc/pull/95)).
 
 ### Changed
+
+- Optimised the transport and composition paths by sharing collision integrals,
+  vectorising electronic and emission sums, and using analytical collision
+  recursion derivatives ([#93](https://github.com/quinnreynolds/minplascalc/pull/93)).
+- Consolidated equilibrium-derived state and shared transport intermediates,
+  including compiled collision-pair evaluation
+  ([#102](https://github.com/quinnreynolds/minplascalc/pull/102)).
+- Replaced finite-difference composition and enthalpy temperature derivatives
+  with analytical equilibrium tangents
+  ([#103](https://github.com/quinnreynolds/minplascalc/pull/103)).
+- Replaced the default LTE composition solve with the coupled log-particle
+  formulation, retaining the particle-number solver as a regression oracle and
+  fallback for zero conserved-element totals
+  ([#104](https://github.com/quinnreynolds/minplascalc/pull/104)).
 
 ### Fixed
 
 - Corrected the misplaced parentheses in the Devoto A11 and A16
   $\\overline Q^{(2,2)}$ coefficients. Conductivity reference values change as
-  a result.
-- Renamed energylevels -> energy_levels
-- Moved package to src layout
+  a result ([#101](https://github.com/quinnreynolds/minplascalc/pull/101)).
+- Corrected electronic-level summation so qualifying levels are not skipped
+  when input data are not strictly energy-sorted
+  ([#93](https://github.com/quinnreynolds/minplascalc/pull/93)).
+
+## [1.0.2] - 2025-05-09
+
+### Added
+
+- Added `CITATION.cff` and updated the bibliography
+  ([#84](https://github.com/quinnreynolds/minplascalc/pull/84)).
+
+### Changed
+
+- Renamed `energylevels` to `energy_levels`
+  ([#80](https://github.com/quinnreynolds/minplascalc/pull/80)).
+- Moved the package to the `src` layout
+  ([#81](https://github.com/quinnreynolds/minplascalc/pull/81)).
+- Added Numba and optimised the Devoto `q` and `qhat` calculations
+  ([#83](https://github.com/quinnreynolds/minplascalc/pull/83)).
 
 ## [1.0.1] - 2025-03-20
 
