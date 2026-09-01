@@ -2,7 +2,7 @@
 
 This experiment addresses temperature-derivative outliers in heat capacity
 and thermal conductivity. It builds on the piecewise analytical equilibrium
-tangent introduced earlier on `feature/consolidate-computation-state`.
+tangent introduced earlier in the productionization stack.
 
 ## Root cause
 
@@ -84,22 +84,14 @@ For 20 temperatures and three SiCO ratios, with seven alternating repetitions:
 The analytical implementation is **2.68x faster**. It also ignores the legacy
 `rel_delta_T` argument, which is retained for API compatibility.
 
-## Connection to the log formulation
+## Relationship to the planned log formulation
 
-The same explicit temperature residual has also been added to the exploratory
-log system. Solving its already-available Jacobian for `du/dT`, where
-`u = log(N)`, reproduces the production analytical mole-fraction tangent and
-heat capacity to `2e-8` relative tolerance at 12000 K.
-
-More importantly, at 10.1325 MPa and 1000 K the production equilibrium reaches
-`log(0)` before a heat capacity can be formed. Log equilibrium converges to a
-`3.5e-11` residual and returns a finite positive heat capacity of
-`950.492919 J/(kg K)`. At 1013.25 Pa and 23000 K, where production warns of
-non-convergence, log equilibrium returns `22364.133435 J/(kg K)`.
-
-This separates the two improvements cleanly: the analytical chain rule removes
-temperature-difference noise, while log variables prevent the underlying
-equilibrium solve from generating zeros or invalid tangents.
+The derivative algebra is independent of the equilibrium variables. A later
+stacked change can reuse the same explicit temperature residual with the log
+system's Jacobian to solve for `du/dT`, where `u = log(N)`. Keeping that
+integration separate makes the two effects reviewable: this change removes
+temperature-difference noise, while log variables are intended to improve the
+robustness of the underlying equilibrium solve.
 
 ## Thermal conductivity check
 
