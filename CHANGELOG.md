@@ -10,11 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added numba as dependency and used it to optimise q and qhat calculation functions.
+- Added a development-only symbolic derivation and randomized cross-check of
+  Devoto's A3--A22 collision-bracket matrices.
+- Added regressions for the reported Si-C-O thermal-conductivity outliers.
 
 ### Changed
 
 ### Fixed
 
+- Corrected the misplaced parentheses in the Devoto A11 and A16
+  $\\overline Q^{(2,2)}$ coefficients. Conductivity reference values change as
+  a result.
 - Renamed energylevels -> energy_levels
 - Moved package to src layout
 

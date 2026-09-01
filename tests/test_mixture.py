@@ -156,11 +156,11 @@ def test_viscosity_complex(mixture_complex, x0, result, tol):
 @pytest.mark.parametrize(
     "T, P, result, tol",
     [
-        (MID_T, MID_P, 1.6850647038100455, 1e-5),
-        (LOW_T, LOW_P, 0.051617047811510164, 1e-7),
-        (HIGH_T, LOW_P, 4.464206850824014, 1e-5),
-        (LOW_T, HIGH_P, 0.05161701653293017, 1e-7),
-        (HIGH_T, HIGH_P, 6.620655660595108, 1e-5),
+        (MID_T, MID_P, 1.6059411995888206, 1e-5),
+        (LOW_T, LOW_P, 0.052125335672304166, 1e-7),
+        (HIGH_T, LOW_P, 5.469144033857229, 1e-5),
+        (LOW_T, HIGH_P, 0.0521253043533545, 1e-7),
+        (HIGH_T, HIGH_P, 8.04668554450143, 1e-5),
     ],
 )
 def test_thermal_conductivity_simple(mixture_simple, T, P, result, tol):
@@ -175,9 +175,9 @@ def test_thermal_conductivity_simple(mixture_simple, T, P, result, tol):
 @pytest.mark.parametrize(
     "x0, result, tol",
     [
-        (LOW_X0, 1.9640250363781075, 1e-5),
-        (MID_X0, 2.1890014838932124, 1e-5),
-        (HIGH_X0, 2.3835646495764453, 1e-5),
+        (LOW_X0, 2.054123612714577, 1e-5),
+        (MID_X0, 2.275659141366203, 1e-5),
+        (HIGH_X0, 2.4269824515817566, 1e-5),
     ],
 )
 def test_thermal_conductivity_complex(mixture_complex, x0, result, tol):
@@ -191,9 +191,9 @@ def test_thermal_conductivity_complex(mixture_complex, x0, result, tol):
 @pytest.mark.parametrize(
     "T, P, result, tol",
     [
-        (MID_T, MID_P, 2464.34348786605, 1e-2),
-        (HIGH_T, LOW_P, 9130.048623089211, 1e-2),
-        (HIGH_T, HIGH_P, 18151.817978997307, 1e-2),
+        (MID_T, MID_P, 2523.9995883041697, 1e-2),
+        (HIGH_T, LOW_P, 9197.57578660961, 1e-2),
+        (HIGH_T, HIGH_P, 18227.372128141295, 1e-2),
     ],
 )
 def test_electrical_conductivity_simple(mixture_simple, T, P, result, tol):
@@ -208,9 +208,9 @@ def test_electrical_conductivity_simple(mixture_simple, T, P, result, tol):
 @pytest.mark.parametrize(
     "x0, result, tol",
     [
-        (LOW_X0, 4727.109691310277, 1e-2),
-        (MID_X0, 4468.541344858815, 1e-2),
-        (HIGH_X0, 3925.856615193799, 1e-2),
+        (LOW_X0, 4749.608571071909, 1e-2),
+        (MID_X0, 4494.919012112646, 1e-2),
+        (HIGH_X0, 3959.917326780716, 1e-2),
     ],
 )
 def test_electrical_conductivity_complex(mixture_complex, x0, result, tol):

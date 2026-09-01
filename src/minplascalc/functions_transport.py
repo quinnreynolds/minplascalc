@@ -2388,7 +2388,7 @@ def _q22_jit(
                     7
                     * masses[j]
                     * masses[l]
-                    * (4 * (masses[j] ** 2 + 7 * masses[l] ** 2))
+                    * (4 * masses[j] ** 2 + 7 * masses[l] ** 2)
                     * Q22[i, l]
                     - 112 * masses[j] * masses[l] ** 3 * Q23[i, l]
                     + 80 * masses[j] * masses[l] ** 3 * Q24[i, l]
@@ -2468,7 +2468,7 @@ def _q23_jit(
                     / 4
                     * masses[j]
                     * masses[l]
-                    * (8 * (masses[j] ** 2 + 7 * masses[l] ** 2))
+                    * (8 * masses[j] ** 2 + 7 * masses[l] ** 2)
                     * Q22[i, l]
                     - 18
                     * masses[j]
