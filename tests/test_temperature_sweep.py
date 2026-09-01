@@ -67,7 +67,8 @@ COMPLEX = MixtureCase(
     T0=10000,
 )
 
-CROSS_CHECK_RTOL = 1e-6
+CROSS_CHECK_RTOL = 2e-7
+CROSS_CHECK_ATOL = 3e-10
 
 
 def _assert_physically_sane(mixture):
@@ -86,8 +87,12 @@ def _assert_matches_cold_start(mixture, case, T):
     cold = case.new_mixture()
     cold.T = T
 
-    assert mixture.calculate_composition() == pytest.approx(
-        cold.calculate_composition(), rel=CROSS_CHECK_RTOL
+    warm_composition = mixture.calculate_composition()
+    cold_composition = cold.calculate_composition()
+    assert warm_composition / warm_composition.sum() == pytest.approx(
+        cold_composition / cold_composition.sum(),
+        rel=CROSS_CHECK_RTOL,
+        abs=CROSS_CHECK_ATOL,
     )
     assert mixture.calculate_density() == pytest.approx(
         cold.calculate_density(), rel=CROSS_CHECK_RTOL

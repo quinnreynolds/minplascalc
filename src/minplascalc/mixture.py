@@ -7,13 +7,19 @@ import logging
 import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Iterator
+from typing import TYPE_CHECKING, Iterator
 
 import numpy as np
 
 from minplascalc import functions_radiation, functions_transport
 from minplascalc import species as _sp
 from minplascalc import units as u
+
+if TYPE_CHECKING:
+    from minplascalc.log_equilibrium import (
+        LogEquilibriumResult,
+        LogEquilibriumSystem,
+    )
 
 __all__ = ["lte_from_names", "LTE", "LTEWithoutElectrons"]
 
@@ -123,6 +129,11 @@ class LTE:
         self.__state: _EquilibriumState | None = None
         self.__transport_workspace = None
         self.__collision_model = None
+        self.__log_equilibrium_initial: (
+            tuple[np.ndarray, np.ndarray] | None
+        ) = None
+        self.__log_equilibrium_system: LogEquilibriumSystem | None = None
+        self.__log_equilibrium_result: LogEquilibriumResult | None = None
 
         self.x0 = x0
         self.T = T
@@ -220,6 +231,8 @@ class LTE:
         self.__isLTE = False
         self.__state = None
         self.__transport_workspace = None
+        self.__log_equilibrium_system = None
+        self.__log_equilibrium_result = None
 
     def __repr__(self):
         return (
@@ -594,7 +607,78 @@ class LTE:
 
         return E0_dN, E0_dT
 
+    def _set_particle_numbers(self, particle_numbers: np.ndarray) -> None:
+        """Install a particle-number iterate for an equilibrium solver."""
+        self.__Ni = particle_numbers
+
+    def _reference_energy_derivatives(
+        self,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Expose reference-energy derivatives to equilibrium solvers."""
+        return self.__get_reference_energy_derivatives()
+
     def calculate_composition(self) -> np.ndarray:
+        r"""Calculate the LTE composition of the plasma in m^-3.
+
+        The coupled Gibbs-equilibrium equations and conservation constraints
+        are solved in log particle numbers, guaranteeing positive species
+        populations. The previous particle-number formulation is retained as
+        an internal fallback for a zero conserved element total, which cannot
+        be represented in logarithmic variables.
+
+        Returns
+        -------
+        np.ndarray
+            Number density of each species in the plasma as listed in
+            :attr:`species`, in :math:`\text{particles.m}^{-3}`.
+        """
+        if self.__isLTE:
+            particle_total = self.__Ni.sum()
+            volume = particle_total * u.k_b * self.T / self.P
+            return self.__Ni / volume
+
+        from minplascalc.log_equilibrium import (
+            LogEquilibriumSystem,
+            ZeroElementTotalError,
+        )
+
+        try:
+            system = LogEquilibriumSystem(self)
+            if self.__log_equilibrium_initial is None:
+                target_temperature = self.T
+                result = system.solve_temperature_path(
+                    np.array([target_temperature]),
+                    tolerance=self.gfe_rtol,
+                    max_iterations=self.gfe_max_iter,
+                ).states[0]
+                result = system.solve_lowest_gibbs_branch(
+                    (result.log_particles, result.scaled_multipliers),
+                    tolerance=self.gfe_rtol,
+                    max_iterations=self.gfe_max_iter,
+                ).selected
+            else:
+                result = system.solve_lowest_gibbs_branch(
+                    self.__log_equilibrium_initial,
+                    tolerance=self.gfe_rtol,
+                    max_iterations=self.gfe_max_iter,
+                ).selected
+        except ZeroElementTotalError:
+            return self._calculate_composition_particle_numbers()
+
+        particle_numbers = np.exp(result.log_particles)
+        system._set_particle_numbers(particle_numbers)
+        self.__E0, self.__dE = self.__get_reference_energies()
+        self.__isLTE = True
+        self.__state = None
+        self.__log_equilibrium_initial = (
+            result.log_particles.copy(),
+            result.scaled_multipliers.copy(),
+        )
+        self.__log_equilibrium_system = system
+        self.__log_equilibrium_result = result
+        return result.number_densities
+
+    def _calculate_composition_particle_numbers(self) -> np.ndarray:
         r"""Calculate the LTE composition of the plasma in m^-3.
 
         An iterative Lagrange multiplier approach is used to minimise the Gibbs
@@ -866,6 +950,19 @@ class LTE:
     ) -> _EquilibriumTemperatureTangent:
         """Differentiate the full constrained equilibrium state."""
         self.calculate_composition()
+        if self.__log_equilibrium_system is not None:
+            assert self.__log_equilibrium_result is not None
+            tangent = self.__log_equilibrium_system.temperature_tangent(
+                self.__log_equilibrium_result
+            )
+            return _EquilibriumTemperatureTangent(
+                particle_derivative=tangent.particle_derivative,
+                mole_fraction_derivative=tangent.mole_fraction_derivative,
+                reference_energy_derivative=(
+                    tangent.reference_energy_derivative
+                ),
+            )
+
         particle_numbers = self.__Ni
         particle_total = particle_numbers.sum()
         count = len(self.species)
@@ -995,6 +1092,9 @@ class LTE:
             self.__dE,
             self.__state,
             self.__transport_workspace,
+            self.__log_equilibrium_initial,
+            self.__log_equilibrium_system,
+            self.__log_equilibrium_result,
         )
         self.T = T
         try:
@@ -1008,6 +1108,9 @@ class LTE:
                 self.__dE,
                 self.__state,
                 self.__transport_workspace,
+                self.__log_equilibrium_initial,
+                self.__log_equilibrium_system,
+                self.__log_equilibrium_result,
             ) = original
 
     def calculate_density(self) -> float:

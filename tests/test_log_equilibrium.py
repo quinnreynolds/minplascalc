@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from bench.log_equilibrium import LogEquilibriumSystem
 from bench.workloads import make_sico, make_simple
+from minplascalc.log_equilibrium import LogEquilibriumSystem
 
 
 def _mole_fractions(number_densities):
@@ -17,7 +17,7 @@ def test_packed_thermodynamics_matches_species_evaluation(
     factory, temperature
 ):
     reference = factory(T=temperature)
-    reference.calculate_composition()
+    reference._calculate_composition_particle_numbers()
     state = reference._equilibrium_state()
 
     system = LogEquilibriumSystem(factory(T=temperature))
@@ -90,6 +90,7 @@ def test_log_equilibrium_analytical_jacobian():
 
 def test_log_equilibrium_temperature_tangent_matches_production():
     production = make_sico(T=12000.0)
+    production._calculate_composition_particle_numbers()
     expected = production.calculate_composition_temperature_derivative()
     expected_cp = production.calculate_heat_capacity()
 
@@ -112,13 +113,47 @@ def test_log_heat_capacity_survives_production_log_zero_case():
     assert heat_capacity > 0
 
 
+def test_public_composition_uses_positive_log_state():
+    mixture = make_sico(T=1000.0, P=10132500.0)
+
+    composition = mixture.calculate_composition()
+
+    assert np.all(np.isfinite(composition))
+    assert np.all(composition > 0)
+    assert mixture._LTE__log_equilibrium_result.residual_norm < 1e-9
+
+
+def test_public_log_composition_matches_particle_number_oracle():
+    production = make_sico(T=12000.0)
+    actual = _mole_fractions(production.calculate_composition())
+    oracle = make_sico(T=12000.0)
+    expected = _mole_fractions(
+        oracle._calculate_composition_particle_numbers()
+    )
+
+    assert actual == pytest.approx(expected, rel=2e-7, abs=2e-10)
+
+
+def test_zero_element_total_uses_particle_number_fallback():
+    mixture = make_sico(T=12000.0)
+    mixture.x0 = [1.0, *np.zeros(len(mixture.species) - 2)]
+
+    composition = mixture.calculate_composition()
+
+    assert np.all(np.isfinite(composition))
+    assert np.all(composition >= 0)
+    assert mixture._LTE__log_equilibrium_result is None
+
+
 @pytest.mark.parametrize("factory", [make_simple, make_sico])
 @pytest.mark.parametrize("temperature", [8000.0, 12000.0, 25000.0])
 def test_log_equilibrium_cold_midrange_matches_production(
     factory, temperature
 ):
     reference = factory(T=temperature)
-    expected = _mole_fractions(reference.calculate_composition())
+    expected = _mole_fractions(
+        reference._calculate_composition_particle_numbers()
+    )
 
     system = LogEquilibriumSystem(factory(T=temperature))
     result = system.solve(tolerance=1e-9)
@@ -144,7 +179,9 @@ def test_log_equilibrium_temperature_continuation(factory, descending):
 
     for index in (0, -1):
         reference = factory(T=float(temperatures[index]))
-        expected = _mole_fractions(reference.calculate_composition())
+        expected = _mole_fractions(
+            reference._calculate_composition_particle_numbers()
+        )
         actual = _mole_fractions(path.states[index].number_densities)
         assert actual == pytest.approx(expected, rel=2e-7, abs=3e-10)
 

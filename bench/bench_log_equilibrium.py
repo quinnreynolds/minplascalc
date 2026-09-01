@@ -1,4 +1,4 @@
-"""Benchmark the experimental log-equilibrium solver against production."""
+"""Benchmark production log equilibrium against the particle-number oracle."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ TEMPERATURES = np.linspace(1000.0, 25000.0, 20)
 MIXTURES = (0.1, 0.5, 0.9)
 
 
-def production_sweep():
-    """Run the current solver and count nonlinear iterations."""
+def particle_number_sweep():
+    """Run the retained particle-number solver and count iterations."""
     original = LTE._LTE__get_reference_energies
     iterations = 0
 
@@ -32,7 +32,9 @@ def production_sweep():
             mixture = make_sico(fraction)
             for temperature in TEMPERATURES:
                 mixture.T = float(temperature)
-                number_densities = mixture.calculate_composition()
+                number_densities = (
+                    mixture._calculate_composition_particle_numbers()
+                )
                 states.append(number_densities / number_densities.sum())
     finally:
         LTE._LTE__get_reference_energies = original
@@ -40,7 +42,7 @@ def production_sweep():
 
 
 def log_sweep():
-    """Run independent continuation through the requested temperature path."""
+    """Run log continuation through the requested temperature path."""
     states = []
     iterations = 0
     evaluations = 0
@@ -60,41 +62,41 @@ def log_sweep():
 
 def main():
     """Report alternating timings, convergence, and branch differences."""
-    production_sweep()
+    particle_number_sweep()
     log_sweep()
-    samples = {"production": [], "log": []}
+    samples = {"particle": [], "log": []}
     results = {}
     for label, function in [
-        ("production", production_sweep),
+        ("particle", particle_number_sweep),
         ("log", log_sweep),
     ] * 7:
         start = time.perf_counter()
         results[label] = function()
         samples[label].append(time.perf_counter() - start)
 
-    production_states, production_iterations = results["production"]
+    particle_states, particle_iterations = results["particle"]
     log_states, log_iterations, log_evaluations, log_solves = results["log"]
     medians = {
         label: statistics.median(values) for label, values in samples.items()
     }
-    differences = np.abs(log_states - production_states)
+    differences = np.abs(log_states - particle_states)
     state_index, species_index = np.unravel_index(
         np.argmax(differences), differences.shape
     )
     mixture_index, temperature_index = divmod(state_index, len(TEMPERATURES))
 
     print("SiCO equilibrium: 20 temperatures x 3 mixtures")
-    for label in ("production", "log"):
+    for label in ("particle", "log"):
         print(f"{label:<12} median={medians[label]:.6f} s {samples[label]}")
-    print(f"speedup      {medians['production'] / medians['log']:.3f}x")
-    print(f"production iterations       {production_iterations}")
+    print(f"speedup      {medians['particle'] / medians['log']:.3f}x")
+    print(f"particle-number iterations  {particle_iterations}")
     print(
         f"log iterations/evaluations  {log_iterations}/{log_evaluations} "
         f"across {log_solves} continuation solves"
     )
     print(
         f"iterations per state        "
-        f"{production_iterations / len(production_states):.2f} production, "
+        f"{particle_iterations / len(particle_states):.2f} particle-number, "
         f"{log_iterations / log_solves:.2f} log"
     )
     print(f"max absolute mole difference {differences.max():.6e}")
@@ -104,10 +106,10 @@ def main():
         f"T={TEMPERATURES[temperature_index]:.1f} K, "
         f"species index={species_index}"
     )
-    weights = np.arange(1, production_states.shape[1] + 1)
+    weights = np.arange(1, particle_states.shape[1] + 1)
     print(
         "weighted checksums            "
-        f"production={np.sum(production_states @ weights):.12e}, "
+        f"particle={np.sum(particle_states @ weights):.12e}, "
         f"log={np.sum(log_states @ weights):.12e}"
     )
 

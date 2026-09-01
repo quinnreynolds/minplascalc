@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replaced the default LTE composition solve with the coupled log-particle
+  formulation, retaining the particle-number solver as a regression oracle and
+  fallback for zero conserved-element totals.
+
 ### Fixed
 
 - Corrected the misplaced parentheses in the Devoto A11 and A16
