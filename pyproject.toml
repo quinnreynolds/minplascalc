@@ -70,6 +70,10 @@ allow-direct-references = true
 [tool.hatch.version]
 path = "src/minplascalc/__init__.py"
 
+[[tool.mypy.overrides]]
+follow_imports = "skip"
+module = "bench.*"
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 
