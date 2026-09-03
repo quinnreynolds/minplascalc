@@ -624,7 +624,11 @@ class LTE:
         are solved in log particle numbers, guaranteeing positive species
         populations. The previous particle-number formulation is retained as
         an internal fallback for a zero conserved element total, which cannot
-        be represented in logarithmic variables.
+        be represented in logarithmic variables, and for cases where the
+        log-equilibrium solver itself fails to converge (for example, a
+        discrete electronic energy level crossing the ionisation-lowering
+        cutoff mid-solve can stall the line search). The latter fallback
+        raises a :class:`UserWarning` so it does not pass unnoticed.
 
         Returns
         -------
@@ -663,6 +667,14 @@ class LTE:
                     max_iterations=self.gfe_max_iter,
                 ).selected
         except ZeroElementTotalError:
+            return self._calculate_composition_particle_numbers()
+        except RuntimeError as exc:
+            warnings.warn(
+                "Log-equilibrium solver failed "
+                f"({exc}); falling back to the particle-number solver. "
+                "Results may differ slightly from the log-equilibrium "
+                "solution."
+            )
             return self._calculate_composition_particle_numbers()
 
         particle_numbers = np.exp(result.log_particles)
