@@ -8,7 +8,7 @@ fallback for mixtures with a zero conserved element total.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -30,6 +30,7 @@ class LogEquilibriumResult:
     residual_norm: float
     iterations: int
     residual_evaluations: int
+    cutoff_branches: int = 0
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,49 @@ class _PackedThermodynamics:
 
 class ZeroElementTotalError(ValueError):
     """A conserved element total cannot be represented in log variables."""
+
+
+class CutoffConvergenceError(RuntimeError):
+    """No consistent root was found in the explored hard-cutoff branches.
+
+    This is a local search failure, not proof that no distant root exists.
+    ``residual_norm`` is the full residual at the stalled Newton iterate.
+    """
+
+    def __init__(
+        self,
+        temperature: float,
+        pressure: float,
+        species_name: str,
+        residual_norm: float,
+        attempted_branches: int,
+        iterations: int,
+        residual_evaluations: int,
+    ):
+        self.temperature = temperature
+        self.pressure = pressure
+        self.species_name = species_name
+        self.residual_norm = residual_norm
+        self.attempted_branches = attempted_branches
+        self.iterations = iterations
+        self.residual_evaluations = residual_evaluations
+        super().__init__(
+            f"No self-consistent equilibrium found in {attempted_branches} "
+            f"local hard-cutoff branches near {species_name} at "
+            f"T={temperature:g} K, P={pressure:g} Pa; "
+            f"stalled residual={residual_norm:.3e}. "
+            "The discrete cutoff may leave a gap between adjacent roots."
+        )
+
+
+class _NewtonFailure(RuntimeError):
+    """Retain the failed iterate for bounded cutoff recovery."""
+
+    def __init__(self, message, initial, residual_norm, iterations):
+        super().__init__(message)
+        self.initial = initial
+        self.residual_norm = residual_norm
+        self.iterations = iterations
 
 
 class LogEquilibriumSystem:
@@ -151,11 +195,11 @@ class LogEquilibriumSystem:
         level_owners = []
         level_energies: list[float] = []
         level_degeneracies: list[float] = []
-        for index, species in monatomic:
-            self.monatomic_ionization[index] = species.ionisation_energy
-            level_owners.extend([index] * len(species._level_energies))
-            level_energies.extend(species._level_energies)
-            level_degeneracies.extend(species._degeneracies)
+        for index, atom in monatomic:
+            self.monatomic_ionization[index] = atom.ionisation_energy
+            level_owners.extend([index] * len(atom._level_energies))
+            level_energies.extend(atom._level_energies)
+            level_degeneracies.extend(atom._degeneracies)
         self.level_owners = np.asarray(level_owners, dtype=np.int64)
         self.level_energies = np.asarray(level_energies, dtype=np.float64)
         self.level_degeneracies = np.asarray(
@@ -332,7 +376,11 @@ class LogEquilibriumSystem:
         return lowering, derivative
 
     def _packed_thermodynamics(
-        self, log_particles: np.ndarray, *, derivatives: bool
+        self,
+        log_particles: np.ndarray,
+        *,
+        derivatives: bool,
+        active_levels: np.ndarray | None = None,
     ) -> _PackedThermodynamics:
         """Evaluate all species thermodynamics in packed numeric arrays."""
         particle_numbers = np.exp(log_particles)
@@ -371,8 +419,11 @@ class LogEquilibriumSystem:
         active_counts = np.zeros(self.species_count, dtype=np.int64)
         if self.monatomic_indices.size:
             owners = self.level_owners
-            active = self.level_energies < (
-                self.monatomic_ionization[owners] - lowering[owners]
+            active = (
+                self.level_energies
+                < (self.monatomic_ionization[owners] - lowering[owners])
+                if active_levels is None
+                else active_levels
             )
             level_terms = self.level_boltzmann_terms * active
             sums = np.bincount(
@@ -498,12 +549,15 @@ class LogEquilibriumSystem:
         *,
         jacobian: bool,
         cache_derivatives: bool = False,
+        active_levels: np.ndarray | None = None,
     ) -> tuple[np.ndarray, np.ndarray | None, _PackedThermodynamics]:
         """Evaluate a new thermodynamic state and retain it for reuse."""
         self.residual_evaluations += 1
         with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
             thermodynamics = self._packed_thermodynamics(
-                log_particles, derivatives=jacobian or cache_derivatives
+                log_particles,
+                derivatives=jacobian or cache_derivatives,
+                active_levels=active_levels,
             )
             residual = self._residual_from_thermodynamics(
                 thermodynamics, log_particles, scaled_multipliers
@@ -552,15 +606,51 @@ class LogEquilibriumSystem:
         tolerance: float = 1e-10,
         max_iterations: int = 80,
         max_backtracks: int = 30,
+        max_cutoff_branches: int = 8,
     ) -> LogEquilibriumResult:
-        """Solve the full system with damped analytical Newton steps."""
+        """Solve with damped Newton and bounded hard-cutoff branch recovery.
+
+        After a stall near a cutoff, solve locally fixed electronic active
+        sets and accept only roots consistent with the original discrete
+        model. ``max_cutoff_branches`` bounds these extra Newton solves; zero
+        disables recovery. An unresolved local gap raises
+        :class:`CutoffConvergenceError`, never an approximate result.
+        """
+        self.residual_evaluations = 0
+        try:
+            return self._solve_newton(
+                initial,
+                tolerance=tolerance,
+                max_iterations=max_iterations,
+                max_backtracks=max_backtracks,
+            )
+        except _NewtonFailure as failure:
+            if max_cutoff_branches <= 0 or max_iterations <= 0:
+                raise
+            return self._recover_cutoff_branches(
+                failure,
+                tolerance=tolerance,
+                max_iterations=max_iterations,
+                max_backtracks=max_backtracks,
+                max_branches=max_cutoff_branches,
+            )
+
+    def _solve_newton(
+        self,
+        initial: tuple[np.ndarray, np.ndarray] | None,
+        *,
+        tolerance: float,
+        max_iterations: int,
+        max_backtracks: int,
+        active_levels: np.ndarray | None = None,
+    ) -> LogEquilibriumResult:
+        """Take Newton steps on the original model or a fixed active set."""
         if initial is None:
             log_particles, scaled_multipliers = self.initial_state()
         else:
             log_particles = np.array(initial[0], copy=True)
             scaled_multipliers = np.array(initial[1], copy=True)
 
-        self.residual_evaluations = 0
         cached_residual = None
         cached_thermodynamics = None
         for iteration in range(max_iterations + 1):
@@ -570,6 +660,7 @@ class LogEquilibriumSystem:
                         log_particles,
                         scaled_multipliers,
                         jacobian=True,
+                        active_levels=active_levels,
                     )
                 )
             else:
@@ -615,6 +706,7 @@ class LogEquilibriumSystem:
                             candidate_multipliers,
                             jacobian=False,
                             cache_derivatives=True,
+                            active_levels=active_levels,
                         )
                     )
                     candidate_merit = 0.5 * candidate @ candidate
@@ -629,14 +721,132 @@ class LogEquilibriumSystem:
                         break
                 step *= 0.5
             else:
-                raise RuntimeError(
+                raise _NewtonFailure(
                     f"Log-equilibrium line search stalled at residual "
-                    f"{residual_norm:.3e}."
+                    f"{residual_norm:.3e}.",
+                    (log_particles, scaled_multipliers),
+                    residual_norm,
+                    iteration,
                 )
 
-        raise RuntimeError(
+        raise _NewtonFailure(
             f"Log-equilibrium solver did not converge after {max_iterations} "
-            f"iterations; residual={residual_norm:.3e}."
+            f"iterations; residual={residual_norm:.3e}.",
+            (log_particles, scaled_multipliers),
+            residual_norm,
+            max_iterations,
+        )
+
+    def _recover_cutoff_branches(
+        self,
+        failure: _NewtonFailure,
+        *,
+        tolerance: float,
+        max_iterations: int,
+        max_backtracks: int,
+        max_branches: int,
+    ) -> LogEquilibriumResult:
+        """Explore nearby active sets without smoothing the physical model."""
+        thermodynamics = self._packed_thermodynamics(
+            failure.initial[0], derivatives=False
+        )
+        owners = self.level_owners
+        margins = (
+            self.monatomic_ionization[owners]
+            - thermodynamics.ionization_lowering[owners]
+            - self.level_energies
+        )
+        # Neutral cutoffs cannot move with composition in this model.
+        nearby = np.flatnonzero(
+            (np.abs(margins) < 2e-5 * u.k_b * self.mixture.T)
+            & (self.charges[owners] > 0)
+        )
+        if self.electron_index < 0 or not nearby.size:
+            raise failure
+        nearby = nearby[np.argsort(np.abs(margins[nearby]))]
+        active = margins > 0
+        queue = [(active, failure.initial)]
+        queued = {active.tobytes()}
+
+        def enqueue(mask, initial, *, priority=False):
+            key = mask.tobytes()
+            if key not in queued:
+                queued.add(key)
+                if priority:
+                    queue.insert(0, (mask, initial))
+                else:
+                    queue.append((mask, initial))
+
+        # Flip equal-energy levels together: splitting them would create an
+        # active set that the strict cutoff can never represent.
+        for level in nearby:
+            alternate = active.copy()
+            group = (owners == owners[level]) & (
+                self.level_energies == self.level_energies[level]
+            )
+            alternate[group] = ~alternate[group]
+            enqueue(alternate, failure.initial)
+            if len(queue) >= max_branches:
+                break
+
+        candidates = []
+        total_iterations = failure.iterations
+        attempted = 0
+        while queue and attempted < max_branches:
+            mask, initial = queue.pop(0)
+            attempted += 1
+            try:
+                candidate = self._solve_newton(
+                    initial,
+                    tolerance=tolerance,
+                    max_iterations=max_iterations,
+                    max_backtracks=max_backtracks,
+                    active_levels=mask,
+                )
+            except _NewtonFailure as branch_failure:
+                total_iterations += branch_failure.iterations
+                continue
+            except np.linalg.LinAlgError:
+                # A speculative branch can have a singular Jacobian.
+                continue
+            total_iterations += candidate.iterations
+            residual, _, actual = self._evaluate_with_state(
+                candidate.log_particles,
+                candidate.scaled_multipliers,
+                jacobian=False,
+            )
+            actual_active = self.level_energies < (
+                self.monatomic_ionization[owners]
+                - actual.ionization_lowering[owners]
+            )
+            norm = float(np.linalg.norm(residual, ord=np.inf))
+            if np.array_equal(mask, actual_active) and norm < tolerance:
+                candidates.append(replace(candidate, residual_norm=norm))
+            else:
+                # Follow the active set implied by this branch's root.
+                # Deduplication stops the two-branch cycle of a cutoff gap.
+                enqueue(
+                    actual_active,
+                    (candidate.log_particles, candidate.scaled_multipliers),
+                    priority=True,
+                )
+
+        if not candidates:
+            raise CutoffConvergenceError(
+                self.mixture.T,
+                self.mixture.P,
+                self.mixture.species[owners[nearby[0]]].name,
+                failure.residual_norm,
+                attempted,
+                total_iterations,
+                self.residual_evaluations,
+            ) from failure
+        selected = min(candidates, key=self.dimensionless_gibbs)
+        return replace(
+            selected,
+            iterations=total_iterations,
+            residual_evaluations=self.residual_evaluations,
+            cutoff_branches=attempted,
         )
 
     def dimensionless_gibbs(self, result: LogEquilibriumResult) -> float:
@@ -791,6 +1001,13 @@ class LogEquilibriumSystem:
         thermodynamics = self._packed_thermodynamics(
             primary.log_particles, derivatives=False
         )
+        if not self.level_energies.size:
+            return LogEquilibriumBranchResult(
+                selected=primary,
+                candidates=(primary,),
+                dimensionless_gibbs=(self.dimensionless_gibbs(primary),),
+                nearest_cutoff_distance=float("inf"),
+            )
         margins = (
             self.monatomic_ionization[self.level_owners]
             - thermodynamics.ionization_lowering[self.level_owners]
@@ -864,52 +1081,94 @@ class LogEquilibriumSystem:
         tolerance: float = 1e-9,
         max_iterations: int = 80,
     ) -> LogEquilibriumPathResult:
-        """Solve requested states using an independent midrange bootstrap."""
+        """Solve a temperature path, restoring the input T on any failure.
+
+        On success the mixture remains at the last requested temperature.
+        A cutoff gap at the bootstrap or an unrequested intermediate point
+        may be bypassed. Requested points must always satisfy the full model.
+        Skipping an intermediate gap can exceed the nominal temperature step.
+        """
         requested = np.asarray(temperatures, dtype=np.float64)
         if requested.ndim != 1 or requested.size == 0:
             raise ValueError("temperatures must be a non-empty vector")
 
-        total_iterations = 0
-        total_evaluations = 0
-        solve_count = 0
+        original_temperature = self.mixture.T
+        try:
+            total_iterations = 0
+            total_evaluations = 0
+            solve_count = 0
 
-        self.mixture.T = bootstrap_temperature
-        current = self.solve(
-            tolerance=tolerance,
-            max_iterations=max_iterations,
-        )
-        total_iterations += current.iterations
-        total_evaluations += current.residual_evaluations
-        solve_count += 1
-
-        def advance(target: float) -> LogEquilibriumResult:
-            nonlocal current, total_iterations, total_evaluations, solve_count
-            start = self.mixture.T
-            step_count = max(
-                1,
-                int(np.ceil(abs(target - start) / maximum_temperature_step)),
-            )
-            initial = (current.log_particles, current.scaled_multipliers)
-            for temperature in np.linspace(start, target, step_count + 1)[1:]:
-                self.mixture.T = float(temperature)
+            self.mixture.T = bootstrap_temperature
+            try:
                 current = self.solve(
-                    initial,
                     tolerance=tolerance,
                     max_iterations=max_iterations,
                 )
-                initial = (current.log_particles, current.scaled_multipliers)
-                total_iterations += current.iterations
-                total_evaluations += current.residual_evaluations
+            except CutoffConvergenceError as failure:
+                if requested[0] == bootstrap_temperature:
+                    raise
+                total_iterations += failure.iterations
+                total_evaluations += failure.residual_evaluations
                 solve_count += 1
-            return current
+                # A bootstrap gap says nothing about the requested state.
+                self.mixture.T = float(requested[0])
+                current = self.solve(
+                    tolerance=tolerance,
+                    max_iterations=max_iterations,
+                )
+            total_iterations += current.iterations
+            total_evaluations += current.residual_evaluations
+            solve_count += 1
 
-        states = []
-        for temperature in requested:
-            states.append(advance(float(temperature)))
+            def advance(target: float) -> LogEquilibriumResult:
+                nonlocal current, total_iterations
+                nonlocal total_evaluations, solve_count
+                start = self.mixture.T
+                step_count = max(
+                    1,
+                    int(
+                        np.ceil(abs(target - start) / maximum_temperature_step)
+                    ),
+                )
+                initial = (current.log_particles, current.scaled_multipliers)
+                for temperature in np.linspace(start, target, step_count + 1)[
+                    1:
+                ]:
+                    self.mixture.T = float(temperature)
+                    try:
+                        current = self.solve(
+                            initial,
+                            tolerance=tolerance,
+                            max_iterations=max_iterations,
+                        )
+                    except CutoffConvergenceError as failure:
+                        if temperature == target:
+                            raise
+                        total_iterations += failure.iterations
+                        total_evaluations += failure.residual_evaluations
+                        solve_count += 1
+                        # Keep the last converged initial state. No result
+                        # from the gap is installed or returned to the caller.
+                        continue
+                    initial = (
+                        current.log_particles,
+                        current.scaled_multipliers,
+                    )
+                    total_iterations += current.iterations
+                    total_evaluations += current.residual_evaluations
+                    solve_count += 1
+                return current
 
-        return LogEquilibriumPathResult(
-            states=tuple(states),
-            total_iterations=total_iterations,
-            total_residual_evaluations=total_evaluations,
-            continuation_solves=solve_count,
-        )
+            states = []
+            for temperature in requested:
+                states.append(advance(float(temperature)))
+
+            return LogEquilibriumPathResult(
+                states=tuple(states),
+                total_iterations=total_iterations,
+                total_residual_evaluations=total_evaluations,
+                continuation_solves=solve_count,
+            )
+        except Exception:
+            self.mixture.T = original_temperature
+            raise

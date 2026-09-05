@@ -626,11 +626,22 @@ class LTE:
         an internal fallback for a zero conserved element total, which cannot
         be represented in logarithmic variables.
 
+        Stalls near an electronic energy cutoff trigger a bounded search of
+        adjacent discrete branches. Every accepted root must satisfy the
+        original cutoff rule and all equilibrium equations. No smoothing or
+        approximate particle-number fallback is used for a cutoff gap.
+
         Returns
         -------
         np.ndarray
             Number density of each species in the plasma as listed in
             :attr:`species`, in :math:`\text{particles.m}^{-3}`.
+
+        Raises
+        ------
+        minplascalc.log_equilibrium.CutoffConvergenceError
+            No self-consistent root was found in the explored local cutoff
+            branches. The requested temperature is preserved on failure.
         """
         if self.__isLTE:
             particle_total = self.__Ni.sum()
