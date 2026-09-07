@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Recover log-equilibrium stalls near electronic energy cutoffs by solving
+  adjacent discrete branches and validating roots against the original model.
+  The hard cutoff and equilibrium tolerance are unchanged; unresolved local
+  gaps raise `CutoffConvergenceError` with state and search diagnostics.
+- Preserve the input temperature when equilibrium continuation fails, and
+  bypass cutoff gaps at unrequested bootstrap or intermediate temperatures.
+- Handle equilibrium branch selection for mixtures without electronic levels.
+
 ## [1.1.0] - 2026-09-01
 
 ### Added

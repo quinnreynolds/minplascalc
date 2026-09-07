@@ -4,7 +4,12 @@ import numpy as np
 import pytest
 
 from bench.workloads import make_sico, make_simple
-from minplascalc.log_equilibrium import LogEquilibriumSystem
+from minplascalc import mixture as mixture_module
+from minplascalc import units as u
+from minplascalc.log_equilibrium import (
+    CutoffConvergenceError,
+    LogEquilibriumSystem,
+)
 
 
 def _mole_fractions(number_densities):
@@ -241,4 +246,182 @@ def test_log_equilibrium_selects_lower_gibbs_cutoff_branch():
             - active_counts[1][differing_species[0]]
         )
         == 1
+    )
+
+
+def _assert_original_equilibrium(system, result, tolerance=1e-10):
+    """Check recovered roots using unfrozen species partition functions."""
+    particles = np.exp(result.log_particles)
+    volume = particles.sum() * u.k_b * system.mixture.T / system.mixture.P
+    system._set_particle_numbers(particles)
+    reference, lowering = system.mixture._LTE__get_reference_energies()
+    partitions = np.array(
+        [
+            sp.total_partition_function(volume, system.mixture.T, de)
+            for sp, de in zip(system.mixture.species, lowering)
+        ]
+    )
+    chemical = (
+        reference / (u.k_b * system.mixture.T)
+        - np.log(partitions)
+        + result.log_particles
+        + system.constraints @ result.scaled_multipliers
+    )
+    assert np.linalg.norm(chemical, np.inf) < tolerance
+    conserved = system.constraints.T @ particles
+    assert conserved[: system.element_count] == pytest.approx(
+        system.targets, rel=tolerance
+    )
+    if system.has_charge_constraint:
+        assert abs(conserved[-1] / particles.sum()) < tolerance
+    assert np.all(result.number_densities > 0)
+    assert result.number_densities.sum() * u.k_b * system.mixture.T == (
+        pytest.approx(system.mixture.P, rel=tolerance)
+    )
+
+
+def test_recover_cutoff_stall_without_changing_partition_model():
+    # Independent public-data case; no production inputs are required.
+    mixture = make_sico(sio=0.9, T=24600.0)
+    mixture.calculate_composition()
+    initial = mixture._LTE__log_equilibrium_initial
+    mixture.T = 24650.0
+    system = LogEquilibriumSystem(mixture)
+    with pytest.raises(RuntimeError, match="line search stalled"):
+        system.solve(initial, max_cutoff_branches=0)
+    with pytest.raises(CutoffConvergenceError) as limited:
+        system.solve(initial, max_cutoff_branches=1)
+    assert limited.value.attempted_branches == 1
+
+    result = system.solve(initial)
+
+    assert 1 < result.cutoff_branches <= 8
+    assert result.residual_evaluations == system.residual_evaluations
+    assert result.residual_norm < 1e-10
+    _assert_original_equilibrium(system, result)
+
+
+@pytest.mark.parametrize("warm", [False, True])
+def test_public_composition_recovers_cutoff_stall(warm):
+    mixture = make_sico(sio=0.9, T=24600.0 if warm else 24650.0)
+    if warm:
+        mixture.calculate_composition()
+        mixture.T = 24650.0
+
+    composition = mixture.calculate_composition()
+
+    assert mixture.T == 24650.0
+    _assert_original_equilibrium(
+        mixture._LTE__log_equilibrium_system,
+        mixture._LTE__log_equilibrium_result,
+    )
+    assert mixture.calculate_composition() == pytest.approx(composition)
+    assert np.isfinite(mixture.calculate_heat_capacity())
+
+
+def test_public_cold_continuation_reaches_requested_temperature():
+    # The penultimate continuation step is the recoverable 24650 K cutoff.
+    target = 12000.0 + (24650.0 - 12000.0) * 14 / 13
+    mixture = make_sico(sio=0.9, T=target)
+
+    mixture.calculate_composition()
+
+    assert mixture.T == target
+    _assert_original_equilibrium(
+        mixture._LTE__log_equilibrium_system,
+        mixture._LTE__log_equilibrium_result,
+    )
+
+
+@pytest.mark.parametrize("warm", [False, True])
+def test_local_cutoff_gap_never_returns_inconsistent_root(warm):
+    mixture = make_sico(T=11850.0 if warm else 11900.0, P=10132500.0)
+    if warm:
+        mixture.calculate_composition()
+        mixture.T = 11900.0
+
+    with pytest.raises(CutoffConvergenceError) as caught:
+        mixture.calculate_composition()
+
+    error = caught.value
+    assert error.species_name == "Si+"
+    assert error.temperature == 11900.0
+    assert error.pressure == 10132500.0
+    assert error.residual_norm > mixture.gfe_rtol
+    assert error.attempted_branches == 2
+    assert mixture.T == 11900.0
+    assert mixture._LTE__log_equilibrium_result is None
+    assert not mixture._LTE__isLTE
+    # Failure must not poison the next point in a caller-managed sweep.
+    mixture.T = 12000.0
+    mixture.calculate_composition()
+    _assert_original_equilibrium(
+        mixture._LTE__log_equilibrium_system,
+        mixture._LTE__log_equilibrium_result,
+    )
+
+
+def test_temperature_path_restores_input_on_requested_cutoff_gap():
+    mixture = make_sico(T=10000.0, P=10132500.0)
+    system = LogEquilibriumSystem(mixture)
+
+    with pytest.raises(CutoffConvergenceError):
+        system.solve_temperature_path(np.array([11900.0, 10000.0]))
+
+    assert mixture.T == 10000.0
+
+
+@pytest.mark.parametrize("bootstrap", [11900.0, 12000.0])
+def test_temperature_path_bypasses_unrequested_cutoff_gap(bootstrap):
+    mixture = make_sico(T=11800.0, P=10132500.0)
+    system = LogEquilibriumSystem(mixture)
+
+    path = system.solve_temperature_path(
+        np.array([11800.0]),
+        bootstrap_temperature=bootstrap,
+        maximum_temperature_step=100.0,
+        tolerance=1e-10,
+    )
+
+    assert mixture.T == 11800.0
+    assert len(path.states) == 1
+    _assert_original_equilibrium(system, path.states[0])
+
+
+@pytest.mark.parametrize("failed_temperature", [12000.0, 11000.0])
+def test_public_composition_restores_temperature_on_other_failure(
+    monkeypatch, failed_temperature
+):
+    mixture = make_sico(T=2000.0)
+    original = LogEquilibriumSystem.solve
+
+    def fail_at_temperature(system, *args, **kwargs):
+        if system.mixture.T == failed_temperature:
+            raise RuntimeError("injected failure")
+        return original(system, *args, **kwargs)
+
+    with monkeypatch.context() as context:
+        context.setattr(LogEquilibriumSystem, "solve", fail_at_temperature)
+        with pytest.raises(RuntimeError, match="injected failure"):
+            mixture.calculate_composition()
+
+    assert mixture.T == 2000.0
+    assert not mixture._LTE__isLTE
+    mixture.calculate_composition()
+    _assert_original_equilibrium(
+        mixture._LTE__log_equilibrium_system,
+        mixture._LTE__log_equilibrium_result,
+    )
+
+
+def test_branch_selection_without_electronic_levels():
+    mixture = mixture_module.lte_from_names(
+        ["O2", "CO"], [0.5, 0.5], 3000.0, 101325.0, electrons_yn=False
+    )
+
+    mixture.calculate_composition()
+
+    _assert_original_equilibrium(
+        mixture._LTE__log_equilibrium_system,
+        mixture._LTE__log_equilibrium_result,
     )
